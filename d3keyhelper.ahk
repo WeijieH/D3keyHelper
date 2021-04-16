@@ -16,7 +16,7 @@ currentProfile:=1
 vRunning:=False
 vPausing:=False
 profileKeybinding:={}
-keysOnHold:=[]
+keysOnHold:={}
 Gui Font, s11
 Gui Add, Tab3, x5 y5 w790 h400 gSetTabFocus, %tabs%
 Gui Font
@@ -246,7 +246,7 @@ SetProfileKeybinding:
     global profileKeybinding, tabslen
     Loop, %tabslen%
     {
-        currentPage := A_Index
+        currentPage:=A_Index
         if (skillset%currentPage%profilekeybindingdropdown = 7)
         {
             GuiControl, Enable, skillset%currentPage%profilekeybindinghkbox
@@ -289,7 +289,12 @@ Return
 
 SwitchProfile:
     global profileKeybinding, currentProfile, vRunning
-    currentProfile := profileKeybinding[A_ThisHotkey]
+    currentHK:=StrReplace(A_ThisHotkey, "+")
+    if (currentProfile!=profileKeybinding[currentHK])
+    {
+        currentProfile:=profileKeybinding[currentHK]
+        Gosub, StopMarco
+    }
 Return
 
 SetStartRun:
@@ -385,18 +390,17 @@ RunMarco:
     Gui, Submit, NoHide
     Loop, 6
     {
-        GuiControlGet, skillset%currentProfile%s1dropdown
-        GuiControlGet, skillset%currentProfile%s1hotkey
+        GuiControlGet, skillset%currentProfile%s%A_Index%dropdown
+        GuiControlGet, skillset%currentProfile%s%A_Index%hotkey
         Switch skillset%currentProfile%s%A_Index%dropdown
         {
         Case 2:
             k:=skillset%currentProfile%s%A_Index%hotkey
             send {%k% Down}
-            keysOnHold.Push(k)
+            keysOnHold[k]:=1
         Case 3, 4:
             GuiControlGet, skillset%currentProfile%s%A_Index%updown
-            interval:=skillset%currentProfile%s%A_Index%updown
-            SetTimer, spamSkillKey%A_Index%, %interval%
+            SetTimer, spamSkillKey%A_Index%, % skillset%currentProfile%s%A_Index%updown
         Default:
             SetTimer, spamSkillKey%A_Index%, off
         }
@@ -406,11 +410,10 @@ RunMarco:
     {
         case 2:
             send {LShift Down}
-            keysOnHold.Push("LShift")
+            keysOnHold["LShift"]:=1
         case 3:
             GuiControlGet, skillset%currentProfile%movingedit
-            iv:=skillset%currentProfile%movingedit
-            SetTimer, forceMoving, %iv%
+            SetTimer, forceMoving, % skillset%currentProfile%movingedit
     }
     vRunning:=True 
     vPausing:=False
@@ -423,10 +426,13 @@ StopMarco:
         SetTimer, spamSkillKey%A_Index%, off
     }
     SetTimer, forceMoving, off
-    for i, key in keysOnHold{
-        send {%key% up}
+    for key, value in keysOnHold.Clone(){
+        if GetKeyState(key)
+        {
+            send {%key% up}
+            keysOnHold.Pop(key)
+        }
     }
-    keysOnHold:=[]
     vRunning:=False
     vPausing:=False
 Return
@@ -558,14 +564,14 @@ Return
         vPausing:=!vPausing
         if vPausing
         {
-            for i, key in keysOnHold
+            for key, value in keysOnHold
             {
                 send {%key% up}
             }
         }
         Else
         {
-            for i, key in keysOnHold
+            for key, value in keysOnHold
             {
                 send {%key% Down}
             }
