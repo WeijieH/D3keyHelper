@@ -261,8 +261,8 @@ SetProfileKeybinding:
         {
             if (value = currentPage)
             {
-                Hotkey, %key%, SwitchProfile, Off
-                Hotkey, +%key%, SwitchProfile, Off
+                Hotkey, ~%key%, SwitchProfile, Off
+                Hotkey, ~+%key%, SwitchProfile, Off
                 profileKeybinding.Pop(key)
             }
         }
@@ -270,8 +270,8 @@ SetProfileKeybinding:
         if voption in 2,3,4,5,6
         {
             ckey:=mouseKeyArray[voption]
-            Hotkey, %ckey%, SwitchProfile, on
-            Hotkey, +%ckey%, SwitchProfile, on
+            Hotkey, ~%ckey%, SwitchProfile, on
+            Hotkey, ~+%ckey%, SwitchProfile, on
             profileKeybinding[ckey]:=currentPage
         }
         else if (voption = 7)
@@ -279,8 +279,8 @@ SetProfileKeybinding:
             ckey:=skillset%currentPage%profilekeybindinghkbox
             if (ckey)
             {
-                Hotkey, %ckey%, SwitchProfile, on
-                Hotkey, +%ckey%, SwitchProfile, on
+                Hotkey, ~%ckey%, SwitchProfile, on
+                Hotkey, ~+%ckey%, SwitchProfile, on
                 profileKeybinding[ckey]:=currentPage
             } 
         }
@@ -289,7 +289,7 @@ Return
 
 SwitchProfile:
     global profileKeybinding, currentProfile, vRunning
-    currentHK:=StrReplace(A_ThisHotkey, "+")
+    currentHK:=StrReplace(StrReplace(A_ThisHotkey, "+"), "~")
     if (currentProfile!=profileKeybinding[currentHK])
     {
         currentProfile:=profileKeybinding[currentHK]
@@ -332,10 +332,10 @@ SetStartRun:
     }
     Try
     {
-        Hotkey, %startRunHK%, MainMacro, off
-        Hotkey, +%startRunHK%, MainMacro, off
-        Hotkey, %newstartRunHK%, MainMacro, on
-        Hotkey, +%newstartRunHK%, MainMacro, on
+        Hotkey, ~%startRunHK%, MainMacro, off
+        Hotkey, ~+%startRunHK%, MainMacro, off
+        Hotkey, ~%newstartRunHK%, MainMacro, on
+        Hotkey, ~+%newstartRunHK%, MainMacro, on
         startRunHK = %newstartRunHK%
     }
     Gosub, SetProfileKeybinding
@@ -619,7 +619,7 @@ SetGambleHelper:
     GuiControlGet, extragamblehk
     Try
     {
-        Hotkey, %gambleHK%, gambleHelper, off
+        Hotkey, ~%gambleHK%, gambleHelper, off
     }
     If extragambleckbox
     {
@@ -629,7 +629,7 @@ SetGambleHelper:
         GuiControl, Enable, extragambleupdown
         Try
         {
-            Hotkey, %extragamblehk%, gambleHelper, on
+            Hotkey, ~%extragamblehk%, gambleHelper, on
             gambleHK:=extragamblehk
         }
     }
