@@ -10,11 +10,11 @@ VERSION:=20210415
 TITLE:=Format("暗黑3技能连点器 v{:d}   by Oldsand", VERSION)
 
 ReadCfgFile("d3oldsand.ini", tabs, hotkeys, actions, intervals, others, generals)
-
 Gui -MaximizeBox -MinimizeBox +Owner
 tabslen:= ObjCount(StrSplit(tabs, "`|"))
 currentProfile:=1
 vRunning:=False
+vPausing:=False
 profileKeybinding:={}
 keysOnHold:=[]
 Gui Font, s11
@@ -28,56 +28,65 @@ Loop, parse, tabs, `|
     Gui Tab, %currentTab%
     Loop, 6
     {
-        hk:=hotkeys[currentTab][A_Index]
         ac:=actions[currentTab][A_Index]
-        iv:=intervals[currentTab][A_Index]
         if A_Index <= 4
         {
-            Gui Add, Hotkey, x45 y%y% w75 vskillset%currentTab%s%A_Index%hotkey, %hk%
+            Gui Add, Hotkey, x45 y%y% w75 vskillset%currentTab%s%A_Index%hotkey, % hotkeys[currentTab][A_Index]
         }
         Else
         {
-            Gui Add, Edit, x45 y%y% w75 vskillset%currentTab%s%A_Index%hotkey +Disabled, %hk%
+            Gui Add, Edit, x45 y%y% w75 vskillset%currentTab%s%A_Index%hotkey +Disabled, % hotkeys[currentTab][A_Index]
         }
         Gui Add, DropDownList, x200 y%y% w80 AltSubmit Choose%ac% vskillset%currentTab%s%A_Index%dropdown, 禁用||按住不放||连点||保持Buff
         Gui Add, Edit, vskillset%currentTab%s%A_Index%edit x360 y%y% w61 h21 Number
-        Gui Add, Updown, vskillset%currentTab%s%A_Index%updown Range20-30000, %iv%
+        Gui Add, Updown, vskillset%currentTab%s%A_Index%updown Range20-30000, % intervals[currentTab][A_Index]
         y+=50
     }
     Gui Add, Text, x490 y%yFirstLine%, 快速切换：
     yd:=yFirstLine-5
     pfmd:=others[currentTab].profilemethod
-    pfhk:=others[currentTab].profilehotkey
     Gui Add, DropDownList, x+5 y%yd% w90 AltSubmit Choose%pfmd% vskillset%currentTab%profilekeybindingdropdown gSetProfileKeybinding, 无||鼠标中键||滚轮向上||滚轮向下||侧键1||侧键2||键盘按键
-    Gui Add, Hotkey, x+15 w85 vskillset%currentTab%profilekeybindinghkbox gSetProfileKeybinding +Disabled, %pfhk%
+    Gui Add, Hotkey, x+15 w85 vskillset%currentTab%profilekeybindinghkbox gSetProfileKeybinding +Disabled, % others[currentTab].profilehotkey
     Gui Add, Text, x490 y+25, 走位辅助：
     pfmv:=others[currentTab].movingmethod
-    pfmi:=others[currentTab].movinginterval
     pflm:=others[currentTab].lazymode
     Gui Add, DropDownList, x+5 y120 w70 AltSubmit Choose%pfmv% vskillset%currentTab%movingdropdown gSetMovingHelper, 无||强制站立||强制走位
     Gui Add, Text, vskillset%currentTab%movingtext x+15 y125 +Disabled, 间隔：
     Gui Add, Edit, vskillset%currentTab%movingedit x+5 y120 w61 h21 Number +Disabled
-    Gui Add, Updown, vskillset%currentTab%movingupdown Range20-3000 +Disabled, %pfmi%
+    Gui Add, Updown, vskillset%currentTab%movingupdown Range20-3000 +Disabled, % others[currentTab].movinginterval
     Gui Add, Text, x490 y+25, 宏启动方式：
     Gui Add, DropDownList, x+5 y160 w90 AltSubmit Choose%pflm% vskillset%currentTab%profilestartmodedropdown, 懒人模式||仅按下时
     if (currentTab>1)
     {
+        Gui Font, s20
+        Gui Add, Text, center x490 y250 w270, 辅助功能见主页设置
         Gui Font, s10
-        Gui Add, Link, x490 y300, This is a <a href="https://www.autohotkey.com">link</a>
+        Gui Add, Link, x500 y340 w250, 提交bug，检查更新:`n <a href="https://github.com/WeijieH/D3keyHelper">https://github.com/WeijieH/D3keyHelper</a>
         Gui Font
     }
     Else
     {
-        Gui Add, CheckBox, x490 y250 vskillset%currentTab%gambling, 赌博助手
-        Gui Font, s10
-        Gui Add, Link, x490 y300, This is a <a href="https://www.autohotkey.com">link</a>
+        smartpause:=generals.enablesmartpause
+        enablegamblehelper:=generals.enablegamblehelper
+        gambleHK:=generals.gamblehelperhk
+        Gui Add, CheckBox, x490 y245 vextragambleckbox gSetGambleHelper Checked%enablegamblehelper%, 赌博助手:
+        Gui Add, Hotkey, vextragamblehk x+5 y242 w50 gSetGambleHelper, % gambleHK
+        Gui Add, Text, vextragambletext x+5 y245, 发送右键次数
+        Gui Add, Edit, vextragambleedit x+5 y242 w60 Number
+        Gui Add, Updown, vextragambleupdown Range2-30, % generals.gamblehelpertimes
+        Gui Add, CheckBox, x490 y280 vextrasmartpause Checked%smartpause%, 智能暂停
+        Gui Add, CheckBox, x+20 y280 vextramore1 +Disabled, Coming Soon
+        Gui Add, CheckBox, x+20 y280 vextramore2 +Disabled, Coming Soon
+        Gui Font, s12
+        Gui Add, Text, center x490 y330 w250, 提交bug，检查更新:
+        Gui Add, Link, y+5 w250, <a href="https://github.com/WeijieH/D3keyHelper">https://github.com/WeijieH/D3keyHelper</a>
         Gui Font
     }
     Gui Add, GroupBox, x20 y50 w125 h340, 技能
     Gui Add, GroupBox, x+30 y50 w130 h340, 策略
     Gui Add, GroupBox, x+30 y50 w110 h340, 执行间隔（毫秒）
     Gui Add, GroupBox, x+30 y50 w300 h150, 额外设置
-    Gui Add, GroupBox, y+10 w300 h180, 辅助功能
+    Gui Add, GroupBox, y+10 w300 h100, 辅助功能
 }
 Gui Tab
 
@@ -98,7 +107,6 @@ Menu, Tray, Tip, %TITLE%
 Menu, Tray, Icon, , , 1
 
 Gosub, SetStartRun
-SetTimer, safeGuard, 300
 Gui Show, w800 h410, %TITLE%
 Return
 
@@ -106,16 +114,19 @@ ReadCfgFile(cfgFileName, ByRef tabs, ByRef hotkeys, ByRef actions, ByRef interva
     global VERSION
     if FileExist(cfgFileName)
     {
+        generals:={}
         IniRead, ver, %cfgFileName%, General, version
         if (%VERSION% != %ver%)
         {
             MsgBox, 配置文件版本不匹配，如有错误请删除配置文件并手动配置。
         }
-        IniRead, gamble, %cfgFileName%, General, gamble
-        IniRead, gamble_times, %cfgFileName%, General, gamble_times
+        IniRead, enablegamblehelper, %cfgFileName%, General, enablegamblehelper
+        IniRead, gamblehelperhk, %cfgFileName%, General, gamblehelperhk
+        IniRead, gamblehelpertimes, %cfgFileName%, General, gamblehelpertimes
+        IniRead, enablesmartpause, %cfgFileName%, General, enablesmartpause
         IniRead, startmethod, %cfgFileName%, General, startmethod
         IniRead, starthotkey, %cfgFileName%, General, starthotkey
-        generals:={"gamble":gamble, "gamble_times":gamble_times,"startmethod":startmethod, "starthotkey":starthotkey}
+        generals:={"enablegamblehelper":enablegamblehelper ,"gamblehelpertimes":gamblehelpertimes, "gamblehelperhk":gamblehelperhk, "startmethod":startmethod, "starthotkey":starthotkey, "enablesmartpause":enablesmartpause}
 
         IniRead, tabs, %cfgFileName%
         tabs:=StrReplace(StrReplace(tabs, "`n", "`|"), "General|", "")
@@ -154,12 +165,19 @@ ReadCfgFile(cfgFileName, ByRef tabs, ByRef hotkeys, ByRef actions, ByRef interva
     }
     Else
     {
-        tabs=配置1|配置2
-        hotkeys:=[["1","2","3","4","左键","右键"],["1","2","3","4","左键","右键"]]
-        actions:=[[1,1,1,1,1,1],[1,1,1,1,1,1]]
-        intervals:=[[300,300,300,300,300,300],[300,300,300,300,300,300]]
-        others:=[{"profilemethod":1, "profilehotkey":"", "movingmethod":1, "movinginterval":100, "lazymode":1}, {"profilemethod":1, "profilehotkey":"", "movingmethod":1, "movinginterval":100, "lazymode":1}]
-        generals:={"gamble":"ph", "gamble_times":15,"startmethod":7, "starthotkey":"F2"}
+        tabs=配置1|配置2|配置3|配置4
+        hotkeys:=[]
+        actions:=[]
+        intervals:=[]
+        others:=[]
+        Loop, parse, tabs, `|
+        {
+            hotkeys.Push(["1","2","3","4","左键","右键"])
+            actions.Push([1,1,1,1,1,1])
+            intervals.Push([300,300,300,300,300,300])
+            others.Push({"profilemethod":1, "profilehotkey":"", "movingmethod":1, "movinginterval":100, "lazymode":1})
+        }
+        enerals:={"enablegamblehelper":1 ,"gamblehelpertimes":15, "gamblehelperhk":"F4", "startmethod":7, "starthotkey":"F2", "enablesmartpause":1}
     }
     Return
 }
@@ -167,9 +185,17 @@ ReadCfgFile(cfgFileName, ByRef tabs, ByRef hotkeys, ByRef actions, ByRef interva
 SaveCfgFile(cfgFileName, tabs, VERSION){
     FileDelete, %cfgFileName%
 
+    GuiControlGet, extragambleckbox
+    GuiControlGet, extragamblehk
+    GuiControlGet, extragambleedit
+    GuiControlGet, extrasmartpause
+    
     IniWrite, %VERSION%, %cfgFileName%, General, version
-    IniWrite, "ph", %cfgFileName%, General, gamble
-    IniWrite, 15, %cfgFileName%, General, gamble_times
+    IniWrite, %extragambleckbox%, %cfgFileName%, General, enablegamblehelper
+    IniWrite, %extragamblehk%, %cfgFileName%, General, gamblehelperhk
+    IniWrite, %extragambleedit%, %cfgFileName%, General, gamblehelpertimes
+    IniWrite, %extrasmartpause%, %cfgFileName%, General, enablesmartpause
+
     GuiControlGet, StartRunDropdown
     GuiControlGet, StartRunHKInput
     IniWrite, %StartRunDropdown%, %cfgFileName%, General, startmethod
@@ -211,7 +237,7 @@ SaveCfgFile(cfgFileName, tabs, VERSION){
 }
 
 SetTabFocus:
-ControlFocus %A_GuiControl%
+    ControlFocus %A_GuiControl%
 Return
 
 SetProfileKeybinding:
@@ -264,12 +290,6 @@ Return
 SwitchProfile:
     global profileKeybinding, currentProfile, vRunning
     currentProfile := profileKeybinding[A_ThisHotkey]
-    if vRunning
-    {
-        vRunning := False
-        Gosub, StopMarco
-        Gosub, MainMacro
-    }
 Return
 
 SetStartRun:
@@ -315,6 +335,8 @@ SetStartRun:
     }
     Gosub, SetProfileKeybinding
     Gosub, SetMovingHelper
+    Gosub, SetGambleHelper
+    SetTimer, safeGuard, 300
 Return
 
 SetMovingHelper:
@@ -359,7 +381,7 @@ MainMacro:
 Return
 
 RunMarco:
-    global currentProfile, vRunning, keysOnHold
+    global currentProfile, vRunning, vPausing, keysOnHold
     Gui, Submit, NoHide
     Loop, 6
     {
@@ -390,11 +412,12 @@ RunMarco:
             iv:=skillset%currentProfile%movingedit
             SetTimer, forceMoving, %iv%
     }
-    vRunning := True 
+    vRunning:=True 
+    vPausing:=False
 Return
 
 StopMarco:
-    global keysOnHold, vRunning
+    global keysOnHold, vRunning, vPausing
     Loop, 6
     {
         SetTimer, spamSkillKey%A_Index%, off
@@ -404,11 +427,16 @@ StopMarco:
         send {%key% up}
     }
     keysOnHold:=[]
-    vRunning := False
+    vRunning:=False
+    vPausing:=False
 Return
 
 spamSkillKey1:
-    global currentProfile
+    global currentProfile, vPausing
+    if vPausing
+    {
+        Return
+    }
     GuiControlGet, skillset%currentProfile%s1dropdown
     k:=skillset%currentProfile%s1hotkey
     switch skillset%currentProfile%s1dropdown
@@ -419,7 +447,11 @@ spamSkillKey1:
 Return
 
 spamSkillKey2:
-    global currentProfile
+    global currentProfile, vPausing
+    if vPausing
+    {
+        Return
+    }
     GuiControlGet, skillset%currentProfile%s2hotkey
     GuiControlGet, skillset%currentProfile%s2dropdown
     k:=skillset%currentProfile%s2hotkey
@@ -431,7 +463,11 @@ spamSkillKey2:
 Return
 
 spamSkillKey3:
-    global currentProfile
+    global currentProfile, vPausing
+    if vPausing
+    {
+        Return
+    }
     GuiControlGet, skillset%currentProfile%s3hotkey
     GuiControlGet, skillset%currentProfile%s3dropdown
     k:=skillset%currentProfile%s3hotkey
@@ -443,7 +479,11 @@ spamSkillKey3:
 Return
 
 spamSkillKey4:
-    global currentProfile
+    global currentProfile, vPausing
+    if vPausing
+    {
+        Return
+    }
     GuiControlGet, skillset%currentProfile%s4hotkey
     GuiControlGet, skillset%currentProfile%s4dropdown
     k:=skillset%currentProfile%s4hotkey
@@ -455,7 +495,11 @@ spamSkillKey4:
 Return
 
 spamSkillKey5:
-    global currentProfile
+    global currentProfile, vPausing
+    if vPausing
+    {
+        Return
+    }
     GuiControlGet, skillset%currentProfile%s5dropdown
     switch skillset%currentProfile%s5dropdown
     {
@@ -465,7 +509,11 @@ spamSkillKey5:
 Return
 
 spamSkillKey6:
-    global currentProfile
+    global currentProfile, vPausing
+    if vPausing
+    {
+        Return
+    }
     GuiControlGet, skillset%currentProfile%s6dropdown
     switch skillset%currentProfile%s6dropdown
     {
@@ -475,7 +523,54 @@ spamSkillKey6:
 Return
 
 forceMoving:
+    global vPausing
+    if vPausing
+    {
+        Return
+    }
     send e
+Return
+
+gambleHelper:
+    GuiControlGet, extragambleedit
+    Send {RButton %extragambleedit%}
+Return
+
+
+~Enter::
+~T::
+~M::
+~+Enter::
+~+T::
+~+M::
+    GuiControlGet, extrasmartpause
+    if extrasmartpause
+    {
+        Gosub, StopMarco
+    }
+Return
+
+~Tab::
+    global vPausing, keysOnHold
+    GuiControlGet, extrasmartpause
+    if extrasmartpause
+    {
+        vPausing:=!vPausing
+        if vPausing
+        {
+            for i, key in keysOnHold
+            {
+                send {%key% up}
+            }
+        }
+        Else
+        {
+            for i, key in keysOnHold
+            {
+                send {%key% Down}
+            }
+        }
+    }
 Return
 
 safeGuard:
@@ -509,6 +604,36 @@ safeGuard:
             }
         }
     }   
+Return
+
+SetGambleHelper:
+    global gambleHK
+    Gui, Submit, NoHide
+    GuiControlGet, extragambleckbox
+    GuiControlGet, extragamblehk
+    Try
+    {
+        Hotkey, %gambleHK%, gambleHelper, off
+    }
+    If extragambleckbox
+    {
+        GuiControl, Enable, extragamblehk
+        GuiControl, Enable, extragambletext
+        GuiControl, Enable, extragambleedit
+        GuiControl, Enable, extragambleupdown
+        Try
+        {
+            Hotkey, %extragamblehk%, gambleHelper, on
+            gambleHK:=extragamblehk
+        }
+    }
+    Else
+    {
+        GuiControl, Disable, extragamblehk
+        GuiControl, Disable, extragambletext
+        GuiControl, Disable, extragambleedit
+        GuiControl, Disable, extragambleupdown
+    }
 Return
 
 GuiEscape:
