@@ -440,6 +440,13 @@ RunMarco:
         {
         Case 2:
             k:=skillset%currentProfile%s%A_Index%hotkey
+            Switch A_Index
+            {
+                case 5:
+                    k:="LButton"
+                case 6:
+                    k:="RButton"
+            }
             send {%k% Down}
             keysOnHold[k]:=1
         Case 3, 4:
