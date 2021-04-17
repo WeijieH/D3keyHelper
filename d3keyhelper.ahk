@@ -17,7 +17,7 @@ SetWorkingDir %A_ScriptDir%
 SetBatchLines -1
 CoordMode, Pixel, Client
 
-VERSION:=20210415
+VERSION:=20210417
 TITLE:=Format("暗黑3技能连点器 v{:d}   by Oldsand", VERSION)
 D3W:=3440
 D3H:=1440
@@ -121,6 +121,10 @@ Menu, Tray, Tip, %TITLE%
 Menu, Tray, Icon, , , 1
 
 Gosub, SetStartRun
+Gosub, SetProfileKeybinding
+Gosub, SetMovingHelper
+Gosub, SetGambleHelper
+SetTimer, safeGuard, 300
 Gui Show, w800 h410, %TITLE%
 Return
 
@@ -132,7 +136,7 @@ ReadCfgFile(cfgFileName, ByRef tabs, ByRef hotkeys, ByRef actions, ByRef interva
     {
         generals:={}
         IniRead, ver, %cfgFileName%, General, version
-        if (%VERSION% != %ver%)
+        if (VERSION != ver)
         {
             MsgBox, 配置文件版本不匹配，如有错误请删除配置文件并手动配置。
         }
@@ -346,6 +350,12 @@ SetStartRun:
     {
         GuiControl, Enable, StartRunHKinput
         newstartRunHK=%StartRunHKinput%
+        Loop, %tabslen%
+        {
+            GuiControl, Enable, skillset%A_Index%s6dropdown
+            GuiControl, Enable, skillset%A_Index%s6updown
+            GuiControl, Enable, skillset%A_Index%s6edit
+        }
     }
     Else
     {
@@ -379,10 +389,6 @@ SetStartRun:
         Hotkey, ~+%newstartRunHK%, MainMacro, on
         startRunHK = %newstartRunHK%
     }
-    Gosub, SetProfileKeybinding
-    Gosub, SetMovingHelper
-    Gosub, SetGambleHelper
-    SetTimer, safeGuard, 300
 Return
 
 SetMovingHelper:
