@@ -521,7 +521,7 @@ spamSkillKey1:
             PixelGetColor, cleft, magicXY[1], magicXY[3], rgb
             crgbl:=splitRGB(cleft)
             crgbr:=splitRGB(cright)
-            If !(crgbl[2]>crgbl[1] and crgbl[1]>crgbl[3] and crgbr[2]>crgbr[1] and crgbr[1]>crgbr[3] and crgbr[3]>30)
+            If !(crgbl[2]>crgbl[1] and crgbl[1]>crgbl[3] and crgbr[2]>crgbr[1] and crgbr[1]>crgbr[3] and crgbr[3]>7)
             {
                 send %k%
             }
@@ -547,7 +547,7 @@ spamSkillKey2:
             PixelGetColor, cleft, magicXY[1], magicXY[3], rgb
             crgbl:=splitRGB(cleft)
             crgbr:=splitRGB(cright)
-            If !(crgbl[2]>crgbl[1] and crgbl[1]>crgbl[3] and crgbr[2]>crgbr[1] and crgbr[1]>crgbr[3] and crgbr[3]>30)
+            If !(crgbl[2]>crgbl[1] and crgbl[1]>crgbl[3] and crgbr[2]>crgbr[1] and crgbr[1]>crgbr[3] and crgbr[3]>7)
             {
                 send %k%
             }
@@ -573,7 +573,7 @@ spamSkillKey3:
             PixelGetColor, cleft, magicXY[1], magicXY[3], rgb
             crgbl:=splitRGB(cleft)
             crgbr:=splitRGB(cright)
-            If !(crgbl[2]>crgbl[1] and crgbl[1]>crgbl[3] and crgbr[2]>crgbr[1] and crgbr[1]>crgbr[3] and crgbr[3]>30)
+            If !(crgbl[2]>crgbl[1] and crgbl[1]>crgbl[3] and crgbr[2]>crgbr[1] and crgbr[1]>crgbr[3] and crgbr[3]>7)
             {
                 send %k%
             }
@@ -599,7 +599,7 @@ spamSkillKey4:
             PixelGetColor, cleft, magicXY[1], magicXY[3], rgb
             crgbl:=splitRGB(cleft)
             crgbr:=splitRGB(cright)
-            If !(crgbl[2]>crgbl[1] and crgbl[1]>crgbl[3] and crgbr[2]>crgbr[1] and crgbr[1]>crgbr[3] and crgbr[3]>30)
+            If !(crgbl[2]>crgbl[1] and crgbl[1]>crgbl[3] and crgbr[2]>crgbr[1] and crgbr[1]>crgbr[3] and crgbr[3]>7)
             {
                 send %k%
             }
@@ -623,7 +623,7 @@ spamSkillKey5:
             PixelGetColor, cleft, magicXY[1], magicXY[3], rgb
             crgbl:=splitRGB(cleft)
             crgbr:=splitRGB(cright)
-            If !(crgbl[2]>crgbl[1] and crgbl[1]>crgbl[3] and crgbr[2]>crgbr[1] and crgbr[1]>crgbr[3] and crgbr[3]>30)
+            If !(crgbl[2]>crgbl[1] and crgbl[1]>crgbl[3] and crgbr[2]>crgbr[1] and crgbr[1]>crgbr[3] and crgbr[3]>7)
             {
                 Click
             }
@@ -647,7 +647,7 @@ spamSkillKey6:
             PixelGetColor, cleft, magicXY[1], magicXY[3], rgb
             crgbl:=splitRGB(cleft)
             crgbr:=splitRGB(cright)
-            If !(crgbl[2]>crgbl[1] and crgbl[1]>crgbl[3] and crgbr[2]>crgbr[1] and crgbr[1]>crgbr[3] and crgbr[3]>30)
+            If !(crgbl[2]>crgbl[1] and crgbl[1]>crgbl[3] and crgbr[2]>crgbr[1] and crgbr[1]>crgbr[3] and crgbr[3]>7)
             {
                 Click Right
             }
