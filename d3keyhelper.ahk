@@ -66,7 +66,7 @@ Loop, parse, tabs, `|
     Gui Add, DropDownList, x+5 y120 w70 AltSubmit Choose%pfmv% vskillset%currentTab%movingdropdown gSetMovingHelper, 无||强制站立||强制走位
     Gui Add, Text, vskillset%currentTab%movingtext x+15 y125 +Disabled, 间隔：
     Gui Add, Edit, vskillset%currentTab%movingedit x+5 y120 w61 h21 Number +Disabled
-    Gui Add, Updown, vskillset%currentTab%movingupdown Range20-3000 +Disabled, % others[currentTab].movinginterval
+    Gui Add, Updown, vskillset%currentTab%movingupdown Range0-3000 +Disabled, % others[currentTab].movinginterval
     Gui Add, Text, x490 y+25, 宏启动方式：
     Gui Add, DropDownList, x+5 y160 w90 AltSubmit Choose%pflm% vskillset%currentTab%profilestartmodedropdown, 懒人模式||仅按下时
     if (currentTab>1)
@@ -470,7 +470,15 @@ RunMarco:
             keysOnHold["LShift"]:=1
         case 3:
             GuiControlGet, skillset%currentProfile%movingedit
-            SetTimer, forceMoving, % skillset%currentProfile%movingedit
+            if (skillset%currentProfile%movingedit<20)
+            {
+                send {e Down}
+                keysOnHold["e"]:=1
+            }
+            Else
+            {
+                SetTimer, forceMoving, % skillset%currentProfile%movingedit
+            }
     }
     vRunning:=True 
     vPausing:=False
@@ -723,7 +731,7 @@ SetGambleHelper:
     }
 Return
 
-; ========================================= Hotkeys ====================================
+; ========================================= Hotkeys =======================================
 ~Enter::
 ~T::
 ~M::
