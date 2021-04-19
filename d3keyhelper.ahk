@@ -10,7 +10,7 @@
 
 
 #SingleInstance Force
-#IfWinActive, ahk_class D3 Main Window Class
+; #IfWinActive, ahk_class D3 Main Window Class
 #NoEnv
 #InstallKeybdHook
 SetWorkingDir %A_ScriptDir%
@@ -22,16 +22,16 @@ TITLE:=Format("暗黑3技能连点器 v{:d}   by Oldsand", VERSION)
 D3W:=3440
 D3H:=1440
 
-ReadCfgFile("d3oldsand.ini", tabs, hotkeys, actions, intervals, ivdelays, others, generals)
+currentProfile:=ReadCfgFile("d3oldsand.ini", tabs, hotkeys, actions, intervals, ivdelays, others, generals)
 Gui -MaximizeBox -MinimizeBox +Owner
-tabslen:= ObjCount(StrSplit(tabs, "`|"))
-currentProfile:=1
+tabsarray:=StrSplit(tabs, "`|")
+tabslen:= ObjCount(tabsarray)
 vRunning:=False
 vPausing:=False
 profileKeybinding:={}
 keysOnHold:={}
 Gui Font, s11
-Gui Add, Tab3, x5 y5 w790 h400 gSetTabFocus, %tabs%
+Gui Add, Tab3, x5 y5 w790 h385 vActiveTab gSetTabFocus AltSubmit, %tabs%
 Gui Font
 Loop, parse, tabs, `|
 {
@@ -39,6 +39,7 @@ Loop, parse, tabs, `|
     yFirstLine:=85
     y:=yFirstLine
     Gui Tab, %currentTab%
+    Gui Add, Hotkey, x0 y0 w0 w0
     Loop, 6
     {
         ac:=actions[currentTab][A_Index]
@@ -75,10 +76,7 @@ Loop, parse, tabs, `|
     if (currentTab>1)
     {
         Gui Font, s20
-        Gui Add, Text, center x490 y250 w270, 辅助功能见主设置
-        Gui Font, s10
-        Gui Add, Text, center x490 y330 w250, 提交bug，检查更新:
-        Gui Add, Link, x500 y+5 w250, <a href="https://github.com/WeijieH/D3keyHelper">https://github.com/WeijieH/D3keyHelper</a>
+        Gui Add, Text, center x495 y280 w270, 辅助功能见主设置
         Gui Font
     }
     Else
@@ -86,26 +84,28 @@ Loop, parse, tabs, `|
         smartpause:=generals.enablesmartpause
         enablegamblehelper:=generals.enablegamblehelper
         gambleHK:=generals.gamblehelperhk
-        Gui Add, CheckBox, x490 y245 vextragambleckbox gSetGambleHelper Checked%enablegamblehelper%, 赌博助手:
-        Gui Add, Hotkey, vextragamblehk x+5 y242 w50 gSetGambleHelper, % gambleHK
-        Gui Add, Text, vextragambletext x+5 y245, 发送右键次数
-        Gui Add, Edit, vextragambleedit x+5 y242 w60 Number
+        enablesalvagehelper:=generals.enablesalvagehelper
+        salvageHK:=generals.salvagehelperhk
+        Gui Add, CheckBox, x490 y250 vextragambleckbox gSetGambleHelper Checked%enablegamblehelper%, 赌博助手：
+        Gui Add, Hotkey, vextragamblehk x+5 y247 w50 gSetGambleHelper, % gambleHK
+        Gui Add, Text, vextragambletext x+5 y250, 发送右键次数
+        Gui Add, Edit, vextragambleedit x+5 y247 w60 Number
         Gui Add, Updown, vextragambleupdown Range2-30, % generals.gamblehelpertimes
-        Gui Add, CheckBox, x490 y280 vextrasmartpause Checked%smartpause%, 智能暂停
-        Gui Add, CheckBox, x+20 y280 vextramore1 +Disabled, Coming Soon
-        Gui Add, CheckBox, x+20 y280 vextramore2 +Disabled, Coming Soon
-        Gui Font, s12
-        Gui Add, Text, center x490 y330 w250, 提交bug，检查更新:
-        Gui Add, Link, y+5 w250, <a href="https://github.com/WeijieH/D3keyHelper">https://github.com/WeijieH/D3keyHelper</a>
-        Gui Font
+        Gui Add, CheckBox, x490 y290 vextraSalvageHelperCkbox gSetSalvageHelper Checked%enablesalvagehelper%, 快速拆解：
+        Gui Add, Hotkey, x+5 y287 w50 vextraSalvageHelperHK gSetSalvageHelper, % salvageHK
+        Gui Add, CheckBox, x490 y+25 vextrasmartpause Checked%smartpause%, 智能暂停
+        Gui Add, CheckBox, x+20 vextramore1 +Disabled, Coming Soon
+        Gui Add, CheckBox, x+20 vextramore2 +Disabled, Coming Soon
+        
     }
-    Gui Add, GroupBox, x20 y50 w100 h340, 技能
-    Gui Add, GroupBox, x+20 y50 w120 h340, 策略
-    Gui Add, GroupBox, x+20 y50 w180 h340, 执行间隔 + 随机延迟（毫秒）
+    Gui Add, GroupBox, x20 y50 w100 h330, 技能
+    Gui Add, GroupBox, x+20 y50 w120 h330, 策略
+    Gui Add, GroupBox, x+20 y50 w180 h330, 执行间隔 + 随机延迟（毫秒）
     Gui Add, GroupBox, x+20 y50 w300 h150, 额外设置
-    Gui Add, GroupBox, y+10 w300 h100, 辅助功能
+    Gui Add, GroupBox, y+15 w300 h165, 辅助功能
 }
 Gui Tab
+GuiControl , Choose, ActiveTab, % currentProfile
 
 startRunHK:=generals.starthotkey
 startmethod:=generals.startmethod
@@ -114,6 +114,12 @@ Gui Add, Text, x470 y8, 宏启动暂停快捷键：
 Gui Font
 Gui Add, DropDownList, x+5 y5 w90 AltSubmit Choose%startmethod% vStartRunDropdown gSetStartRun, 鼠标右键||鼠标中键||滚轮向上||滚轮向下||侧键1||侧键2||键盘按键
 Gui Add, Hotkey, x+5 y5 w70 vStartRunHKinput gSetStartRun, %startRunHK%
+skillsetText:=tabsarray[currentProfile]
+Gui Add, Text, x10 y395, 当前激活配置:
+Gui Font, cRed s10
+Gui Add, Text, x+5 vStatuesSkillsetText, % skillsetText
+Gui Font
+Gui Add, Link, x480 y395, 提交bug，检查更新: <a href="https://github.com/WeijieH/D3keyHelper">https://github.com/WeijieH/D3keyHelper</a>
 
 Menu, Tray, NoStandard
 Menu, Tray, Add, 设置
@@ -128,8 +134,9 @@ Gosub, SetStartRun
 Gosub, SetProfileKeybinding
 Gosub, SetMovingHelper
 Gosub, SetGambleHelper
+Gosub, SetSalvageHelper
 SetTimer, safeGuard, 300
-Gui Show, w800 h410, %TITLE%
+Gui Show, w800 h415, %TITLE%
 Return
 
 
@@ -144,13 +151,19 @@ ReadCfgFile(cfgFileName, ByRef tabs, ByRef hotkeys, ByRef actions, ByRef interva
         {
             MsgBox, 配置文件版本不匹配，如有错误请删除配置文件并手动配置。
         }
+        IniRead, currentProfile, %cfgFileName%, General, activatedprofile, 1
         IniRead, enablegamblehelper, %cfgFileName%, General, enablegamblehelper
         IniRead, gamblehelperhk, %cfgFileName%, General, gamblehelperhk
         IniRead, gamblehelpertimes, %cfgFileName%, General, gamblehelpertimes
+        IniRead, enablesalvagehelper, %cfgFileName%, General, enablesalvagehelper
+        IniRead, salvagehelperhk, %cfgFileName%, General, salvagehelperhk
         IniRead, enablesmartpause, %cfgFileName%, General, enablesmartpause
         IniRead, startmethod, %cfgFileName%, General, startmethod
         IniRead, starthotkey, %cfgFileName%, General, starthotkey
-        generals:={"enablegamblehelper":enablegamblehelper ,"gamblehelpertimes":gamblehelpertimes, "gamblehelperhk":gamblehelperhk, "startmethod":startmethod, "starthotkey":starthotkey, "enablesmartpause":enablesmartpause}
+        generals:={"salvagehelperhk":salvagehelperhk, "enablesalvagehelper":enablesalvagehelper
+        , "enablegamblehelper":enablegamblehelper, "gamblehelpertimes":gamblehelpertimes
+        , "gamblehelperhk":gamblehelperhk, "startmethod":startmethod, "starthotkey":starthotkey
+        , "enablesmartpause":enablesmartpause}
 
         IniRead, tabs, %cfgFileName%
         tabs:=StrReplace(StrReplace(tabs, "`n", "`|"), "General|", "")
@@ -195,6 +208,7 @@ ReadCfgFile(cfgFileName, ByRef tabs, ByRef hotkeys, ByRef actions, ByRef interva
     Else
     {
         tabs=配置1|配置2|配置3|配置4
+        currentProfile:=1
         hotkeys:=[]
         actions:=[]
         intervals:=[]
@@ -210,22 +224,29 @@ ReadCfgFile(cfgFileName, ByRef tabs, ByRef hotkeys, ByRef actions, ByRef interva
         }
         generals:={"enablegamblehelper":1 ,"gamblehelpertimes":15, "gamblehelperhk":"F4", "startmethod":7, "starthotkey":"F2", "enablesmartpause":1}
     }
-    Return
+    Return currentProfile
 }
 
 SaveCfgFile(cfgFileName, tabs, VERSION){
+    global currentProfile
     FileDelete, %cfgFileName%
 
     GuiControlGet, extragambleckbox
     GuiControlGet, extragamblehk
     GuiControlGet, extragambleedit
     GuiControlGet, extrasmartpause
+    GuiControlGet, extraSalvageHelperCkbox
+    GuiControlGet, extraSalvageHelperHK
     
     IniWrite, %VERSION%, %cfgFileName%, General, version
+    IniWrite, %currentProfile%, %cfgFileName%, General, activatedprofile
     IniWrite, %extragambleckbox%, %cfgFileName%, General, enablegamblehelper
     IniWrite, %extragamblehk%, %cfgFileName%, General, gamblehelperhk
     IniWrite, %extragambleedit%, %cfgFileName%, General, gamblehelpertimes
     IniWrite, %extrasmartpause%, %cfgFileName%, General, enablesmartpause
+    IniWrite, %extraSalvageHelperCkbox%, %cfgFileName%, General, enablesalvagehelper
+    IniWrite, %extraSalvageHelperHK%, %cfgFileName%, General, salvagehelperhk
+    
 
     GuiControlGet, StartRunDropdown
     GuiControlGet, StartRunHKInput
@@ -292,11 +313,13 @@ splitRGB(vthiscolor){
     Return [vred, vgreen, vblue]
 }
 
-
 ; =====================================Subroutines===================================
 
 SetTabFocus:
-    ControlFocus %A_GuiControl%
+    global currentProfile
+    Gui, Submit, NoHide
+    GuiControl, , StatuesSkillsetText, % tabsarray[ActiveTab]
+    currentProfile:=ActiveTab
 Return
 
 SetProfileKeybinding:
@@ -352,6 +375,8 @@ SwitchProfile:
     if (currentProfile!=profileKeybinding[currentHK])
     {
         currentProfile:=profileKeybinding[currentHK]
+        GuiControl, , StatuesSkillsetText, % tabsarray[currentProfile]
+        GuiControl , Choose, ActiveTab, % tabsarray[currentProfile]
         Gosub, StopMarco
     }
 Return
@@ -762,6 +787,12 @@ gambleHelper:
     Send {RButton %extragambleedit%}
 Return
 
+SalvageHelper:
+    Click
+    sleep 100
+    send {enter}
+Return
+
 safeGuard:
     global vRunning, tabslen
     If !WinActive("ahk_class D3 Main Window Class")
@@ -825,6 +856,29 @@ SetGambleHelper:
     }
 Return
 
+SetSalvageHelper:
+    global salvageHK
+    Gui, Submit, NoHide
+    GuiControlGet, extraSalvageHelperCkbox
+    GuiControlGet, extraSalvageHelperHK
+    Try
+    {
+        Hotkey, ~%salvageHK%, SalvageHelper, off
+    }
+    If extraSalvageHelperCkbox
+    {
+        GuiControl, Enable, extraSalvageHelperHK
+        Try
+        {
+            Hotkey, ~%extraSalvageHelperHK%, SalvageHelper, on
+            salvageHK:=extraSalvageHelperHK
+        }
+    }
+    Else
+    {
+        GuiControl, Disable, extraSalvageHelperHK
+    }
+Return
 ; ========================================= Hotkeys =======================================
 ~Enter::
 ~T::
