@@ -10,7 +10,7 @@
 
 
 #SingleInstance Force
-; #IfWinActive, ahk_class D3 Main Window Class
+#IfWinActive, ahk_class D3 Main Window Class
 #NoEnv
 #InstallKeybdHook
 SetWorkingDir %A_ScriptDir%
