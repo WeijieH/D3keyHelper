@@ -152,12 +152,12 @@ ReadCfgFile(cfgFileName, ByRef tabs, ByRef hotkeys, ByRef actions, ByRef interva
             MsgBox, 配置文件版本不匹配，如有错误请删除配置文件并手动配置。
         }
         IniRead, currentProfile, %cfgFileName%, General, activatedprofile, 1
-        IniRead, enablegamblehelper, %cfgFileName%, General, enablegamblehelper
-        IniRead, gamblehelperhk, %cfgFileName%, General, gamblehelperhk
-        IniRead, gamblehelpertimes, %cfgFileName%, General, gamblehelpertimes
-        IniRead, enablesalvagehelper, %cfgFileName%, General, enablesalvagehelper
-        IniRead, salvagehelperhk, %cfgFileName%, General, salvagehelperhk
-        IniRead, enablesmartpause, %cfgFileName%, General, enablesmartpause
+        IniRead, enablegamblehelper, %cfgFileName%, General, enablegamblehelper, 1
+        IniRead, gamblehelperhk, %cfgFileName%, General, gamblehelperhk, "F4"
+        IniRead, gamblehelpertimes, %cfgFileName%, General, gamblehelpertimes, 15
+        IniRead, enablesalvagehelper, %cfgFileName%, General, enablesalvagehelper, 1
+        IniRead, salvagehelperhk, %cfgFileName%, General, salvagehelperhk, "F5"
+        IniRead, enablesmartpause, %cfgFileName%, General, enablesmartpause, 1
         IniRead, startmethod, %cfgFileName%, General, startmethod
         IniRead, starthotkey, %cfgFileName%, General, starthotkey
         generals:={"salvagehelperhk":salvagehelperhk, "enablesalvagehelper":enablesalvagehelper
