@@ -17,7 +17,7 @@ SetWorkingDir %A_ScriptDir%
 SetBatchLines -1
 CoordMode, Pixel, Client
 
-VERSION:=20210419
+VERSION:=20210420
 TITLE:=Format("暗黑3技能连点器 v{:d}   by Oldsand", VERSION)
 D3W:=3440
 D3H:=1440
@@ -313,10 +313,233 @@ splitRGB(vthiscolor){
     Return [vred, vgreen, vblue]
 }
 
-; =====================================Subroutines===================================
+spamSkillKey1()
+{
+    local
+    global currentProfile, vPausing, D3W, D3H
+    if vPausing
+    {
+        Return
+    }
+    GuiControlGet, skillset%currentProfile%s1hotkey
+    GuiControlGet, skillset%currentProfile%s1dropdown
+    GuiControlGet, skillset%currentProfile%s1delayupdown
+    switch skillset%currentProfile%s1dropdown
+    {
+        case 3:
+            if (skillset%currentProfile%s1delayupdown>1)
+            {
+                Random, delay, 1, skillset%currentProfile%s1delayupdown
+                Sleep, delay
+            }
+            if !vPausing
+            {
+                send % skillset%currentProfile%s1hotkey
+            }
+        case 4:
+            magicXY:=getSkillButtonPos(1, D3W, D3H)
+            PixelGetColor, cright, magicXY[2], magicXY[3], rgb
+            PixelGetColor, cleft, magicXY[1], magicXY[3], rgb
+            crgbl:=splitRGB(cleft)
+            crgbr:=splitRGB(cright)
+            If (!vPausing and !(crgbl[2]>crgbl[1] and crgbl[1]>crgbl[3] and crgbr[2]>crgbr[1] and crgbr[1]>crgbr[3] and crgbr[3]>7))
+            {
+                send % skillset%currentProfile%s1hotkey
+            }
+    }
+    Return
+}
 
+
+spamSkillKey2()
+{
+    local
+    global currentProfile, vPausing, D3W, D3H
+    if vPausing
+    {
+        Return
+    }
+    GuiControlGet, skillset%currentProfile%s2hotkey
+    GuiControlGet, skillset%currentProfile%s2dropdown
+    GuiControlGet, skillset%currentProfile%s2delayupdown
+    switch skillset%currentProfile%s2dropdown
+    {
+        case 3:
+            if (skillset%currentProfile%s2delayupdown>1)
+            {
+                Random, delay, 1, skillset%currentProfile%s2delayupdown
+                Sleep, delay
+            }
+            if !vPausing
+            {
+                send % skillset%currentProfile%s2hotkey
+            }
+        case 4:
+            magicXY:=getSkillButtonPos(2, D3W, D3H)
+            PixelGetColor, cright, magicXY[2], magicXY[3], rgb
+            PixelGetColor, cleft, magicXY[1], magicXY[3], rgb
+            crgbl:=splitRGB(cleft)
+            crgbr:=splitRGB(cright)
+            If (!vPausing and !(crgbl[2]>crgbl[1] and crgbl[1]>crgbl[3] and crgbr[2]>crgbr[1] and crgbr[1]>crgbr[3] and crgbr[3]>7))
+            {
+                send % skillset%currentProfile%s2hotkey
+            }
+    }
+    Return
+}
+
+spamSkillKey3()
+{
+    local
+    global currentProfile, vPausing, D3W, D3H
+    if vPausing
+    {
+        Return
+    }
+    GuiControlGet, skillset%currentProfile%s3hotkey
+    GuiControlGet, skillset%currentProfile%s3dropdown
+    GuiControlGet, skillset%currentProfile%s3delayupdown
+    switch skillset%currentProfile%s3dropdown
+    {
+        case 3:
+            if (skillset%currentProfile%s3delayupdown>1)
+            {
+                Random, delay, 1, skillset%currentProfile%s3delayupdown
+                Sleep, delay
+            }
+            if !vPausing
+            {
+                send % skillset%currentProfile%s3hotkey
+            }
+        case 4:
+            if !vPausing
+            magicXY:=getSkillButtonPos(3, D3W, D3H)
+            PixelGetColor, cright, magicXY[2], magicXY[3], rgb
+            PixelGetColor, cleft, magicXY[1], magicXY[3], rgb
+            crgbl:=splitRGB(cleft)
+            crgbr:=splitRGB(cright)
+            If (!vPausing and !(crgbl[2]>crgbl[1] and crgbl[1]>crgbl[3] and crgbr[2]>crgbr[1] and crgbr[1]>crgbr[3] and crgbr[3]>7))
+            {
+                send % skillset%currentProfile%s3hotkey
+            }
+    }
+    Return
+}
+    
+
+spamSkillKey4()
+{
+    local
+    global currentProfile, vPausing, D3W, D3H
+    if vPausing
+    {
+        Return
+    }
+    GuiControlGet, skillset%currentProfile%s4hotkey
+    GuiControlGet, skillset%currentProfile%s4dropdown
+    GuiControlGet, skillset%currentProfile%s4delayupdown
+    switch skillset%currentProfile%s4dropdown
+    {
+        case 3:
+            if (skillset%currentProfile%s4delayupdown>1)
+            {
+                Random, delay, 1, skillset%currentProfile%s4delayupdown
+                Sleep, delay
+            }
+            if !vPausing
+            {
+                send % skillset%currentProfile%s4hotkey
+            }
+        case 4:
+            magicXY:=getSkillButtonPos(4, D3W, D3H)
+            PixelGetColor, cright, magicXY[2], magicXY[3], rgb
+            PixelGetColor, cleft, magicXY[1], magicXY[3], rgb
+            crgbl:=splitRGB(cleft)
+            crgbr:=splitRGB(cright)
+            If (!vPausing and !(crgbl[2]>crgbl[1] and crgbl[1]>crgbl[3] and crgbr[2]>crgbr[1] and crgbr[1]>crgbr[3] and crgbr[3]>7))
+            {
+                send % skillset%currentProfile%s4hotkey
+            }
+    }
+    Return
+}
+
+
+spamSkillKey5()
+{
+    local
+    global currentProfile, vPausing, D3W, D3H
+    if vPausing
+    {
+        Return
+    }
+    GuiControlGet, skillset%currentProfile%s5dropdown
+    GuiControlGet, skillset%currentProfile%s5delayupdown
+    switch skillset%currentProfile%s5dropdown
+    {
+        case 3:
+            if (skillset%currentProfile%s5delayupdown>1)
+            {
+                Random, delay, 1, skillset%currentProfile%s5delayupdown
+                Sleep, delay
+            }
+            if !vPausing
+            {
+                Click
+            }
+        case 4:
+            magicXY:=getSkillButtonPos(5, D3W, D3H)
+            PixelGetColor, cright, magicXY[2], magicXY[3], rgb
+            PixelGetColor, cleft, magicXY[1], magicXY[3], rgb
+            crgbl:=splitRGB(cleft)
+            crgbr:=splitRGB(cright)
+            If (!vPausing and !(crgbl[2]>crgbl[1] and crgbl[1]>crgbl[3] and crgbr[2]>crgbr[1] and crgbr[1]>crgbr[3] and crgbr[3]>7))
+            {
+                Click
+            }
+    }
+    Return
+}
+
+
+spamSkillKey6()
+{
+    local
+    global currentProfile, vPausing, D3W, D3H
+    if vPausing
+    {
+        Return
+    }
+    GuiControlGet, skillset%currentProfile%s6dropdown
+    GuiControlGet, skillset%currentProfile%s6delayupdown
+    switch skillset%currentProfile%s6dropdown
+    {
+        case 3:
+            if (skillset%currentProfile%s6delayupdown>1)
+            {
+                Random, delay, 1, skillset%currentProfile%s6delayupdown
+                Sleep, delay
+            }
+            if !vPausing
+            {
+                Click Right
+            }
+        case 4:
+            magicXY:=getSkillButtonPos(6, D3W, D3H)
+            PixelGetColor, cright, magicXY[2], magicXY[3], rgb
+            PixelGetColor, cleft, magicXY[1], magicXY[3], rgb
+            crgbl:=splitRGB(cleft)
+            crgbr:=splitRGB(cright)
+            If (!vPausing and !(crgbl[2]>crgbl[1] and crgbl[1]>crgbl[3] and crgbr[2]>crgbr[1] and crgbr[1]>crgbr[3] and crgbr[3]>7))
+            {
+                Click Right
+            }
+    }
+    Return
+}
+
+; =====================================Subroutines===================================
 SetTabFocus:
-    global currentProfile
     Gui, Submit, NoHide
     GuiControl, , StatuesSkillsetText, % tabsarray[ActiveTab]
     currentProfile:=ActiveTab
@@ -325,7 +548,6 @@ Return
 SetProfileKeybinding:
     Gui, Submit, NoHide
     mouseKeyArray:=["", "MButton", "WheelUp", "WheelDown", "XButton1", "XButton2", ""]
-    global profileKeybinding, tabslen
     Loop, %tabslen%
     {
         currentPage:=A_Index
@@ -370,7 +592,6 @@ SetProfileKeybinding:
 Return
 
 SwitchProfile:
-    global profileKeybinding, currentProfile, vRunning
     currentHK:=StrReplace(StrReplace(A_ThisHotkey, "+"), "~")
     if (currentProfile!=profileKeybinding[currentHK])
     {
@@ -383,7 +604,6 @@ Return
 
 SetStartRun:
     Gui, Submit, NoHide
-    global startRunHK, tabslen
     startRunMouseKeyArray:=["RButton", "MButton", "WheelUp", "WheelDown", "XButton1", "XButton2", ""]
     if (StartRunDropdown = 7)
     {
@@ -476,9 +696,7 @@ SetSkillsetDropdown:
 Return
 
 MainMacro:
-    global vRunning, startRunHK, currentProfile, D3W, D3W
     WinGetPos, , , D3W, D3H, A
-    ; c:=getSkillButtonPos(1, D3W, D3H)
     GuiControlGet, skillset%currentProfile%profilestartmodedropdown
     lazy:=skillset%currentProfile%profilestartmodedropdown
     switch lazy
@@ -500,7 +718,6 @@ MainMacro:
 Return
 
 RunMarco:
-    global currentProfile, vRunning, vPausing, keysOnHold
     Gui, Submit, NoHide
     Loop, 6
     {
@@ -549,7 +766,6 @@ RunMarco:
 Return
 
 StopMarco:
-    global keysOnHold, vRunning, vPausing
     Loop, 6
     {
         SetTimer, spamSkillKey%A_Index%, off
@@ -566,215 +782,7 @@ StopMarco:
     vPausing:=False
 Return
 
-spamSkillKey1:
-    global currentProfile, vPausing, D3W, D3H
-    if vPausing
-    {
-        Return
-    }
-    GuiControlGet, skillset%currentProfile%s1hotkey
-    GuiControlGet, skillset%currentProfile%s1dropdown
-    GuiControlGet, skillset%currentProfile%s1delayupdown
-    k:=skillset%currentProfile%s1hotkey
-    switch skillset%currentProfile%s1dropdown
-    {
-        case 3:
-            if (skillset%currentProfile%s1delayupdown>1)
-            {
-                Random, delay, 1, skillset%currentProfile%s1delayupdown
-                Sleep, delay
-            }
-            if !vPausing
-            {
-                send %k%
-            }
-        case 4:
-            magicXY:=getSkillButtonPos(1, D3W, D3H)
-            PixelGetColor, cright, magicXY[2], magicXY[3], rgb
-            PixelGetColor, cleft, magicXY[1], magicXY[3], rgb
-            crgbl:=splitRGB(cleft)
-            crgbr:=splitRGB(cright)
-            If (!vPausing and !(crgbl[2]>crgbl[1] and crgbl[1]>crgbl[3] and crgbr[2]>crgbr[1] and crgbr[1]>crgbr[3] and crgbr[3]>7))
-            {
-                send %k%
-            }
-    }
-Return
-
-spamSkillKey2:
-    global currentProfile, vPausing, D3W, D3H
-    if vPausing
-    {
-        Return
-    }
-    GuiControlGet, skillset%currentProfile%s2hotkey
-    GuiControlGet, skillset%currentProfile%s2dropdown
-    GuiControlGet, skillset%currentProfile%s2delayupdown
-    k:=skillset%currentProfile%s2hotkey
-    switch skillset%currentProfile%s2dropdown
-    {
-        case 3:
-            if (skillset%currentProfile%s2delayupdown>1)
-            {
-                Random, delay, 1, skillset%currentProfile%s2delayupdown
-                Sleep, delay
-            }
-            if !vPausing
-            {
-                send %k%
-            }
-        case 4:
-            magicXY:=getSkillButtonPos(2, D3W, D3H)
-            PixelGetColor, cright, magicXY[2], magicXY[3], rgb
-            PixelGetColor, cleft, magicXY[1], magicXY[3], rgb
-            crgbl:=splitRGB(cleft)
-            crgbr:=splitRGB(cright)
-            If (!vPausing and !(crgbl[2]>crgbl[1] and crgbl[1]>crgbl[3] and crgbr[2]>crgbr[1] and crgbr[1]>crgbr[3] and crgbr[3]>7))
-            {
-                send %k%
-            }
-    }
-Return
-
-spamSkillKey3:
-    global currentProfile, vPausing, D3W, D3H
-    if vPausing
-    {
-        Return
-    }
-    GuiControlGet, skillset%currentProfile%s3hotkey
-    GuiControlGet, skillset%currentProfile%s3dropdown
-    GuiControlGet, skillset%currentProfile%s3delayupdown
-    k:=skillset%currentProfile%s3hotkey
-    switch skillset%currentProfile%s3dropdown
-    {
-        case 3:
-            if (skillset%currentProfile%s3delayupdown>1)
-            {
-                Random, delay, 1, skillset%currentProfile%s3delayupdown
-                Sleep, delay
-            }
-            if !vPausing
-            {
-                send %k%
-            }
-        case 4:
-            if !vPausing
-            magicXY:=getSkillButtonPos(3, D3W, D3H)
-            PixelGetColor, cright, magicXY[2], magicXY[3], rgb
-            PixelGetColor, cleft, magicXY[1], magicXY[3], rgb
-            crgbl:=splitRGB(cleft)
-            crgbr:=splitRGB(cright)
-            If (!vPausing and !(crgbl[2]>crgbl[1] and crgbl[1]>crgbl[3] and crgbr[2]>crgbr[1] and crgbr[1]>crgbr[3] and crgbr[3]>7))
-            {
-                send %k%
-            }
-    }
-Return
-
-spamSkillKey4:
-    global currentProfile, vPausing, D3W, D3H
-    if vPausing
-    {
-        Return
-    }
-    GuiControlGet, skillset%currentProfile%s4hotkey
-    GuiControlGet, skillset%currentProfile%s4dropdown
-    GuiControlGet, skillset%currentProfile%s4delayupdown
-    k:=skillset%currentProfile%s4hotkey
-    switch skillset%currentProfile%s4dropdown
-    {
-        case 3:
-            if (skillset%currentProfile%s4delayupdown>1)
-            {
-                Random, delay, 1, skillset%currentProfile%s4delayupdown
-                Sleep, delay
-            }
-            if !vPausing
-            {
-                send %k%
-            }
-        case 4:
-            magicXY:=getSkillButtonPos(4, D3W, D3H)
-            PixelGetColor, cright, magicXY[2], magicXY[3], rgb
-            PixelGetColor, cleft, magicXY[1], magicXY[3], rgb
-            crgbl:=splitRGB(cleft)
-            crgbr:=splitRGB(cright)
-            If (!vPausing and !(crgbl[2]>crgbl[1] and crgbl[1]>crgbl[3] and crgbr[2]>crgbr[1] and crgbr[1]>crgbr[3] and crgbr[3]>7))
-            {
-                send %k%
-            }
-    }
-Return
-
-spamSkillKey5:
-    global currentProfile, vPausing, D3W, D3H
-    if vPausing
-    {
-        Return
-    }
-    GuiControlGet, skillset%currentProfile%s5dropdown
-    GuiControlGet, skillset%currentProfile%s5delayupdown
-    switch skillset%currentProfile%s5dropdown
-    {
-        case 3:
-            if (skillset%currentProfile%s5delayupdown>1)
-            {
-                Random, delay, 1, skillset%currentProfile%s5delayupdown
-                Sleep, delay
-            }
-            if !vPausing
-            {
-                Click
-            }
-        case 4:
-            magicXY:=getSkillButtonPos(5, D3W, D3H)
-            PixelGetColor, cright, magicXY[2], magicXY[3], rgb
-            PixelGetColor, cleft, magicXY[1], magicXY[3], rgb
-            crgbl:=splitRGB(cleft)
-            crgbr:=splitRGB(cright)
-            If (!vPausing and !(crgbl[2]>crgbl[1] and crgbl[1]>crgbl[3] and crgbr[2]>crgbr[1] and crgbr[1]>crgbr[3] and crgbr[3]>7))
-            {
-                Click
-            }
-    }
-Return
-
-spamSkillKey6:
-    global currentProfile, vPausing, D3W, D3H
-    if vPausing
-    {
-        Return
-    }
-    GuiControlGet, skillset%currentProfile%s6hotkey
-    GuiControlGet, skillset%currentProfile%s6delayupdown
-    switch skillset%currentProfile%s6dropdown
-    {
-        case 3:
-            if (skillset%currentProfile%s6delayupdown>1)
-            {
-                Random, delay, 1, skillset%currentProfile%s6delayupdown
-                Sleep, delay
-            }
-            if !vPausing
-            {
-                Click Right
-            }
-        case 4:
-            magicXY:=getSkillButtonPos(6, D3W, D3H)
-            PixelGetColor, cright, magicXY[2], magicXY[3], rgb
-            PixelGetColor, cleft, magicXY[1], magicXY[3], rgb
-            crgbl:=splitRGB(cleft)
-            crgbr:=splitRGB(cright)
-            If (!vPausing and !(crgbl[2]>crgbl[1] and crgbl[1]>crgbl[3] and crgbr[2]>crgbr[1] and crgbr[1]>crgbr[3] and crgbr[3]>7))
-            {
-                Click Right
-            }
-    }
-Return
-
 forceMoving:
-    global vPausing
     if vPausing
     {
         Return
@@ -794,7 +802,6 @@ SalvageHelper:
 Return
 
 safeGuard:
-    global vRunning, tabslen
     If !WinActive("ahk_class D3 Main Window Class")
     {
         Gosub, StopMarco
@@ -827,7 +834,6 @@ safeGuard:
 Return
 
 SetGambleHelper:
-    global gambleHK
     Gui, Submit, NoHide
     GuiControlGet, extragambleckbox
     GuiControlGet, extragamblehk
@@ -857,7 +863,6 @@ SetGambleHelper:
 Return
 
 SetSalvageHelper:
-    global salvageHK
     Gui, Submit, NoHide
     GuiControlGet, extraSalvageHelperCkbox
     GuiControlGet, extraSalvageHelperHK
@@ -879,6 +884,7 @@ SetSalvageHelper:
         GuiControl, Disable, extraSalvageHelperHK
     }
 Return
+
 ; ========================================= Hotkeys =======================================
 ~Enter::
 ~T::
