@@ -86,16 +86,17 @@ Loop, parse, tabs, `|
         gambleHK:=generals.gamblehelperhk
         enablesalvagehelper:=generals.enablesalvagehelper
         salvageHK:=generals.salvagehelperhk
-        Gui Add, CheckBox, x490 y250 vextragambleckbox gSetGambleHelper Checked%enablegamblehelper%, 赌博助手：
-        Gui Add, Hotkey, vextragamblehk x+5 y247 w50 gSetGambleHelper, % gambleHK
-        Gui Add, Text, vextragambletext x+5 y250, 发送右键次数
-        Gui Add, Edit, vextragambleedit x+5 y247 w60 Number
+        playsound:=generals.enablesoundplay
+        Gui Add, CheckBox, x490 y245 vextragambleckbox gSetGambleHelper Checked%enablegamblehelper%, 赌博助手：
+        Gui Add, Hotkey, vextragamblehk x+5 y242 w50 gSetGambleHelper, % gambleHK
+        Gui Add, Text, vextragambletext x+5 y245, 发送右键次数
+        Gui Add, Edit, vextragambleedit x+5 y242 w60 Number
         Gui Add, Updown, vextragambleupdown Range2-30, % generals.gamblehelpertimes
-        Gui Add, CheckBox, x490 y290 vextraSalvageHelperCkbox gSetSalvageHelper Checked%enablesalvagehelper%, 快速拆解：
-        Gui Add, Hotkey, x+5 y287 w50 vextraSalvageHelperHK gSetSalvageHelper, % salvageHK
-        Gui Add, CheckBox, x490 y+25 vextrasmartpause Checked%smartpause%, 智能暂停
-        Gui Add, CheckBox, x+20 vextramore1 +Disabled, Coming Soon
-        Gui Add, CheckBox, x+20 vextramore2 +Disabled, Coming Soon
+        Gui Add, CheckBox, x490 y280 vextraSalvageHelperCkbox gSetSalvageHelper Checked%enablesalvagehelper%, 快速拆解：
+        Gui Add, Hotkey, x+5 y278 w50 vextraSalvageHelperHK gSetSalvageHelper, % salvageHK
+        Gui Add, CheckBox, x+30 y280 vextrasmartpause Checked%smartpause%, 智能暂停
+        Gui Add, CheckBox, x490 y+20 vextraSoundonProfileSwitch Checked%playsound%, 使用快捷键切换配置成功时播放声音
+        Gui Add, CheckBox, y+20 vextramore2 +Disabled, Coming Soon
         
     }
     Gui Add, GroupBox, x20 y50 w100 h330, 技能
@@ -158,12 +159,13 @@ ReadCfgFile(cfgFileName, ByRef tabs, ByRef hotkeys, ByRef actions, ByRef interva
         IniRead, enablesalvagehelper, %cfgFileName%, General, enablesalvagehelper, 1
         IniRead, salvagehelperhk, %cfgFileName%, General, salvagehelperhk, "F5"
         IniRead, enablesmartpause, %cfgFileName%, General, enablesmartpause, 1
+        IniRead, enablesoundplay, %cfgFileName%, General, enablesoundplay, 0
         IniRead, startmethod, %cfgFileName%, General, startmethod
         IniRead, starthotkey, %cfgFileName%, General, starthotkey
         generals:={"salvagehelperhk":salvagehelperhk, "enablesalvagehelper":enablesalvagehelper
         , "enablegamblehelper":enablegamblehelper, "gamblehelpertimes":gamblehelpertimes
         , "gamblehelperhk":gamblehelperhk, "startmethod":startmethod, "starthotkey":starthotkey
-        , "enablesmartpause":enablesmartpause}
+        , "enablesmartpause":enablesmartpause, "enablesoundplay":enablesoundplay}
 
         IniRead, tabs, %cfgFileName%
         tabs:=StrReplace(StrReplace(tabs, "`n", "`|"), "General|", "")
@@ -222,7 +224,8 @@ ReadCfgFile(cfgFileName, ByRef tabs, ByRef hotkeys, ByRef actions, ByRef interva
             ivdelays.Push([10,10,10,10,10,10])
             others.Push({"profilemethod":1, "profilehotkey":"", "movingmethod":1, "movinginterval":100, "lazymode":1})
         }
-        generals:={"enablegamblehelper":1 ,"gamblehelpertimes":15, "gamblehelperhk":"F4", "startmethod":7, "starthotkey":"F2", "enablesmartpause":1}
+        generals:={"enablegamblehelper":1 ,"gamblehelpertimes":15, "gamblehelperhk":"F4", "startmethod":7, "starthotkey":"F2", "enablesmartpause":1
+        , "salvagehelperhk":"F5", "enablesalvagehelper":1, "enablesoundplay":0}
     }
     Return currentProfile
 }
@@ -237,6 +240,7 @@ SaveCfgFile(cfgFileName, tabs, VERSION){
     GuiControlGet, extrasmartpause
     GuiControlGet, extraSalvageHelperCkbox
     GuiControlGet, extraSalvageHelperHK
+    GuiControlGet, extraSoundonProfileSwitch
     
     IniWrite, %VERSION%, %cfgFileName%, General, version
     IniWrite, %currentProfile%, %cfgFileName%, General, activatedprofile
@@ -246,6 +250,7 @@ SaveCfgFile(cfgFileName, tabs, VERSION){
     IniWrite, %extrasmartpause%, %cfgFileName%, General, enablesmartpause
     IniWrite, %extraSalvageHelperCkbox%, %cfgFileName%, General, enablesalvagehelper
     IniWrite, %extraSalvageHelperHK%, %cfgFileName%, General, salvagehelperhk
+    IniWrite, %extraSoundonProfileSwitch%, %cfgFileName%, General, enablesoundplay
     
 
     GuiControlGet, StartRunDropdown
@@ -599,6 +604,11 @@ SwitchProfile:
         GuiControl, , StatuesSkillsetText, % tabsarray[currentProfile]
         GuiControl , Choose, ActiveTab, % tabsarray[currentProfile]
         Gosub, StopMarco
+        GuiControlGet, extraSoundonProfileSwitch
+        if extraSoundonProfileSwitch
+        {
+            SoundBeep, 750, 250
+        }
     }
 Return
 
