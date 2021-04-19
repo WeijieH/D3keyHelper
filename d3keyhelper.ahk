@@ -17,12 +17,12 @@ SetWorkingDir %A_ScriptDir%
 SetBatchLines -1
 CoordMode, Pixel, Client
 
-VERSION:=20210417
+VERSION:=20210419
 TITLE:=Format("暗黑3技能连点器 v{:d}   by Oldsand", VERSION)
 D3W:=3440
 D3H:=1440
 
-ReadCfgFile("d3oldsand.ini", tabs, hotkeys, actions, intervals, others, generals)
+ReadCfgFile("d3oldsand.ini", tabs, hotkeys, actions, intervals, ivdelays, others, generals)
 Gui -MaximizeBox -MinimizeBox +Owner
 tabslen:= ObjCount(StrSplit(tabs, "`|"))
 currentProfile:=1
@@ -44,15 +44,18 @@ Loop, parse, tabs, `|
         ac:=actions[currentTab][A_Index]
         if A_Index <= 4
         {
-            Gui Add, Hotkey, x45 y%y% w75 vskillset%currentTab%s%A_Index%hotkey, % hotkeys[currentTab][A_Index]
+            Gui Add, Hotkey, x45 y%y% w45 vskillset%currentTab%s%A_Index%hotkey, % hotkeys[currentTab][A_Index]
         }
         Else
         {
-            Gui Add, Edit, x45 y%y% w75 vskillset%currentTab%s%A_Index%hotkey +Disabled, % hotkeys[currentTab][A_Index]
+            Gui Add, Edit, x45 y%y% w45 vskillset%currentTab%s%A_Index%hotkey +Disabled, % hotkeys[currentTab][A_Index]
         }
-        Gui Add, DropDownList, x200 y%y% w80 AltSubmit Choose%ac% vskillset%currentTab%s%A_Index%dropdown, 禁用||按住不放||连点||保持Buff
-        Gui Add, Edit, vskillset%currentTab%s%A_Index%edit x360 y%y% w61 h21 Number
+        Gui Add, DropDownList, x160 y%y% w80 AltSubmit Choose%ac% gSetSkillsetDropdown vskillset%currentTab%s%A_Index%dropdown, 禁用||按住不放||连点||保持Buff
+        Gui Add, Edit, vskillset%currentTab%s%A_Index%edit x300 y%y% w70 Number
         Gui Add, Updown, vskillset%currentTab%s%A_Index%updown Range20-30000, % intervals[currentTab][A_Index]
+        Gui Add, Text, x+10, +
+        Gui Add, Edit, vskillset%currentTab%s%A_Index%delayedit x+10 y%y% w45 Number
+        Gui Add, Updown, vskillset%currentTab%s%A_Index%delayupdown Range0-3000, % ivdelays[currentTab][A_Index]
         y+=50
     }
     Gui Add, Text, x490 y%yFirstLine%, 快速切换：
@@ -96,10 +99,10 @@ Loop, parse, tabs, `|
         Gui Add, Link, y+5 w250, <a href="https://github.com/WeijieH/D3keyHelper">https://github.com/WeijieH/D3keyHelper</a>
         Gui Font
     }
-    Gui Add, GroupBox, x20 y50 w125 h340, 技能
-    Gui Add, GroupBox, x+30 y50 w130 h340, 策略
-    Gui Add, GroupBox, x+30 y50 w110 h340, 执行间隔（毫秒）
-    Gui Add, GroupBox, x+30 y50 w300 h150, 额外设置
+    Gui Add, GroupBox, x20 y50 w100 h340, 技能
+    Gui Add, GroupBox, x+20 y50 w120 h340, 策略
+    Gui Add, GroupBox, x+20 y50 w180 h340, 执行间隔 + 随机延迟（毫秒）
+    Gui Add, GroupBox, x+20 y50 w300 h150, 额外设置
     Gui Add, GroupBox, y+10 w300 h100, 辅助功能
 }
 Gui Tab
@@ -120,6 +123,7 @@ Menu, Tray, Click, 1
 Menu, Tray, Tip, %TITLE%
 Menu, Tray, Icon, , , 1
 
+Gosub, SetSkillsetDropdown
 Gosub, SetStartRun
 Gosub, SetProfileKeybinding
 Gosub, SetMovingHelper
@@ -130,7 +134,7 @@ Return
 
 
 ; =================================== User Functions =====================================
-ReadCfgFile(cfgFileName, ByRef tabs, ByRef hotkeys, ByRef actions, ByRef intervals, ByRef others, ByRef generals){
+ReadCfgFile(cfgFileName, ByRef tabs, ByRef hotkeys, ByRef actions, ByRef intervals, ByRef ivdelays, ByRef others, ByRef generals){
     global VERSION
     if FileExist(cfgFileName)
     {
@@ -153,6 +157,7 @@ ReadCfgFile(cfgFileName, ByRef tabs, ByRef hotkeys, ByRef actions, ByRef interva
         hotkeys:=[]
         actions:=[]
         intervals:=[]
+        ivdelays:=[]
         others:=[]
         Loop, parse, tabs, `|
         {
@@ -160,19 +165,23 @@ ReadCfgFile(cfgFileName, ByRef tabs, ByRef hotkeys, ByRef actions, ByRef interva
             thk:=[]
             tac:=[]
             tiv:=[]
+            tdy:=[]
             tos:={}
             Loop, 6
             {
                 IniRead, hk, %cfgFileName%, %cSection%, skill_%A_Index%
-                IniRead, ac, %cfgFileName%, %cSection%, action_%A_Index%
-                IniRead, iv, %cfgFileName%, %cSection%, interval_%A_Index%
+                IniRead, ac, %cfgFileName%, %cSection%, action_%A_Index%, 1
+                IniRead, iv, %cfgFileName%, %cSection%, interval_%A_Index%, 300
+                IniRead, dy, %cfgFileName%, %cSection%, delay_%A_Index%, 10
                 thk.Push(hk)
                 tac.Push(ac)
                 tiv.Push(iv)
+                tdy.Push(dy)
             }
             hotkeys.Push(thk)
             actions.Push(tac)
             intervals.Push(tiv)
+            ivdelays.Push(tdy)
             IniRead, pfmd, %cfgFileName%, %cSection%, profilehkmethod
             IniRead, pfhk, %cfgFileName%, %cSection%, profilehkkey
             IniRead, pfmv, %cfgFileName%, %cSection%, movingmethod
@@ -189,12 +198,14 @@ ReadCfgFile(cfgFileName, ByRef tabs, ByRef hotkeys, ByRef actions, ByRef interva
         hotkeys:=[]
         actions:=[]
         intervals:=[]
+        ivdelays:=[]
         others:=[]
         Loop, parse, tabs, `|
         {
             hotkeys.Push(["1","2","3","4","左键","右键"])
             actions.Push([1,1,1,1,1,1])
             intervals.Push([300,300,300,300,300,300])
+            ivdelays.Push([10,10,10,10,10,10])
             others.Push({"profilemethod":1, "profilehotkey":"", "movingmethod":1, "movinginterval":100, "lazymode":1})
         }
         generals:={"enablegamblehelper":1 ,"gamblehelpertimes":15, "gamblehelperhk":"F4", "startmethod":7, "starthotkey":"F2", "enablesmartpause":1}
@@ -230,12 +241,15 @@ SaveCfgFile(cfgFileName, tabs, VERSION){
             GuiControlGet, skillset%cSection%s%A_Index%hotkey
             GuiControlGet, skillset%cSection%s%A_Index%dropdown
             GuiControlGet, skillset%cSection%s%A_Index%updown
+            GuiControlGet, skillset%cSection%s%A_Index%delayupdown
             hk:=skillset%cSection%s%A_Index%hotkey
             ac:=skillset%cSection%s%A_Index%dropdown
             iv:=skillset%cSection%s%A_Index%updown
+            dy:=skillset%cSection%s%A_Index%delayupdown
             IniWrite, %hk%, %cfgFileName%, %nSction%, skill_%A_Index%
             IniWrite, %ac%, %cfgFileName%, %nSction%, action_%A_Index%
             IniWrite, %iv%, %cfgFileName%, %nSction%, interval_%A_Index%
+            IniWrite, %dy%, %cfgFileName%, %nSction%, delay_%A_Index%
         }
         GuiControlGet, skillset%cSection%profilekeybindingdropdown
         GuiControlGet, skillset%cSection%profilekeybindinghkbox
@@ -353,8 +367,6 @@ SetStartRun:
         Loop, %tabslen%
         {
             GuiControl, Enable, skillset%A_Index%s6dropdown
-            GuiControl, Enable, skillset%A_Index%s6updown
-            GuiControl, Enable, skillset%A_Index%s6edit
         }
     }
     Else
@@ -367,6 +379,8 @@ SetStartRun:
                 GuiControl, Disable, skillset%A_Index%s6dropdown
                 GuiControl, Disable, skillset%A_Index%s6updown
                 GuiControl, Disable, skillset%A_Index%s6edit
+                GuiControl, Disable, skillset%A_Index%s6delayedit
+                GuiControl, Disable, skillset%A_Index%s6delayupdown
             }
         }
         Else
@@ -374,8 +388,6 @@ SetStartRun:
             Loop, %tabslen%
             {
                 GuiControl, Enable, skillset%A_Index%s6dropdown
-                GuiControl, Enable, skillset%A_Index%s6updown
-                GuiControl, Enable, skillset%A_Index%s6edit
             }
         }
         GuiControl, Disable, StartRunHKinput
@@ -410,6 +422,33 @@ SetMovingHelper:
     }
 Return
 
+SetSkillsetDropdown:
+    Gui, Submit, NoHide
+    Loop, %tabslen%{
+        npage:=A_Index
+        Loop, 6
+        {
+            switch skillset%npage%s%A_Index%dropdown
+            {
+                case 1,2:
+                    GuiControl, Disable, skillset%npage%s%A_Index%edit
+                    GuiControl, Disable, skillset%npage%s%A_Index%updown
+                    GuiControl, Disable, skillset%npage%s%A_Index%delayedit
+                    GuiControl, Disable, skillset%npage%s%A_Index%delayupdown
+                case 3:
+                    GuiControl, Enable, skillset%npage%s%A_Index%edit
+                    GuiControl, Enable, skillset%npage%s%A_Index%updown
+                    GuiControl, Enable, skillset%npage%s%A_Index%delayedit
+                    GuiControl, Enable, skillset%npage%s%A_Index%delayupdown
+                case 4:
+                    GuiControl, Enable, skillset%npage%s%A_Index%edit
+                    GuiControl, Enable, skillset%npage%s%A_Index%updown
+                    GuiControl, Disable, skillset%npage%s%A_Index%delayedit
+                    GuiControl, Disable, skillset%npage%s%A_Index%delayupdown
+            }
+        }
+    }
+Return
 
 MainMacro:
     global vRunning, startRunHK, currentProfile, D3W, D3W
@@ -510,18 +549,27 @@ spamSkillKey1:
     }
     GuiControlGet, skillset%currentProfile%s1hotkey
     GuiControlGet, skillset%currentProfile%s1dropdown
+    GuiControlGet, skillset%currentProfile%s1delayupdown
     k:=skillset%currentProfile%s1hotkey
     switch skillset%currentProfile%s1dropdown
     {
         case 3:
-            send %k%
+            if (skillset%currentProfile%s1delayupdown>1)
+            {
+                Random, delay, 1, skillset%currentProfile%s1delayupdown
+                Sleep, delay
+            }
+            if !vPausing
+            {
+                send %k%
+            }
         case 4:
             magicXY:=getSkillButtonPos(1, D3W, D3H)
             PixelGetColor, cright, magicXY[2], magicXY[3], rgb
             PixelGetColor, cleft, magicXY[1], magicXY[3], rgb
             crgbl:=splitRGB(cleft)
             crgbr:=splitRGB(cright)
-            If !(crgbl[2]>crgbl[1] and crgbl[1]>crgbl[3] and crgbr[2]>crgbr[1] and crgbr[1]>crgbr[3] and crgbr[3]>7)
+            If (!vPausing and !(crgbl[2]>crgbl[1] and crgbl[1]>crgbl[3] and crgbr[2]>crgbr[1] and crgbr[1]>crgbr[3] and crgbr[3]>7))
             {
                 send %k%
             }
@@ -536,18 +584,27 @@ spamSkillKey2:
     }
     GuiControlGet, skillset%currentProfile%s2hotkey
     GuiControlGet, skillset%currentProfile%s2dropdown
+    GuiControlGet, skillset%currentProfile%s2delayupdown
     k:=skillset%currentProfile%s2hotkey
     switch skillset%currentProfile%s2dropdown
     {
         case 3:
-            send %k%
+            if (skillset%currentProfile%s2delayupdown>1)
+            {
+                Random, delay, 1, skillset%currentProfile%s2delayupdown
+                Sleep, delay
+            }
+            if !vPausing
+            {
+                send %k%
+            }
         case 4:
             magicXY:=getSkillButtonPos(2, D3W, D3H)
             PixelGetColor, cright, magicXY[2], magicXY[3], rgb
             PixelGetColor, cleft, magicXY[1], magicXY[3], rgb
             crgbl:=splitRGB(cleft)
             crgbr:=splitRGB(cright)
-            If !(crgbl[2]>crgbl[1] and crgbl[1]>crgbl[3] and crgbr[2]>crgbr[1] and crgbr[1]>crgbr[3] and crgbr[3]>7)
+            If (!vPausing and !(crgbl[2]>crgbl[1] and crgbl[1]>crgbl[3] and crgbr[2]>crgbr[1] and crgbr[1]>crgbr[3] and crgbr[3]>7))
             {
                 send %k%
             }
@@ -562,18 +619,28 @@ spamSkillKey3:
     }
     GuiControlGet, skillset%currentProfile%s3hotkey
     GuiControlGet, skillset%currentProfile%s3dropdown
+    GuiControlGet, skillset%currentProfile%s3delayupdown
     k:=skillset%currentProfile%s3hotkey
     switch skillset%currentProfile%s3dropdown
     {
         case 3:
-            send %k%
+            if (skillset%currentProfile%s3delayupdown>1)
+            {
+                Random, delay, 1, skillset%currentProfile%s3delayupdown
+                Sleep, delay
+            }
+            if !vPausing
+            {
+                send %k%
+            }
         case 4:
+            if !vPausing
             magicXY:=getSkillButtonPos(3, D3W, D3H)
             PixelGetColor, cright, magicXY[2], magicXY[3], rgb
             PixelGetColor, cleft, magicXY[1], magicXY[3], rgb
             crgbl:=splitRGB(cleft)
             crgbr:=splitRGB(cright)
-            If !(crgbl[2]>crgbl[1] and crgbl[1]>crgbl[3] and crgbr[2]>crgbr[1] and crgbr[1]>crgbr[3] and crgbr[3]>7)
+            If (!vPausing and !(crgbl[2]>crgbl[1] and crgbl[1]>crgbl[3] and crgbr[2]>crgbr[1] and crgbr[1]>crgbr[3] and crgbr[3]>7))
             {
                 send %k%
             }
@@ -588,18 +655,27 @@ spamSkillKey4:
     }
     GuiControlGet, skillset%currentProfile%s4hotkey
     GuiControlGet, skillset%currentProfile%s4dropdown
+    GuiControlGet, skillset%currentProfile%s4delayupdown
     k:=skillset%currentProfile%s4hotkey
     switch skillset%currentProfile%s4dropdown
     {
         case 3:
-            send %k%
+            if (skillset%currentProfile%s4delayupdown>1)
+            {
+                Random, delay, 1, skillset%currentProfile%s4delayupdown
+                Sleep, delay
+            }
+            if !vPausing
+            {
+                send %k%
+            }
         case 4:
             magicXY:=getSkillButtonPos(4, D3W, D3H)
             PixelGetColor, cright, magicXY[2], magicXY[3], rgb
             PixelGetColor, cleft, magicXY[1], magicXY[3], rgb
             crgbl:=splitRGB(cleft)
             crgbr:=splitRGB(cright)
-            If !(crgbl[2]>crgbl[1] and crgbl[1]>crgbl[3] and crgbr[2]>crgbr[1] and crgbr[1]>crgbr[3] and crgbr[3]>7)
+            If (!vPausing and !(crgbl[2]>crgbl[1] and crgbl[1]>crgbl[3] and crgbr[2]>crgbr[1] and crgbr[1]>crgbr[3] and crgbr[3]>7))
             {
                 send %k%
             }
@@ -613,17 +689,26 @@ spamSkillKey5:
         Return
     }
     GuiControlGet, skillset%currentProfile%s5dropdown
+    GuiControlGet, skillset%currentProfile%s5delayupdown
     switch skillset%currentProfile%s5dropdown
     {
         case 3:
-            Click
+            if (skillset%currentProfile%s5delayupdown>1)
+            {
+                Random, delay, 1, skillset%currentProfile%s5delayupdown
+                Sleep, delay
+            }
+            if !vPausing
+            {
+                Click
+            }
         case 4:
             magicXY:=getSkillButtonPos(5, D3W, D3H)
             PixelGetColor, cright, magicXY[2], magicXY[3], rgb
             PixelGetColor, cleft, magicXY[1], magicXY[3], rgb
             crgbl:=splitRGB(cleft)
             crgbr:=splitRGB(cright)
-            If !(crgbl[2]>crgbl[1] and crgbl[1]>crgbl[3] and crgbr[2]>crgbr[1] and crgbr[1]>crgbr[3] and crgbr[3]>7)
+            If (!vPausing and !(crgbl[2]>crgbl[1] and crgbl[1]>crgbl[3] and crgbr[2]>crgbr[1] and crgbr[1]>crgbr[3] and crgbr[3]>7))
             {
                 Click
             }
@@ -637,17 +722,26 @@ spamSkillKey6:
         Return
     }
     GuiControlGet, skillset%currentProfile%s6hotkey
+    GuiControlGet, skillset%currentProfile%s6delayupdown
     switch skillset%currentProfile%s6dropdown
     {
         case 3:
-            Click Right
+            if (skillset%currentProfile%s6delayupdown>1)
+            {
+                Random, delay, 1, skillset%currentProfile%s6delayupdown
+                Sleep, delay
+            }
+            if !vPausing
+            {
+                Click Right
+            }
         case 4:
             magicXY:=getSkillButtonPos(6, D3W, D3H)
             PixelGetColor, cright, magicXY[2], magicXY[3], rgb
             PixelGetColor, cleft, magicXY[1], magicXY[3], rgb
             crgbl:=splitRGB(cleft)
             crgbr:=splitRGB(cright)
-            If !(crgbl[2]>crgbl[1] and crgbl[1]>crgbl[3] and crgbr[2]>crgbr[1] and crgbr[1]>crgbr[3] and crgbr[3]>7)
+            If (!vPausing and !(crgbl[2]>crgbl[1] and crgbl[1]>crgbl[3] and crgbr[2]>crgbr[1] and crgbr[1]>crgbr[3] and crgbr[3]>7))
             {
                 Click Right
             }
