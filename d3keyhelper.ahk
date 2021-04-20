@@ -143,6 +143,7 @@ Return
 
 ; =================================== User Functions =====================================
 ReadCfgFile(cfgFileName, ByRef tabs, ByRef hotkeys, ByRef actions, ByRef intervals, ByRef ivdelays, ByRef others, ByRef generals){
+    local
     global VERSION
     if FileExist(cfgFileName)
     {
@@ -230,8 +231,7 @@ ReadCfgFile(cfgFileName, ByRef tabs, ByRef hotkeys, ByRef actions, ByRef interva
     Return currentProfile
 }
 
-SaveCfgFile(cfgFileName, tabs, VERSION){
-    global currentProfile
+SaveCfgFile(cfgFileName, tabs, currentProfile, VERSION){
     FileDelete, %cfgFileName%
 
     GuiControlGet, extragambleckbox
@@ -318,232 +318,61 @@ splitRGB(vthiscolor){
     Return [vred, vgreen, vblue]
 }
 
-spamSkillKey1()
-{
+skillKey(currentProfile, nskill, D3W, D3H){
     local
-    global currentProfile, vPausing, D3W, D3H
-    if vPausing
+    global vPausing
+    GuiControlGet, skillset%currentProfile%s%nskill%hotkey
+    GuiControlGet, skillset%currentProfile%s%nskill%dropdown
+    GuiControlGet, skillset%currentProfile%s%nskill%delayupdown
+    switch nskill
     {
-        Return
+        case 1,2,3,4:
+            k:=skillset%currentProfile%s%nskill%hotkey
+        case 5:
+            k:="LButton"
+        case 6:
+            k:="RButton"
     }
-    GuiControlGet, skillset%currentProfile%s1hotkey
-    GuiControlGet, skillset%currentProfile%s1dropdown
-    GuiControlGet, skillset%currentProfile%s1delayupdown
-    switch skillset%currentProfile%s1dropdown
+    switch skillset%currentProfile%s%nskill%dropdown
     {
         case 3:
-            if (skillset%currentProfile%s1delayupdown>1)
+            if (skillset%currentProfile%s%nskill%delayupdown>1)
             {
-                Random, delay, 1, skillset%currentProfile%s1delayupdown
+                Random, delay, 1, skillset%currentProfile%s%nskill%delayupdown
                 Sleep, delay
             }
             if !vPausing
             {
-                send % skillset%currentProfile%s1hotkey
+                send {%k%}
             }
         case 4:
-            magicXY:=getSkillButtonPos(1, D3W, D3H)
+            magicXY:=getSkillButtonPos(nskill, D3W, D3H)
             PixelGetColor, cright, magicXY[2], magicXY[3], rgb
             PixelGetColor, cleft, magicXY[1], magicXY[3], rgb
             crgbl:=splitRGB(cleft)
             crgbr:=splitRGB(cright)
             If (!vPausing and !(crgbl[2]>crgbl[1] and crgbl[1]>crgbl[3] and crgbr[2]>crgbr[1] and crgbr[1]>crgbr[3] and crgbr[3]>7))
             {
-                send % skillset%currentProfile%s1hotkey
-            }
-    }
-    Return
-}
-
-
-spamSkillKey2()
-{
-    local
-    global currentProfile, vPausing, D3W, D3H
-    if vPausing
-    {
-        Return
-    }
-    GuiControlGet, skillset%currentProfile%s2hotkey
-    GuiControlGet, skillset%currentProfile%s2dropdown
-    GuiControlGet, skillset%currentProfile%s2delayupdown
-    switch skillset%currentProfile%s2dropdown
-    {
-        case 3:
-            if (skillset%currentProfile%s2delayupdown>1)
-            {
-                Random, delay, 1, skillset%currentProfile%s2delayupdown
-                Sleep, delay
-            }
-            if !vPausing
-            {
-                send % skillset%currentProfile%s2hotkey
-            }
-        case 4:
-            magicXY:=getSkillButtonPos(2, D3W, D3H)
-            PixelGetColor, cright, magicXY[2], magicXY[3], rgb
-            PixelGetColor, cleft, magicXY[1], magicXY[3], rgb
-            crgbl:=splitRGB(cleft)
-            crgbr:=splitRGB(cright)
-            If (!vPausing and !(crgbl[2]>crgbl[1] and crgbl[1]>crgbl[3] and crgbr[2]>crgbr[1] and crgbr[1]>crgbr[3] and crgbr[3]>7))
-            {
-                send % skillset%currentProfile%s2hotkey
-            }
-    }
-    Return
-}
-
-spamSkillKey3()
-{
-    local
-    global currentProfile, vPausing, D3W, D3H
-    if vPausing
-    {
-        Return
-    }
-    GuiControlGet, skillset%currentProfile%s3hotkey
-    GuiControlGet, skillset%currentProfile%s3dropdown
-    GuiControlGet, skillset%currentProfile%s3delayupdown
-    switch skillset%currentProfile%s3dropdown
-    {
-        case 3:
-            if (skillset%currentProfile%s3delayupdown>1)
-            {
-                Random, delay, 1, skillset%currentProfile%s3delayupdown
-                Sleep, delay
-            }
-            if !vPausing
-            {
-                send % skillset%currentProfile%s3hotkey
-            }
-        case 4:
-            if !vPausing
-            magicXY:=getSkillButtonPos(3, D3W, D3H)
-            PixelGetColor, cright, magicXY[2], magicXY[3], rgb
-            PixelGetColor, cleft, magicXY[1], magicXY[3], rgb
-            crgbl:=splitRGB(cleft)
-            crgbr:=splitRGB(cright)
-            If (!vPausing and !(crgbl[2]>crgbl[1] and crgbl[1]>crgbl[3] and crgbr[2]>crgbr[1] and crgbr[1]>crgbr[3] and crgbr[3]>7))
-            {
-                send % skillset%currentProfile%s3hotkey
-            }
-    }
-    Return
-}
-    
-
-spamSkillKey4()
-{
-    local
-    global currentProfile, vPausing, D3W, D3H
-    if vPausing
-    {
-        Return
-    }
-    GuiControlGet, skillset%currentProfile%s4hotkey
-    GuiControlGet, skillset%currentProfile%s4dropdown
-    GuiControlGet, skillset%currentProfile%s4delayupdown
-    switch skillset%currentProfile%s4dropdown
-    {
-        case 3:
-            if (skillset%currentProfile%s4delayupdown>1)
-            {
-                Random, delay, 1, skillset%currentProfile%s4delayupdown
-                Sleep, delay
-            }
-            if !vPausing
-            {
-                send % skillset%currentProfile%s4hotkey
-            }
-        case 4:
-            magicXY:=getSkillButtonPos(4, D3W, D3H)
-            PixelGetColor, cright, magicXY[2], magicXY[3], rgb
-            PixelGetColor, cleft, magicXY[1], magicXY[3], rgb
-            crgbl:=splitRGB(cleft)
-            crgbr:=splitRGB(cright)
-            If (!vPausing and !(crgbl[2]>crgbl[1] and crgbl[1]>crgbl[3] and crgbr[2]>crgbr[1] and crgbr[1]>crgbr[3] and crgbr[3]>7))
-            {
-                send % skillset%currentProfile%s4hotkey
-            }
-    }
-    Return
-}
-
-
-spamSkillKey5()
-{
-    local
-    global currentProfile, vPausing, D3W, D3H
-    if vPausing
-    {
-        Return
-    }
-    GuiControlGet, skillset%currentProfile%s5dropdown
-    GuiControlGet, skillset%currentProfile%s5delayupdown
-    switch skillset%currentProfile%s5dropdown
-    {
-        case 3:
-            if (skillset%currentProfile%s5delayupdown>1)
-            {
-                Random, delay, 1, skillset%currentProfile%s5delayupdown
-                Sleep, delay
-            }
-            if !vPausing
-            {
-                Click
-            }
-        case 4:
-            magicXY:=getSkillButtonPos(5, D3W, D3H)
-            PixelGetColor, cright, magicXY[2], magicXY[3], rgb
-            PixelGetColor, cleft, magicXY[1], magicXY[3], rgb
-            crgbl:=splitRGB(cleft)
-            crgbr:=splitRGB(cright)
-            If (!vPausing and !(crgbl[2]>crgbl[1] and crgbl[1]>crgbl[3] and crgbr[2]>crgbr[1] and crgbr[1]>crgbr[3] and crgbr[3]>7))
-            {
-                Click
-            }
-    }
-    Return
-}
-
-
-spamSkillKey6()
-{
-    local
-    global currentProfile, vPausing, D3W, D3H
-    if vPausing
-    {
-        Return
-    }
-    GuiControlGet, skillset%currentProfile%s6dropdown
-    GuiControlGet, skillset%currentProfile%s6delayupdown
-    switch skillset%currentProfile%s6dropdown
-    {
-        case 3:
-            if (skillset%currentProfile%s6delayupdown>1)
-            {
-                Random, delay, 1, skillset%currentProfile%s6delayupdown
-                Sleep, delay
-            }
-            if !vPausing
-            {
-                Click Right
-            }
-        case 4:
-            magicXY:=getSkillButtonPos(6, D3W, D3H)
-            PixelGetColor, cright, magicXY[2], magicXY[3], rgb
-            PixelGetColor, cleft, magicXY[1], magicXY[3], rgb
-            crgbl:=splitRGB(cleft)
-            crgbr:=splitRGB(cright)
-            If (!vPausing and !(crgbl[2]>crgbl[1] and crgbl[1]>crgbl[3] and crgbr[2]>crgbr[1] and crgbr[1]>crgbr[3] and crgbr[3]>7))
-            {
-                Click Right
+                send {%k%}
             }
     }
     Return
 }
 
 ; =====================================Subroutines===================================
+spamSkillKey1:
+spamSkillKey2:
+spamSkillKey3:
+spamSkillKey4:
+spamSkillKey5:
+spamSkillKey6:
+    if !vPausing
+    {
+        nkey:=SubStr(A_ThisLabel, 0, 1)
+        skillKey(currentProfile, nkey, D3W, D3H)
+    }
+Return
+
 SetTabFocus:
     Gui, Submit, NoHide
     GuiControl, , StatuesSkillsetText, % tabsarray[ActiveTab]
@@ -936,7 +765,7 @@ Return
 GuiEscape:
 GuiClose:
     Gui, Submit
-    SaveCfgFile("d3oldsand.ini", tabs, VERSION)
+    SaveCfgFile("d3oldsand.ini", tabs, currentProfile, VERSION)
 Return
 
 设置:
@@ -944,5 +773,5 @@ Return
 Return
 
 退出:
-    SaveCfgFile("d3oldsand.ini", tabs, VERSION)
+    SaveCfgFile("d3oldsand.ini", tabs, currentProfile, VERSION)
 ExitApp
