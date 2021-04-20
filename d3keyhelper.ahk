@@ -118,7 +118,7 @@ Gui Add, Hotkey, x+5 y5 w70 vStartRunHKinput gSetStartRun, %startRunHK%
 skillsetText:=tabsarray[currentProfile]
 Gui Add, Text, x10 y395, 当前激活配置:
 Gui Font, cRed s10
-Gui Add, Text, x+5 vStatuesSkillsetText, % skillsetText
+Gui Add, Text, x+5 w350 vStatuesSkillsetText, % skillsetText
 Gui Font
 Gui Add, Link, x480 y395, 提交bug，检查更新: <a href="https://github.com/WeijieH/D3keyHelper">https://github.com/WeijieH/D3keyHelper</a>
 
