@@ -17,8 +17,8 @@ SetWorkingDir %A_ScriptDir%
 SetBatchLines -1
 CoordMode, Pixel, Client
 
-VERSION:=20210420
-TITLE:=Format("暗黑3技能连点器 v{:d}   by Oldsand", VERSION)
+VERSION:=210421
+TITLE:=Format("暗黑3技能连点器 v1.0.{:d}   by Oldsand", VERSION)
 D3W:=3440
 D3H:=1440
 
@@ -353,7 +353,21 @@ skillKey(currentProfile, nskill, D3W, D3H){
             crgbr:=splitRGB(cright)
             If (!vPausing and !(crgbl[2]>crgbl[1] and crgbl[1]>crgbl[3] and crgbr[2]>crgbr[1] and crgbr[1]>crgbr[3] and crgbr[3]>7))
             {
-                send {%k%}
+                switch nskill
+                {
+                    case 5:
+                        if GetKeyState("LShift")
+                        {
+                            send {%k%}
+                        }
+                        ElseLL
+                        {
+                            send {LShift down}{%k% down}
+                            send {LShift up}{%k% up}
+                        }
+                    Default:
+                        send {%k%}
+                }
             }
     }
     Return
