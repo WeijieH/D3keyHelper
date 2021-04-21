@@ -360,7 +360,7 @@ skillKey(currentProfile, nskill, D3W, D3H){
                         {
                             send {%k%}
                         }
-                        ElseLL
+                        Else
                         {
                             send {LShift down}{%k% down}
                             send {LShift up}{%k% up}
