@@ -161,8 +161,8 @@ ReadCfgFile(cfgFileName, ByRef tabs, ByRef hotkeys, ByRef actions, ByRef interva
         IniRead, salvagehelperhk, %cfgFileName%, General, salvagehelperhk, "F5"
         IniRead, enablesmartpause, %cfgFileName%, General, enablesmartpause, 1
         IniRead, enablesoundplay, %cfgFileName%, General, enablesoundplay, 0
-        IniRead, startmethod, %cfgFileName%, General, startmethod
-        IniRead, starthotkey, %cfgFileName%, General, starthotkey
+        IniRead, startmethod, %cfgFileName%, General, startmethod, 7
+        IniRead, starthotkey, %cfgFileName%, General, starthotkey, "F2"
         generals:={"salvagehelperhk":salvagehelperhk, "enablesalvagehelper":enablesalvagehelper
         , "enablegamblehelper":enablegamblehelper, "gamblehelpertimes":gamblehelpertimes
         , "gamblehelperhk":gamblehelperhk, "startmethod":startmethod, "starthotkey":starthotkey
@@ -198,11 +198,11 @@ ReadCfgFile(cfgFileName, ByRef tabs, ByRef hotkeys, ByRef actions, ByRef interva
             actions.Push(tac)
             intervals.Push(tiv)
             ivdelays.Push(tdy)
-            IniRead, pfmd, %cfgFileName%, %cSection%, profilehkmethod
+            IniRead, pfmd, %cfgFileName%, %cSection%, profilehkmethod, 1
             IniRead, pfhk, %cfgFileName%, %cSection%, profilehkkey
-            IniRead, pfmv, %cfgFileName%, %cSection%, movingmethod
-            IniRead, pfmi, %cfgFileName%, %cSection%, movinginterval
-            IniRead, pflm, %cfgFileName%, %cSection%, lazymode
+            IniRead, pfmv, %cfgFileName%, %cSection%, movingmethod, 1
+            IniRead, pfmi, %cfgFileName%, %cSection%, movinginterval, 100
+            IniRead, pflm, %cfgFileName%, %cSection%, lazymode, 1
             tos:={"profilemethod":pfmd, "profilehotkey":pfhk, "movingmethod":pfmv, "movinginterval":pfmi, "lazymode":pflm}
             others.Push(tos)
         }
@@ -232,7 +232,7 @@ ReadCfgFile(cfgFileName, ByRef tabs, ByRef hotkeys, ByRef actions, ByRef interva
 }
 
 SaveCfgFile(cfgFileName, tabs, currentProfile, VERSION){
-    FileDelete, %cfgFileName%
+    createOrTruncateFile(cfgFileName)
 
     GuiControlGet, extragambleckbox
     GuiControlGet, extragamblehk
@@ -241,7 +241,7 @@ SaveCfgFile(cfgFileName, tabs, currentProfile, VERSION){
     GuiControlGet, extraSalvageHelperCkbox
     GuiControlGet, extraSalvageHelperHK
     GuiControlGet, extraSoundonProfileSwitch
-    
+
     IniWrite, %VERSION%, %cfgFileName%, General, version
     IniWrite, %currentProfile%, %cfgFileName%, General, activatedprofile
     IniWrite, %extragambleckbox%, %cfgFileName%, General, enablegamblehelper
@@ -359,6 +359,23 @@ skillKey(currentProfile, nskill, D3W, D3H){
     Return
 }
 
+createOrTruncateFile(FileName){
+    if (FileName = "")
+    {
+        return
+    }
+    file:=FileOpen(FileName, "w", "UTF-16")
+    if !IsObject(file)
+    {
+        MsgBox 无法创建或写入文件："%FileName%"
+        return
+    }
+    file.Write("; ===============================================`r`n")
+    file.Write("; 欢迎来到“老沙”D3按键宏的配置文件。`r`n")
+    file.Write("; 每个非General区块都对应一套按键配置，可以自由增删。`r`n")
+    file.Write("; ===============================================`r`n")
+    file.Close()
+}
 ; =====================================Subroutines===================================
 spamSkillKey1:
 spamSkillKey2:
