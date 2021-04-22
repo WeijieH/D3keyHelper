@@ -214,10 +214,10 @@ ReadCfgFile(cfgFileName, ByRef tabs, ByRef hotkeys, ByRef actions, ByRef interva
         IniRead, oldsandhelpermethod, %cfgFileName%, General, oldsandhelpermethod, 7
         IniRead, enablegamblehelper, %cfgFileName%, General, enablegamblehelper, 1
         IniRead, gamblehelpertimes, %cfgFileName%, General, gamblehelpertimes, 15
-        IniRead, enablesalvagehelper, %cfgFileName%, General, enablesalvagehelper, 1
+        IniRead, enablesalvagehelper, %cfgFileName%, General, enablesalvagehelper, 0
         IniRead, salvagehelpermethod, %cfgFileName%, General, salvagehelpermethod, 1
-        IniRead, enablesmartpause, %cfgFileName%, General, enablesmartpause, 1
-        IniRead, enablesoundplay, %cfgFileName%, General, enablesoundplay, 0
+        IniRead, enablesmartpause, %cfgFileName%, General, enablesmartpause, 0
+        IniRead, enablesoundplay, %cfgFileName%, General, enablesoundplay, 1
         IniRead, startmethod, %cfgFileName%, General, startmethod, 7
         IniRead, starthotkey, %cfgFileName%, General, starthotkey, F2
         generals:={"oldsandhelpermethod":oldsandhelpermethod, "oldsandhelperhk":oldsandhelperhk
@@ -291,7 +291,7 @@ ReadCfgFile(cfgFileName, ByRef tabs, ByRef hotkeys, ByRef actions, ByRef interva
         }
         generals:={"enablegamblehelper":1 ,"gamblehelpertimes":15, "oldsandhelperhk":"F5"
         , "startmethod":7, "starthotkey":"F2", "enablesmartpause":1, "salvagehelpermethod":1
-        , "oldsandhelpermethod":7, "enablesalvagehelper":1, "enablesoundplay":0}
+        , "oldsandhelpermethod":7, "enablesalvagehelper":0, "enablesoundplay":1}
     }
     Return currentProfile
 }
@@ -463,15 +463,23 @@ createOrTruncateFile(FileName){
 oldsandHelper(){
     WinGetPos, , , D3W, D3H, A
     MouseGetPos, xpos, ypos
+    GuiControlGet, extragambleckbox
+    GuiControlGet, extraSalvageHelperCkbox
+    GuiControlGet, extraSalvageHelperDropdown
     if (xpos<D3W/2)
     {
-        Gosub, gambleHelper
+        if extragambleckbox
+        {
+            Gosub, gambleHelper
+        }
     }
     Else
     {
-        Gosub, SalvageHelper
+        if (extraSalvageHelperCkbox and extraSalvageHelperDropdown=1)
+        {
+            Gosub, SalvageHelper
+        }
     }
-    OutputDebug, odlsand!
     Return
 }
 
