@@ -17,7 +17,7 @@ SetWorkingDir %A_ScriptDir%
 SetBatchLines -1
 CoordMode, Pixel, Client
 
-VERSION:=210421
+VERSION:=210423
 TITLE:=Format("暗黑3技能连点器 v1.1.{:d}   by Oldsand", VERSION)
 MainWindowW:=850
 MainWindowH:=500
