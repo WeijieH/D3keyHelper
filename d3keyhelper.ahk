@@ -366,16 +366,8 @@ SaveCfgFile(cfgFileName, tabs, currentProfile, VERSION){
 }
 
 getSkillButtonPos(buttonID, ww, wh){
-    if (ww<2000)
-    {
-        x1:=(ww/2+67.2*buttonID-391.53+2)*wh/1080
-        x2:=(ww/2+67.2*buttonID-391.53+4)*wh/1080
-    }
-    Else
-    {
-        x1:=(ww/2+90.031*buttonID-523.26+2)*wh/1440
-        x2:=(ww/2+90.031*buttonID-523.26+4)*wh/1440
-    }
+    x1:=ww/2+(90.031*buttonID-523.26+2)*wh/1440
+    x2:=ww/2+(90.031*buttonID-523.26+4)*wh/1440
     y:=0.9222*wh-0.4304
     Return [Round(x1), Round(x2), Round(y)]
 }
