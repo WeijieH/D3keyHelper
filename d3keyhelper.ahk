@@ -37,6 +37,12 @@ tabh:=MainWindowH-30
 extraSettingGroupy:=310
 helperSettingGroupx:=510
 helperSettingGroupy:=40
+helperSettingExtra1y:=helperSettingGroupy+250
+helperSettingExtra2y:=helperSettingExtra1y+30
+helperSettingExtra3y:=helperSettingExtra2y+30
+helperSettingExtra4y:=helperSettingExtra3y+30
+helperSettingExtra3yo:=helperSettingExtra3y-3
+helperSettingExtra4yo:=helperSettingExtra4y-3
 extraSettingLine1y:=extraSettingGroupy+30
 extraSettingLine2y:=extraSettingLine1y+30
 extraSettingLine3y:=extraSettingLine2y+30
@@ -136,6 +142,8 @@ Loop, parse, tabs, `|
         enablesalvagehelper:=generals.enablesalvagehelper
         salvagehelpermethod:=generals.salvagehelpermethod
         playsound:=generals.enablesoundplay
+        usecustomstanding:=generals.customstanding
+        usecustommoving:=generals.custommoving
         Gui Font, cRed s10
         Gui Add, Text, x%helperSettingLinex% y%helperSettingLine1y%, 助手宏启动快捷键：
         Gui Font
@@ -149,9 +157,13 @@ Loop, parse, tabs, `|
         Gui Add, DropDownList, x+5 y%helperSettingLine3yo% w150 AltSubmit vextraSalvageHelperDropdown Choose%salvagehelpermethod%, 快速分解||Coming Soon||Coming Soon
         Gui Add, CheckBox, x%helperSettingLinex% y%helperSettingLine4y% vextramore3 +Disabled, 魔盒重铸助手（Coming Soon）
         Gui Add, CheckBox, x%helperSettingLinex% y%helperSettingLine5y% vextramore4 +Disabled, 魔盒升级助手（Coming Soon）
-        Gui Add, CheckBox, x%helperSettingLinex% y+40 vextraSoundonProfileSwitch Checked%playsound%, 使用快捷键切换配置成功时播放声音
-        Gui Add, CheckBox, x%helperSettingLinex% y+20 vextrasmartpause Checked%smartpause%, 智能暂停
-        Gui Add, CheckBox, y+20 vextramore2 +Disabled, Coming Soon
+        Gui Add, CheckBox, x%helperSettingLinex% y%helperSettingExtra1y% vextraSoundonProfileSwitch Checked%playsound%, 使用快捷键切换配置成功时播放声音
+        Gui Add, CheckBox, x%helperSettingLinex% y%helperSettingExtra2y% vextraSmartPause Checked%smartpause%, 智能暂停
+        Gui Add, CheckBox, x%helperSettingLinex% y%helperSettingExtra3y% vextraCustomStanding gSetCustomStanding Checked%usecustomstanding%, 使用自定义强制站立按键：
+        Gui Add, Hotkey, x+5 y%helperSettingExtra3yo% w70 vextraCustomStandingHK gSetCustomStanding, % generals.customstandinghk
+        Gui Add, CheckBox, x%helperSettingLinex% y%helperSettingExtra4y% vextraCustomMoving gSetCustomMoving Checked%usecustommoving%, 使用自定义强制移动按键：
+        Gui Add, Hotkey, x+5 y%helperSettingExtra4yo% w70 Limit14 vextraCustomMovingHK gSetCustomMoving, % generals.custommovinghk
+        Gui Add, CheckBox, x%helperSettingLinex% y+20 vextramore2 +Disabled, Coming Soon
         
     }
     Gui Add, GroupBox, x20 y%helperSettingGroupy% w475 h260, 按键宏设置
@@ -192,6 +204,8 @@ Gosub, SetGambleHelper
 Gosub, SetSalvageHelper
 Gosub, SetHelperKeybinding
 Gosub, SetQuickPause
+SetCustomStanding()
+SetCustomMoving()
 SetTimer, safeGuard, 300
 Gui Show, w%MainWindowW% h%MainWindowH%, %TITLE%
 Return
@@ -220,11 +234,16 @@ ReadCfgFile(cfgFileName, ByRef tabs, ByRef hotkeys, ByRef actions, ByRef interva
         IniRead, enablesoundplay, %cfgFileName%, General, enablesoundplay, 1
         IniRead, startmethod, %cfgFileName%, General, startmethod, 7
         IniRead, starthotkey, %cfgFileName%, General, starthotkey, F2
+        IniRead, custommoving, %cfgFileName%, General, custommoving, 0
+        IniRead, custommovinghk, %cfgFileName%, General, custommovinghk, e
+        IniRead, customstanding, %cfgFileName%, General, customstanding, 0
+        IniRead, customstandinghk, %cfgFileName%, General, customstandinghk, LShift
         generals:={"oldsandhelpermethod":oldsandhelpermethod, "oldsandhelperhk":oldsandhelperhk
         , "enablesalvagehelper":enablesalvagehelper, "salvagehelpermethod":salvagehelpermethod
         , "enablegamblehelper":enablegamblehelper, "gamblehelpertimes":gamblehelpertimes
         , "startmethod":startmethod, "starthotkey":starthotkey
-        , "enablesmartpause":enablesmartpause, "enablesoundplay":enablesoundplay}
+        , "enablesmartpause":enablesmartpause, "enablesoundplay":enablesoundplay
+        , "custommoving":custommoving, "custommovinghk":custommovinghk, "customstanding":customstanding, "customstandinghk":customstandinghk}
 
         IniRead, tabs, %cfgFileName%
         tabs:=StrReplace(StrReplace(tabs, "`n", "`|"), "General|", "")
@@ -291,7 +310,8 @@ ReadCfgFile(cfgFileName, ByRef tabs, ByRef hotkeys, ByRef actions, ByRef interva
         }
         generals:={"enablegamblehelper":1 ,"gamblehelpertimes":15, "oldsandhelperhk":"F5"
         , "startmethod":7, "starthotkey":"F2", "enablesmartpause":1, "salvagehelpermethod":1
-        , "oldsandhelpermethod":7, "enablesalvagehelper":0, "enablesoundplay":1}
+        , "oldsandhelpermethod":7, "enablesalvagehelper":0, "enablesoundplay":1
+        , "custommoving":0, "custommovinghk":"e", "customstanding":0, "customstandinghk":"LShift"}
     }
     Return currentProfile
 }
@@ -303,21 +323,29 @@ SaveCfgFile(cfgFileName, tabs, currentProfile, VERSION){
     GuiControlGet, helperKeybindingdropdown
     GuiControlGet, helperKeybindingHK
     GuiControlGet, extragambleedit
-    GuiControlGet, extrasmartpause
+    GuiControlGet, extraSmartPause
     GuiControlGet, extraSalvageHelperCkbox
     GuiControlGet, extraSalvageHelperDropdown
     GuiControlGet, extraSoundonProfileSwitch
+    GuiControlGet, extraCustomMoving
+    GuiControlGet, extraCustomMovingHK
+    GuiControlGet, extraCustomStanding
+    GuiControlGet, extraCustomStandingHK
 
     IniWrite, %VERSION%, %cfgFileName%, General, version
     IniWrite, %currentProfile%, %cfgFileName%, General, activatedprofile
     IniWrite, %extragambleckbox%, %cfgFileName%, General, enablegamblehelper
     IniWrite, %extragambleedit%, %cfgFileName%, General, gamblehelpertimes
-    IniWrite, %extrasmartpause%, %cfgFileName%, General, enablesmartpause
+    IniWrite, %extraSmartPause%, %cfgFileName%, General, enablesmartpause
     IniWrite, %extraSalvageHelperCkbox%, %cfgFileName%, General, enablesalvagehelper
     IniWrite, %extraSalvageHelperDropdown%, %cfgFileName%, General, salvagehelpermethod
     IniWrite, %extraSoundonProfileSwitch%, %cfgFileName%, General, enablesoundplay
     IniWrite, %helperKeybindingHK%, %cfgFileName%, General, oldsandhelperhk
     IniWrite, %helperKeybindingdropdown%, %cfgFileName%, General, oldsandhelpermethod
+    IniWrite, %extraCustomMoving%, %cfgFileName%, General, custommoving
+    IniWrite, %extraCustomMovingHK%, %cfgFileName%, General, custommovinghk
+    IniWrite, %extraCustomStanding%, %cfgFileName%, General, customstanding
+    IniWrite, %extraCustomStandingHK%, %cfgFileName%, General, customstandinghk
     
 
     GuiControlGet, StartRunDropdown
@@ -379,7 +407,7 @@ splitRGB(vthiscolor){
     Return [vred, vgreen, vblue]
 }
 
-skillKey(currentProfile, nskill, D3W, D3H){
+skillKey(currentProfile, nskill, D3W, D3H, forceStandingKey){
     local
     global vPausing
     GuiControlGet, skillset%currentProfile%s%nskill%hotkey
@@ -417,14 +445,14 @@ skillKey(currentProfile, nskill, D3W, D3H){
                 switch nskill
                 {
                     case 5:
-                        if GetKeyState("LShift")
+                        if GetKeyState(forceStandingKey)
                         {
                             send {%k%}
                         }
                         Else
                         {
-                            send {LShift down}{%k% down}
-                            send {LShift up}{%k% up}
+                            send {%forceStandingKey% down}{%k% down}
+                            send {%forceStandingKey% up}{%k% up}
                         }
                     Default:
                         send {%k%}
@@ -506,6 +534,41 @@ clickResumeMarco()
     Return
 }
 
+SetCustomStanding(){
+    GuiControlGet, extraCustomStanding
+    if extraCustomStanding
+    {
+        GuiControl, Enable, extraCustomStandingHK
+        GuiControlGet, extraCustomStandingHK
+        if !extraCustomStandingHK
+        {
+            GuiControl,, extraCustomStandingHK, LShift
+        }
+    }
+    Else
+    {
+        GuiControl, Disable, extraCustomStandingHK
+    }
+    Return
+}
+
+SetCustomMoving(){
+    GuiControlGet, extraCustomMoving
+    if extraCustomMoving
+    {
+        GuiControl, Enable, extraCustomMovingHK
+        GuiControlGet, extraCustomMovingHK
+        if !extraCustomMovingHK
+        {
+            GuiControl,, extraCustomMovingHK, e
+        }
+    }
+    Else
+    {
+        GuiControl, Disable, extraCustomMovingHK
+    }
+    Return
+}
 ; =====================================Subroutines===================================
 spamSkillKey1:
 spamSkillKey2:
@@ -516,7 +579,7 @@ spamSkillKey6:
     if !vPausing
     {
         nkey:=SubStr(A_ThisLabel, 0, 1)
-        skillKey(currentProfile, nkey, D3W, D3H)
+        skillKey(currentProfile, nkey, D3W, D3H, forceStandingKey)
     }
 Return
 
@@ -751,8 +814,7 @@ Return
 MainMacro:
     WinGetPos, , , D3W, D3H, A
     GuiControlGet, skillset%currentProfile%profilestartmodedropdown
-    lazy:=skillset%currentProfile%profilestartmodedropdown
-    switch lazy
+    switch skillset%currentProfile%profilestartmodedropdown
     {
         case 1:
              if not vRunning
@@ -772,6 +834,12 @@ Return
 
 RunMarco:
     Gui, Submit, NoHide
+    GuiControlGet, extraCustomStanding
+    GuiControlGet, extraCustomStandingHK
+    forceStandingKey:=extraCustomStanding? extraCustomStandingHK:"LShift"
+    GuiControlGet, extraCustomMoving
+    GuiControlGet, extraCustomMovingHK
+    forceMovingKey:=extraCustomMoving? extraCustomMovingHK:"e"
     Loop, 6
     {
         GuiControlGet, skillset%currentProfile%s%A_Index%dropdown
@@ -800,11 +868,11 @@ RunMarco:
     Switch skillset%currentProfile%movingdropdown
     {
         case 2:
-            send {LShift Down}
-            keysOnHold["LShift"]:=1
+            send {%extraCustomStandingHK% Down}
+            keysOnHold[extraCustomStandingHK]:=1
         case 3:
-            send {e Down}
-            keysOnHold["e"]:=1
+            send {%extraCustomMovingHK% Down}
+            keysOnHold[extraCustomMovingHK]:=1
         case 4:
             GuiControlGet, skillset%currentProfile%movingedit
             SetTimer, forceMoving, % skillset%currentProfile%movingedit
@@ -849,7 +917,7 @@ Return
 forceMoving:
     if !vPausing
     {
-        send e
+        send {%forceMovingKey%}
     }
 Return
 
@@ -932,16 +1000,16 @@ Return
 ~+Enter::
 ~+T::
 ~+M::
-    GuiControlGet, extrasmartpause
-    if extrasmartpause
+    GuiControlGet, extraSmartPause
+    if extraSmartPause
     {
         Gosub, StopMarco
     }
 Return
 
 ~Tab::
-    GuiControlGet, extrasmartpause
-    if extrasmartpause
+    GuiControlGet, extraSmartPause
+    if extraSmartPause
     {
         vPausing:=!vPausing
         if vPausing
