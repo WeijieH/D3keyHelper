@@ -102,10 +102,10 @@ Loop, parse, tabs, `|
     Gui Add, Text, x40 y%extraSettingLine2y%, 走位辅助：
     pfmv:=others[currentTab].movingmethod
     pflm:=others[currentTab].lazymode
-    Gui Add, DropDownList, x+5 y%extraSettingLine2yo% w85 AltSubmit Choose%pfmv% vskillset%currentTab%movingdropdown gSetMovingHelper, 无||强制站立||强制走位
-    Gui Add, Text, vskillset%currentTab%movingtext x+10 y%extraSettingLine2y%, 移动间隔（毫秒）：
+    Gui Add, DropDownList, x+5 y%extraSettingLine2yo% w130 AltSubmit Choose%pfmv% vskillset%currentTab%movingdropdown gSetMovingHelper, 无||强制站立||强制走位（按住不放）||强制走位（连点）
+    Gui Add, Text, vskillset%currentTab%movingtext x+10 y%extraSettingLine2y%, 间隔（毫秒）：
     Gui Add, Edit, vskillset%currentTab%movingedit x+5 y%extraSettingLine2yo% w60 Number
-    Gui Add, Updown, vskillset%currentTab%movingupdown Range0-3000, % others[currentTab].movinginterval
+    Gui Add, Updown, vskillset%currentTab%movingupdown Range20-3000, % others[currentTab].movinginterval
     
     Gui Add, Text, x40 y%extraSettingLine3y%, 宏启动方式：
     Gui Add, DropDownList, x+5 y%extraSettingLine3yo% w90 AltSubmit Choose%pflm% vskillset%currentTab%profilestartmodedropdown, 懒人模式||仅按下时
@@ -705,7 +705,7 @@ SetMovingHelper:
     Gui, Submit, NoHide
     Loop, %tabslen%{
         npage:=A_Index
-        if (skillset%npage%movingdropdown = 3)
+        if (skillset%npage%movingdropdown = 4)
         {
             GuiControl, Enable, skillset%npage%movingtext
             GuiControl, Enable, skillset%npage%movingedit
@@ -803,16 +803,12 @@ RunMarco:
             send {LShift Down}
             keysOnHold["LShift"]:=1
         case 3:
+            send {e Down}
+            keysOnHold["e"]:=1
+        case 4:
             GuiControlGet, skillset%currentProfile%movingedit
-            if (skillset%currentProfile%movingedit<20)
-            {
-                send {e Down}
-                keysOnHold["e"]:=1
-            }
-            Else
-            {
-                SetTimer, forceMoving, % skillset%currentProfile%movingedit
-            }
+            SetTimer, forceMoving, % skillset%currentProfile%movingedit
+
     }
     vRunning:=True 
     vPausing:=False
