@@ -17,7 +17,7 @@ SetWorkingDir %A_ScriptDir%
 SetBatchLines -1
 CoordMode, Pixel, Client
 
-VERSION:=210423
+VERSION:=210424
 TITLE:=Format("暗黑3技能连点器 v1.1.{:d}   by Oldsand", VERSION)
 MainWindowW:=850
 MainWindowH:=500
@@ -413,15 +413,7 @@ skillKey(currentProfile, nskill, D3W, D3H, forceStandingKey){
     GuiControlGet, skillset%currentProfile%s%nskill%hotkey
     GuiControlGet, skillset%currentProfile%s%nskill%dropdown
     GuiControlGet, skillset%currentProfile%s%nskill%delayupdown
-    switch nskill
-    {
-        case 1,2,3,4:
-            k:=skillset%currentProfile%s%nskill%hotkey
-        case 5:
-            k:="LButton"
-        case 6:
-            k:="RButton"
-    }
+    k:=skillset%currentProfile%s%nskill%hotkey
     switch skillset%currentProfile%s%nskill%dropdown
     {
         case 3:
@@ -503,8 +495,7 @@ oldsandHelper(){
     Return
 }
 
-clickPauseMarco(keysOnHold, pausetime, vRunning)
-{
+clickPauseMarco(keysOnHold, pausetime, vRunning){
     if vRunning
     {
         for key, value in keysOnHold
@@ -520,8 +511,7 @@ clickPauseMarco(keysOnHold, pausetime, vRunning)
     Return
 }
 
-clickResumeMarco()
-{
+clickResumeMarco(){
     local
     global keysOnHold, vRunning
     for key, value in keysOnHold
