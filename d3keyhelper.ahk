@@ -17,7 +17,7 @@ SetWorkingDir %A_ScriptDir%
 SetBatchLines -1
 CoordMode, Pixel, Client
 
-VERSION:=210424
+VERSION:=210425
 TITLE:=Format("暗黑3技能连点器 v1.1.{:d}   by Oldsand", VERSION)
 MainWindowW:=850
 MainWindowH:=500
@@ -424,7 +424,7 @@ skillKey(currentProfile, nskill, D3W, D3H, forceStandingKey){
             }
             if !vPausing
             {
-                send {%k%}
+                SendInput {Blind}{%k%}
             }
         case 4:
             magicXY:=getSkillButtonPos(nskill, D3W, D3H)
@@ -439,15 +439,15 @@ skillKey(currentProfile, nskill, D3W, D3H, forceStandingKey){
                     case 5:
                         if GetKeyState(forceStandingKey)
                         {
-                            send {%k%}
+                            SendInput {Blind}{%k%}
                         }
                         Else
                         {
-                            send {%forceStandingKey% down}{%k% down}
-                            send {%forceStandingKey% up}{%k% up}
+                            SendInput {Blind}{%forceStandingKey% down}{%k% down}
+                            SendInput {Blind}{%forceStandingKey% up}{%k% up}
                         }
                     Default:
-                        send {%k%}
+                        SendInput {Blind}{%k%}
                 }
             }
     }
@@ -502,7 +502,7 @@ clickPauseMarco(keysOnHold, pausetime, vRunning){
         {
             if GetKeyState(key)
             {
-                send {%key% up}
+                SendInput {%key% up}
             }
         }
         SetTimer, clickResumeMarco, off
@@ -518,7 +518,7 @@ clickResumeMarco(){
     {
         if (vRunning and !GetKeyState(key))
         {
-            send {%key% down}
+            SendInput {%key% down}
         }
     }
     Return
@@ -667,7 +667,7 @@ SetProfileKeybinding:
             {
                 Hotkey, ~%key%, SwitchProfile, Off
                 Hotkey, ~+%key%, SwitchProfile, Off
-                profileKeybinding.Pop(key)
+                profileKeybinding.Delete(key)
             }
         }
         voption:=skillset%currentPage%profilekeybindingdropdown
@@ -838,14 +838,7 @@ RunMarco:
         {
         Case 2:
             k:=skillset%currentProfile%s%A_Index%hotkey
-            Switch A_Index
-            {
-                case 5:
-                    k:="LButton"
-                case 6:
-                    k:="RButton"
-            }
-            send {%k% Down}
+            SendInput {%k% Down}
             keysOnHold[k]:=1
         Case 3, 4:
             GuiControlGet, skillset%currentProfile%s%A_Index%updown
@@ -858,10 +851,10 @@ RunMarco:
     Switch skillset%currentProfile%movingdropdown
     {
         case 2:
-            send {%extraCustomStandingHK% Down}
+            SendInput {%extraCustomStandingHK% Down}
             keysOnHold[extraCustomStandingHK]:=1
         case 3:
-            send {%extraCustomMovingHK% Down}
+            SendInput {%extraCustomMovingHK% Down}
             keysOnHold[extraCustomMovingHK]:=1
         case 4:
             GuiControlGet, skillset%currentProfile%movingedit
@@ -881,8 +874,8 @@ StopMarco:
     for key, value in keysOnHold.Clone(){
         if GetKeyState(key)
         {
-            send {%key% up}
-            keysOnHold.Pop(key)
+            SendInput {%key% up}
+            keysOnHold.Delete(key)
         }
     }
     vRunning:=False
@@ -907,19 +900,23 @@ Return
 forceMoving:
     if !vPausing
     {
-        send {%forceMovingKey%}
+        SendInput {%forceMovingKey%}
     }
 Return
 
 gambleHelper:
     GuiControlGet, extragambleedit
-    Send {RButton %extragambleedit%}
+    Loop, %extragambleedit%
+    {
+        SendInput {RButton}
+        sleep 35
+    }
 Return
 
 SalvageHelper:
     Click
     sleep 100
-    send {enter}
+    SendInput {enter}
 Return
 
 safeGuard:
@@ -951,7 +948,7 @@ safeGuard:
                 }
             }
         }
-    }   
+    }
 Return
 
 SetGambleHelper:
@@ -1006,14 +1003,14 @@ Return
         {
             for key, value in keysOnHold
             {
-                send {%key% up}
+                SendInput {%key% up}
             }
         }
         Else
         {
             for key, value in keysOnHold
             {
-                send {%key% Down}
+                SendInput {%key% Down}
             }
         }
     }
