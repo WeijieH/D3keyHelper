@@ -924,28 +924,25 @@ safeGuard:
     {
         Gosub, StopMarco
     }
-    Else
+    if vRunning
     {
-        if vRunning
+        Loop, %tabslen%
         {
-            Loop, %tabslen%
+            currentTab:=A_Index
+            Loop, 4
             {
-                currentTab:=A_Index
-                Loop, 4
-                {
-                    GuiControl, Disable, skillset%currentTab%s%A_Index%hotkey
-                }
+                GuiControl, Disable, skillset%currentTab%s%A_Index%hotkey
             }
         }
-        Else
+    }
+    Else
+    {
+        Loop, %tabslen%
         {
-            Loop, %tabslen%
+            currentTab:=A_Index
+            Loop, 4
             {
-                currentTab:=A_Index
-                Loop, 4
-                {
-                    GuiControl, Enable, skillset%currentTab%s%A_Index%hotkey
-                }
+                GuiControl, Enable, skillset%currentTab%s%A_Index%hotkey
             }
         }
     }
