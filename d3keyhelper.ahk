@@ -115,7 +115,7 @@ Loop, parse, tabs, `|
     Gui Add, Edit, vskillset%currentTab%movingedit x+5 y%extraSettingLine2yo% w60 Number
     Gui Add, Updown, vskillset%currentTab%movingupdown Range20-3000, % others[currentTab].movinginterval
     
-    pfusq:=others[currentTab].useskillqueueID
+    pfusq:=others[currentTab].useskillqueue
     Gui Add, Text, x40 y%extraSettingLine3y%, 宏启动方式：
     Gui Add, DropDownList, x+5 y%extraSettingLine3yo% w90 AltSubmit Choose%pflm% vskillset%currentTab%profilestartmodedropdown, 懒人模式||仅按下时
     Gui Add, Checkbox, x+10 y%extraSettingLine3y% Checked%pfusq% hwnduseskillqueueckbox%currentTab%ID vskillset%currentTab%useskillqueueckbox gSetSkillQueue, 使用单线程按键队列（毫秒）：
@@ -164,7 +164,7 @@ Loop, parse, tabs, `|
         Gui Add, CheckBox, x%helperSettingLinex% y%helperSettingLine3y% hwndextraSalvageHelperCkboxID vextraSalvageHelperCkbox gSetSalvageHelper Checked%enablesalvagehelper%, 铁匠分解助手：
         Gui Add, DropDownList, x+5 y%helperSettingLine3yo% w150 AltSubmit vextraSalvageHelperDropdown Choose%salvagehelpermethod%, 快速分解||Coming Soon||Coming Soon
         AddToolTip(extraSalvageHelperCkboxID, "快速分解：按下快捷键即等同于点击鼠标左键+回车`nComing Soon：该功能正在开发中`nComing Soon：该功能正在开发中")
-        Gui Add, CheckBox, x%helperSettingLinex% y%helperSettingLine4y% vextramoIDre3 +Disabled, 魔盒重铸助手（Coming Soon）
+        Gui Add, CheckBox, x%helperSettingLinex% y%helperSettingLine4y% vextramore3 +Disabled, 魔盒重铸助手（Coming Soon）
         Gui Add, CheckBox, x%helperSettingLinex% y%helperSettingLine5y% vextramore4 +Disabled, 魔盒升级助手（Coming Soon）
         Gui Add, CheckBox, x%helperSettingLinex% y%helperSettingExtra1y% vextraSoundonProfileSwitch Checked%playsound%, 使用快捷键切换配置成功时播放声音
         Gui Add, CheckBox, x%helperSettingLinex% y%helperSettingExtra2y% hwndextraSmartPauseID vextraSmartPause Checked%smartpause%, 智能暂停
