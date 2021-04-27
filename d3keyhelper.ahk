@@ -12,12 +12,13 @@
 #SingleInstance Force
 #IfWinActive, ahk_class D3 Main Window Class
 #NoEnv
-#InstallKeybdHook
+#UseHook
 SetWorkingDir %A_ScriptDir%
 SetBatchLines -1
 CoordMode, Pixel, Client
+Process, Priority, , High
 
-VERSION:=210425
+VERSION:=210427
 TITLE:=Format("暗黑3技能连点器 v1.1.{:d}   by Oldsand", VERSION)
 MainWindowW:=850
 MainWindowH:=500
@@ -96,8 +97,9 @@ Loop, parse, tabs, `|
         Gui Add, DropDownList, x+10 y%y% w80 AltSubmit Choose%ac% gSetSkillsetDropdown vskillset%currentTab%s%A_Index%dropdown, 禁用||按住不放||连点||保持Buff
         Gui Add, Edit, vskillset%currentTab%s%A_Index%edit x+20 y%y% w100 Number
         Gui Add, Updown, vskillset%currentTab%s%A_Index%updown Range20-30000, % intervals[currentTab][A_Index]
-        Gui Add, Edit, vskillset%currentTab%s%A_Index%delayedit x+25 y%y% w70 Number
+        Gui Add, Edit, vskillset%currentTab%s%A_Index%delayedit hwndskillset%currentTab%s%A_Index%delayeditID x+25 y%y% w70 Number
         Gui Add, Updown, vskillset%currentTab%s%A_Index%delayupdown Range0-3000, % ivdelays[currentTab][A_Index]
+        AddToolTip(skillset%currentTab%s%A_Index%delayeditID, "这里填入随机延迟的最大值，设为0可以关闭随即延迟")
         y+=35
     }
     Gui Add, Text, x40 y%extraSettingLine1y%, 快速切换至本配置：
@@ -113,8 +115,14 @@ Loop, parse, tabs, `|
     Gui Add, Edit, vskillset%currentTab%movingedit x+5 y%extraSettingLine2yo% w60 Number
     Gui Add, Updown, vskillset%currentTab%movingupdown Range20-3000, % others[currentTab].movinginterval
     
+    pfusq:=others[currentTab].useskillqueueID
     Gui Add, Text, x40 y%extraSettingLine3y%, 宏启动方式：
     Gui Add, DropDownList, x+5 y%extraSettingLine3yo% w90 AltSubmit Choose%pflm% vskillset%currentTab%profilestartmodedropdown, 懒人模式||仅按下时
+    Gui Add, Checkbox, x+10 y%extraSettingLine3y% Checked%pfusq% hwnduseskillqueueckbox%currentTab%ID vskillset%currentTab%useskillqueueckbox gSetSkillQueue, 使用单线程按键队列（毫秒）：
+    AddToolTip(useskillqueueckbox%currentTab%ID, "开启后按键不会被立刻按下而是存储至一个按键队列中`n连点会使技能加入队列头部，保持buff会使技能加入队列尾部")
+    Gui Add, Edit, vskillset%currentTab%useskillqueueedit hwnduseskillqueueedit%currentTab%ID x+0 y%extraSettingLine3yo% w50 Number
+    Gui Add, Updown, vskillset%currentTab%useskillqueueupdown Range20-300, % others[currentTab].useskillqueueinterval
+    AddToolTip(useskillqueueedit%currentTab%ID, "按键队列中的按键会以此间隔一一发送至游戏窗口")
 
     pfqp:=others[currentTab].enablequickpause
     pfqpm1:=others[currentTab].quickpausemethod1
@@ -153,12 +161,14 @@ Loop, parse, tabs, `|
         Gui Add, Text, vextragambletext x+5 y%helperSettingLine2y%, 发送右键次数
         Gui Add, Edit, vextragambleedit x+5 y%helperSettingLine2yo% w60 Number
         Gui Add, Updown, vextragambleupdown Range2-30, % generals.gamblehelpertimes
-        Gui Add, CheckBox, x%helperSettingLinex% y%helperSettingLine3y% vextraSalvageHelperCkbox gSetSalvageHelper Checked%enablesalvagehelper%, 铁匠分解助手：
+        Gui Add, CheckBox, x%helperSettingLinex% y%helperSettingLine3y% hwndextraSalvageHelperCkboxID vextraSalvageHelperCkbox gSetSalvageHelper Checked%enablesalvagehelper%, 铁匠分解助手：
         Gui Add, DropDownList, x+5 y%helperSettingLine3yo% w150 AltSubmit vextraSalvageHelperDropdown Choose%salvagehelpermethod%, 快速分解||Coming Soon||Coming Soon
-        Gui Add, CheckBox, x%helperSettingLinex% y%helperSettingLine4y% vextramore3 +Disabled, 魔盒重铸助手（Coming Soon）
+        AddToolTip(extraSalvageHelperCkboxID, "快速分解：按下快捷键即等同于点击鼠标左键+回车`nComing Soon：该功能正在开发中`nComing Soon：该功能正在开发中")
+        Gui Add, CheckBox, x%helperSettingLinex% y%helperSettingLine4y% vextramoIDre3 +Disabled, 魔盒重铸助手（Coming Soon）
         Gui Add, CheckBox, x%helperSettingLinex% y%helperSettingLine5y% vextramore4 +Disabled, 魔盒升级助手（Coming Soon）
         Gui Add, CheckBox, x%helperSettingLinex% y%helperSettingExtra1y% vextraSoundonProfileSwitch Checked%playsound%, 使用快捷键切换配置成功时播放声音
-        Gui Add, CheckBox, x%helperSettingLinex% y%helperSettingExtra2y% vextraSmartPause Checked%smartpause%, 智能暂停
+        Gui Add, CheckBox, x%helperSettingLinex% y%helperSettingExtra2y% hwndextraSmartPauseID vextraSmartPause Checked%smartpause%, 智能暂停
+        AddToolTip(extraSmartPauseID, "开启后，游戏中按tab键可以暂停宏`n回车键，M键，T键会停止宏")
         Gui Add, CheckBox, x%helperSettingLinex% y%helperSettingExtra3y% vextraCustomStanding gSetCustomStanding Checked%usecustomstanding%, 使用自定义强制站立按键：
         Gui Add, Hotkey, x+5 y%helperSettingExtra3yo% w70 vextraCustomStandingHK gSetCustomStanding, % generals.customstandinghk
         Gui Add, CheckBox, x%helperSettingLinex% y%helperSettingExtra4y% vextraCustomMoving gSetCustomMoving Checked%usecustommoving%, 使用自定义强制移动按键：
@@ -186,7 +196,7 @@ Gui Add, Text, x10 y%ybottomtext%, 当前激活配置:
 Gui Font, cRed s10
 Gui Add, Text, x+5 w350 vStatuesSkillsetText, % skillsetText
 Gui Font
-Gui Add, Link, x530 y%ybottomtext%, 提交bug，检查更新: <a href="https://github.com/WeijieH/D3keyHelper">https://github.com/WeijieH/D3keyHelper</a>
+Gui Add, Link, x510 y%ybottomtext%, 提交bug，检查更新: <a href="https://github.com/WeijieH/D3keyHelper">https://github.com/WeijieH/D3keyHelper</a>
 
 Menu, Tray, NoStandard
 Menu, Tray, Add, 设置
@@ -200,12 +210,13 @@ Gosub, SetSkillsetDropdown
 Gosub, SetStartRun
 Gosub, SetProfileKeybinding
 Gosub, SetMovingHelper
-Gosub, SetGambleHelper
-Gosub, SetSalvageHelper
 Gosub, SetHelperKeybinding
 Gosub, SetQuickPause
+SetGambleHelper()
+SetSalvageHelper()
 SetCustomStanding()
 SetCustomMoving()
+SetSkillQueue()
 SetTimer, safeGuard, 300
 Gui Show, w%MainWindowW% h%MainWindowH%, %TITLE%
 Return
@@ -284,8 +295,11 @@ ReadCfgFile(cfgFileName, ByRef tabs, ByRef hotkeys, ByRef actions, ByRef interva
             IniRead, pfqpm1, %cfgFileName%, %cSection%, quickpausemethod1, 1
             IniRead, pfqpm2, %cfgFileName%, %cSection%, quickpausemethod2, 1
             IniRead, pfqpdy, %cfgFileName%, %cSection%, quickpausedelay, 1500
+            IniRead, pfusq, %cfgFileName%, %cSection%, useskillqueue, 0
+            IniRead, pfusqiv, %cfgFileName%, %cSection%, useskillqueueinterval, 100
             tos:={"profilemethod":pfmd, "profilehotkey":pfhk, "movingmethod":pfmv, "movinginterval":pfmi, "lazymode":pflm
-            , "enablequickpause":pfqp, "quickpausemethod1":pfqpm1, "quickpausemethod2":pfqpm2, "quickpausedelay":pfqpdy}
+            , "enablequickpause":pfqp, "quickpausemethod1":pfqpm1, "quickpausemethod2":pfqpm2, "quickpausedelay":pfqpdy
+            , "useskillqueue":pfusq, "useskillqueueinterval":pfusqiv}
             others.Push(tos)
         }
 
@@ -306,7 +320,8 @@ ReadCfgFile(cfgFileName, ByRef tabs, ByRef hotkeys, ByRef actions, ByRef interva
             intervals.Push([300,300,300,300,300,300])
             ivdelays.Push([10,10,10,10,10,10])
             others.Push({"profilemethod":1, "profilehotkey":"", "movingmethod":1, "movinginterval":100, "lazymode":1
-            , "enablequickpause":0, "quickpausemethod1":1, "quickpausemethod2":1, "quickpausedelay":1500})
+            , "enablequickpause":0, "quickpausemethod1":1, "quickpausemethod2":1, "quickpausedelay":1500
+            , "useskillqueue":0, "useskillqueueinterval":100})
         }
         generals:={"enablegamblehelper":1 ,"gamblehelpertimes":15, "oldsandhelperhk":"F5"
         , "startmethod":7, "starthotkey":"F2", "enablesmartpause":1, "salvagehelpermethod":1
@@ -389,15 +404,18 @@ SaveCfgFile(cfgFileName, tabs, currentProfile, VERSION){
         IniWrite, % skillset%cSection%clickpausedropdown2, %cfgFileName%, %nSction%, quickpausemethod2
         GuiControlGet, skillset%cSection%clickpauseupdown
         IniWrite, % skillset%cSection%clickpauseupdown, %cfgFileName%, %nSction%, quickpausedelay
+        GuiControlGet, skillset%cSection%useskillqueueckbox
+        IniWrite, % skillset%cSection%useskillqueueckbox, %cfgFileName%, %nSction%, useskillqueue
+        GuiControlGet, skillset%cSection%useskillqueueedit
+        IniWrite, % skillset%cSection%useskillqueueedit, %cfgFileName%, %nSction%, useskillqueueinterval
     }
     Return
 }
 
 getSkillButtonPos(buttonID, ww, wh){
-    x1:=ww/2+(90.031*buttonID-523.26+2)*wh/1440
-    x2:=ww/2+(90.031*buttonID-523.26+4)*wh/1440
+    x:=ww/2+(90.031*buttonID-523.26)*wh/1440
     y:=0.9222*wh-0.4304
-    Return [Round(x1), Round(x2), Round(y)]
+    Return [Round(x), Round(y)]
 }
 
 splitRGB(vthiscolor){
@@ -407,9 +425,9 @@ splitRGB(vthiscolor){
     Return [vred, vgreen, vblue]
 }
 
-skillKey(currentProfile, nskill, D3W, D3H, forceStandingKey){
+skillKey(currentProfile, nskill, D3W, D3H, forceStandingKey, useSkillQueue){
     local
-    global vPausing
+    global vPausing, skillQueue
     GuiControlGet, skillset%currentProfile%s%nskill%hotkey
     GuiControlGet, skillset%currentProfile%s%nskill%dropdown
     GuiControlGet, skillset%currentProfile%s%nskill%delayupdown
@@ -424,30 +442,64 @@ skillKey(currentProfile, nskill, D3W, D3H, forceStandingKey){
             }
             if !vPausing
             {
-                SendInput {Blind}{%k%}
+                if useSkillQueue
+                {
+                    if (skillQueue.Count() < 100){
+                        skillQueue.InsertAt(1, k)
+                    }
+                }
+                Else
+                {
+                    Send {Blind}{%k%}
+                }
             }
         case 4:
             magicXY:=getSkillButtonPos(nskill, D3W, D3H)
-            PixelGetColor, cright, magicXY[2], magicXY[3], rgb
-            PixelGetColor, cleft, magicXY[1], magicXY[3], rgb
-            crgbl:=splitRGB(cleft)
-            crgbr:=splitRGB(cright)
-            If (!vPausing and !(crgbl[2]>crgbl[1] and crgbl[1]>crgbl[3] and crgbr[2]>crgbr[1] and crgbr[1]>crgbr[3] and crgbr[3]>7))
+            PixelGetColor, cpixel, magicXY[1], magicXY[2], rgb
+            crgb:=splitRGB(cpixel)
+            If (!vPausing and crgb[1]+crgb[2]+crgb[3] < 220)
             {
                 switch nskill
                 {
                     case 5:
                         if GetKeyState(forceStandingKey)
                         {
-                            SendInput {Blind}{%k%}
+                            if useSkillQueue
+                            {
+                                if (skillQueue.Count() < 100){
+                                    skillQueue.Push(k)
+                                }
+                            }
+                            Else
+                            {
+                                Send {Blind}{%k%}
+                            }
                         }
                         Else
                         {
-                            SendInput {Blind}{%forceStandingKey% down}{%k% down}
-                            SendInput {Blind}{%forceStandingKey% up}{%k% up}
+                            if useSkillQueue
+                            {
+                                if (skillQueue.Count() < 100){
+                                    skillQueue.Push(" ")
+                                }
+                            }
+                            Else
+                            {
+                                Send {Blind}{%forceStandingKey% down}{%k% down}
+                                Send {Blind}{%forceStandingKey% up}{%k% up}
+                            }
                         }
                     Default:
-                        SendInput {Blind}{%k%}
+                        if useSkillQueue
+                        {
+                            if (skillQueue.Count() < 100){
+                                skillQueue.Push(k)
+                            }
+                        }
+                        Else
+                        {
+                            Send {Blind}{%k%}
+                        }
                 }
             }
     }
@@ -502,7 +554,7 @@ clickPauseMarco(keysOnHold, pausetime, vRunning){
         {
             if GetKeyState(key)
             {
-                SendInput {%key% up}
+                Send {%key% up}
             }
         }
         SetTimer, clickResumeMarco, off
@@ -518,7 +570,7 @@ clickResumeMarco(){
     {
         if (vRunning and !GetKeyState(key))
         {
-            SendInput {%key% down}
+            Send {%key% down}
         }
     }
     Return
@@ -559,6 +611,143 @@ SetCustomMoving(){
     }
     Return
 }
+
+SetGambleHelper(){
+    Gui, Submit, NoHide
+    GuiControlGet, extragambleckbox
+    If extragambleckbox
+    {
+        GuiControl, Enable, extragambletext
+        GuiControl, Enable, extragambleedit
+    }
+    Else
+    {
+        GuiControl, Disable, extragambletext
+        GuiControl, Disable, extragambleedit
+    }
+    Return
+}
+
+SetSalvageHelper(){
+    Gui, Submit, NoHide
+    GuiControlGet, extraSalvageHelperCkbox
+    GuiControlGet, extraSalvageHelperHK
+    If extraSalvageHelperCkbox
+    {
+        GuiControl, Enable, extraSalvageHelperDropdown
+    }
+    Else
+    {
+        GuiControl, Disable, extraSalvageHelperDropdown
+    }
+    Return
+}
+
+SetSkillQueue(){
+    local
+    global tabslen
+    Loop, %tabslen%
+    {
+        GuiControlGet, skillset%A_Index%useskillqueueckbox
+        if skillset%A_Index%useskillqueueckbox
+        {
+            GuiControl, Enable, skillset%A_Index%useskillqueueedit
+            GuiControl, Enable, skillset%A_Index%useskillqueueupdown
+        }
+        Else
+        {
+            GuiControl, Disable, skillset%A_Index%useskillqueueedit
+            GuiControl, Disable, skillset%A_Index%useskillqueueupdown
+        }
+    }
+    Return
+}
+
+spamSkillQueue(){
+    local
+    global skillQueue, forceStandingKey
+    if (skillQueue.Count() > 0)
+    {
+        k:=skillQueue.RemoveAt(1)
+        switch k
+        {
+            case " ":
+                Send {Blind}{%forceStandingKey% down}{LButton down}
+                Send {Blind}{%forceStandingKey% up}{LButton up}
+            Default:
+                Send {Blind}{%k%}
+        }
+    }
+    Return
+}
+
+; https://gist.github.com/andreberg/55d003569f0564cd8695
+AddToolTip(con, text, Modify=0){
+    Static TThwnd, GuiHwnd
+    TInfo =
+    UInt := "UInt"
+    Ptr := (A_PtrSize ? "Ptr" : UInt)
+    PtrSize := (A_PtrSize ? A_PtrSize : 4)
+    Str := "Str"
+    WM_USER := 0x400
+    TTM_ADDTOOL := (A_IsUnicode ? WM_USER+50 : WM_USER+4)
+    TTM_UPDATETIPTEXT := (A_IsUnicode ? WM_USER+57 : WM_USER+12)
+    TTM_SETMAXTIPWIDTH := WM_USER+24
+    TTF_IDISHWND := 1
+    TTF_CENTERTIP := 2
+    TTF_RTLREADING := 4
+    TTF_SUBCLASS := 16
+    TTF_TRACK := 0x0020
+    TTF_ABSOLUTE := 0x0080
+    TTF_TRANSPARENT := 0x0100
+    TTF_PARSELINKS := 0x1000
+    If (!TThwnd) {
+        Gui, +LastFound
+        GuiHwnd := WinExist()
+        TThwnd := DllCall("CreateWindowEx"
+                    ,UInt,0
+                    ,Str,"tooltips_class32"
+                    ,UInt,0
+                    ,UInt,2147483648
+                    ,UInt,-2147483648
+                    ,UInt,-2147483648
+                    ,UInt,-2147483648
+                    ,UInt,-2147483648
+                    ,UInt,GuiHwnd
+                    ,UInt,0
+                    ,UInt,0
+                    ,UInt,0)
+    }
+    cbSize := 6*4+6*PtrSize
+    uFlags := TTF_IDISHWND|TTF_SUBCLASS|TTF_PARSELINKS
+    VarSetCapacity(TInfo, cbSize, 0)
+    NumPut(cbSize, TInfo)
+    NumPut(uFlags, TInfo, 4)
+    NumPut(GuiHwnd, TInfo, 8)
+    NumPut(con, TInfo, 8+PtrSize)
+    NumPut(&text, TInfo, 6*4+3*PtrSize)
+    NumPut(0,TInfo, 6*4+6*PtrSize)
+    DetectHiddenWindows, On
+    If (!Modify) {
+        DllCall("SendMessage"
+            ,Ptr,TThwnd
+            ,UInt,TTM_ADDTOOL
+            ,Ptr,0
+            ,Ptr,&TInfo
+            ,Ptr) 
+        DllCall("SendMessage"
+            ,Ptr,TThwnd
+            ,UInt,TTM_SETMAXTIPWIDTH
+            ,Ptr,0
+            ,Ptr,A_ScreenWidth) 
+    }
+    DllCall("SendMessage"
+        ,Ptr,TThwnd
+        ,UInt,TTM_UPDATETIPTEXT
+        ,Ptr,0
+        ,Ptr,&TInfo
+        ,Ptr)
+}
 ; =====================================Subroutines===================================
 spamSkillKey1:
 spamSkillKey2:
@@ -569,7 +758,7 @@ spamSkillKey6:
     if !vPausing
     {
         nkey:=SubStr(A_ThisLabel, 0, 1)
-        skillKey(currentProfile, nkey, D3W, D3H, forceStandingKey)
+        skillKey(currentProfile, nkey, D3W, D3H, forceStandingKey, skillset%currentProfile%useskillqueueckbox)
     }
 Return
 
@@ -651,16 +840,6 @@ SetProfileKeybinding:
     Loop, %tabslen%
     {
         currentPage:=A_Index
-        if (skillset%currentPage%profilekeybindingdropdown = 7)
-        {
-            GuiControl, Enable, skillset%currentPage%profilekeybindinghkbox
-        }
-        Else
-        { 
-            GuiControl, Disable, skillset%currentPage%profilekeybindinghkbox
-        }
-        Gui, Submit, NoHide
-
         for key, value in profileKeybinding.Clone()
         {
             if (value = currentPage)
@@ -670,23 +849,25 @@ SetProfileKeybinding:
                 profileKeybinding.Delete(key)
             }
         }
-        voption:=skillset%currentPage%profilekeybindingdropdown
-        if voption in 2,3,4,5,6
+        switch skillset%currentPage%profilekeybindingdropdown
         {
-            ckey:=mouseKeyArray[voption]
-            Hotkey, ~%ckey%, SwitchProfile, on
-            Hotkey, ~+%ckey%, SwitchProfile, on
-            profileKeybinding[ckey]:=currentPage
-        }
-        else if (voption = 7)
-        {
-            ckey:=skillset%currentPage%profilekeybindinghkbox
-            if (ckey)
-            {
+            case 1:
+                GuiControl, Disable, skillset%currentPage%profilekeybindinghkbox
+            case 2,3,4,5,6:
+                GuiControl, Disable, skillset%currentPage%profilekeybindinghkbox
+                ckey:=mouseKeyArray[skillset%currentPage%profilekeybindingdropdown]
                 Hotkey, ~%ckey%, SwitchProfile, on
                 Hotkey, ~+%ckey%, SwitchProfile, on
                 profileKeybinding[ckey]:=currentPage
-            } 
+            case 7:
+                GuiControl, Enable, skillset%currentPage%profilekeybindinghkbox
+                ckey:=skillset%currentPage%profilekeybindinghkbox
+                if (ckey)
+                {
+                    Hotkey, ~%ckey%, SwitchProfile, on
+                    Hotkey, ~+%ckey%, SwitchProfile, on
+                    profileKeybinding[ckey]:=currentPage
+                } 
         }
     }
 Return
@@ -802,12 +983,15 @@ SetSkillsetDropdown:
 Return
 
 MainMacro:
-    WinGetPos, , , D3W, D3H, A
+    VarSetCapacity(rect, 16)
+    DllCall("GetClientRect", "ptr", WinExist("A"), "ptr", &rect)
+    D3W:=NumGet(rect, 8, "int")
+    D3H:=NumGet(rect, 12, "int")
     GuiControlGet, skillset%currentProfile%profilestartmodedropdown
     switch skillset%currentProfile%profilestartmodedropdown
     {
         case 1:
-             if not vRunning
+            if !vRunning
             {
                 Gosub, RunMarco
             }
@@ -830,6 +1014,7 @@ RunMarco:
     GuiControlGet, extraCustomMoving
     GuiControlGet, extraCustomMovingHK
     forceMovingKey:=extraCustomMoving? extraCustomMovingHK:"e"
+    skillQueue:=[]
     Loop, 6
     {
         GuiControlGet, skillset%currentProfile%s%A_Index%dropdown
@@ -838,7 +1023,7 @@ RunMarco:
         {
         Case 2:
             k:=skillset%currentProfile%s%A_Index%hotkey
-            SendInput {%k% Down}
+            Send {%k% Down}
             keysOnHold[k]:=1
         Case 3, 4:
             GuiControlGet, skillset%currentProfile%s%A_Index%updown
@@ -851,33 +1036,38 @@ RunMarco:
     Switch skillset%currentProfile%movingdropdown
     {
         case 2:
-            SendInput {%extraCustomStandingHK% Down}
+            Send {%extraCustomStandingHK% Down}
             keysOnHold[extraCustomStandingHK]:=1
         case 3:
-            SendInput {%extraCustomMovingHK% Down}
+            Send {%extraCustomMovingHK% Down}
             keysOnHold[extraCustomMovingHK]:=1
         case 4:
             GuiControlGet, skillset%currentProfile%movingedit
             SetTimer, forceMoving, % skillset%currentProfile%movingedit
 
     }
+    if skillset%currentProfile%useskillqueueckbox{
+        GuiControlGet, skillset%currentProfile%useskillqueueupdown
+        SetTimer, spamSkillQueue, % skillset%currentProfile%useskillqueueupdown
+    }
     vRunning:=True 
     vPausing:=False
 Return
 
 StopMarco:
+    SetTimer, spamSkillQueue, off
+    skillQueue:=[]
     Loop, 6
     {
         SetTimer, spamSkillKey%A_Index%, off
     }
     SetTimer, forceMoving, off
-    for key, value in keysOnHold.Clone(){
-        if GetKeyState(key)
-        {
-            SendInput {%key% up}
-            keysOnHold.Delete(key)
+    for key, value in keysOnHold{
+        if GetKeyState(key){
+            Send {%key% up}
         }
     }
+    keysOnHold:={}
     vRunning:=False
     vPausing:=False
 Return
@@ -900,7 +1090,7 @@ Return
 forceMoving:
     if !vPausing
     {
-        SendInput {%forceMovingKey%}
+        Send {%forceMovingKey%}
     }
 Return
 
@@ -908,7 +1098,7 @@ gambleHelper:
     GuiControlGet, extragambleedit
     Loop, %extragambleedit%
     {
-        SendInput {RButton}
+        Send {RButton}
         sleep 35
     }
 Return
@@ -916,7 +1106,7 @@ Return
 SalvageHelper:
     Click
     sleep 100
-    SendInput {enter}
+    Send {enter}
 Return
 
 safeGuard:
@@ -947,36 +1137,6 @@ safeGuard:
         }
     }
 Return
-
-SetGambleHelper:
-    Gui, Submit, NoHide
-    GuiControlGet, extragambleckbox
-    If extragambleckbox
-    {
-        GuiControl, Enable, extragambletext
-        GuiControl, Enable, extragambleedit
-    }
-    Else
-    {
-        GuiControl, Disable, extragambletext
-        GuiControl, Disable, extragambleedit
-    }
-Return
-
-SetSalvageHelper:
-    Gui, Submit, NoHide
-    GuiControlGet, extraSalvageHelperCkbox
-    GuiControlGet, extraSalvageHelperHK
-    If extraSalvageHelperCkbox
-    {
-        GuiControl, Enable, extraSalvageHelperDropdown
-    }
-    Else
-    {
-        GuiControl, Disable, extraSalvageHelperDropdown
-    }
-Return
-
 ; ========================================= Hotkeys =======================================
 ~Enter::
 ~T::
@@ -998,16 +1158,18 @@ Return
         vPausing:=!vPausing
         if vPausing
         {
-            for key, value in keysOnHold
-            {
-                SendInput {%key% up}
+            for key, value in keysOnHold{
+                if GetKeyState(key){
+                    Send {%key% up}
+                }
             }
         }
         Else
         {
-            for key, value in keysOnHold
-            {
-                SendInput {%key% Down}
+            for key, value in keysOnHold{
+                if !GetKeyState(key){
+                    Send {%key% down}
+                }
             }
         }
     }
