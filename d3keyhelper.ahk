@@ -121,8 +121,8 @@ Loop, parse, tabs, `|
     Gui Add, Checkbox, x+10 y%extraSettingLine3y% Checked%pfusq% hwnduseskillqueueckbox%currentTab%ID vskillset%currentTab%useskillqueueckbox gSetSkillQueue, 使用单线程按键队列（毫秒）：
     AddToolTip(useskillqueueckbox%currentTab%ID, "开启后按键不会被立刻按下而是存储至一个按键队列中`n连点会使技能加入队列头部，保持buff会使技能加入队列尾部")
     Gui Add, Edit, vskillset%currentTab%useskillqueueedit hwnduseskillqueueedit%currentTab%ID x+0 y%extraSettingLine3yo% w50 Number
-    Gui Add, Updown, vskillset%currentTab%useskillqueueupdown Range20-300, % others[currentTab].useskillqueueinterval
-    AddToolTip(useskillqueueedit%currentTab%ID, "按键队列中的按键会以此间隔一一发送至游戏窗口")
+    Gui Add, Updown, vskillset%currentTab%useskillqueueupdown Range30-1000, % others[currentTab].useskillqueueinterval
+    AddToolTip(useskillqueueedit%currentTab%ID, "按键队列中的连点按键会以此间隔一一发送至游戏窗口")
 
     pfqp:=others[currentTab].enablequickpause
     pfqpm1:=others[currentTab].quickpausemethod1
@@ -296,7 +296,7 @@ ReadCfgFile(cfgFileName, ByRef tabs, ByRef hotkeys, ByRef actions, ByRef interva
             IniRead, pfqpm2, %cfgFileName%, %cSection%, quickpausemethod2, 1
             IniRead, pfqpdy, %cfgFileName%, %cSection%, quickpausedelay, 1500
             IniRead, pfusq, %cfgFileName%, %cSection%, useskillqueue, 0
-            IniRead, pfusqiv, %cfgFileName%, %cSection%, useskillqueueinterval, 100
+            IniRead, pfusqiv, %cfgFileName%, %cSection%, useskillqueueinterval, 200
             tos:={"profilemethod":pfmd, "profilehotkey":pfhk, "movingmethod":pfmv, "movinginterval":pfmi, "lazymode":pflm
             , "enablequickpause":pfqp, "quickpausemethod1":pfqpm1, "quickpausemethod2":pfqpm2, "quickpausedelay":pfqpdy
             , "useskillqueue":pfusq, "useskillqueueinterval":pfusqiv}
@@ -321,7 +321,7 @@ ReadCfgFile(cfgFileName, ByRef tabs, ByRef hotkeys, ByRef actions, ByRef interva
             ivdelays.Push([10,10,10,10,10,10])
             others.Push({"profilemethod":1, "profilehotkey":"", "movingmethod":1, "movinginterval":100, "lazymode":1
             , "enablequickpause":0, "quickpausemethod1":1, "quickpausemethod2":1, "quickpausedelay":1500
-            , "useskillqueue":0, "useskillqueueinterval":100})
+            , "useskillqueue":0, "useskillqueueinterval":200})
         }
         generals:={"enablegamblehelper":1 ,"gamblehelpertimes":15, "oldsandhelperhk":"F5"
         , "startmethod":7, "starthotkey":"F2", "enablesmartpause":1, "salvagehelpermethod":1
@@ -445,7 +445,7 @@ skillKey(currentProfile, nskill, D3W, D3H, forceStandingKey, useSkillQueue){
                 if useSkillQueue
                 {
                     if (skillQueue.Count() < 100){
-                        skillQueue.InsertAt(1, k)
+                        skillQueue.InsertAt(1, [k, 3])
                     }
                 }
                 Else
@@ -462,38 +462,29 @@ skillKey(currentProfile, nskill, D3W, D3H, forceStandingKey, useSkillQueue){
                 switch nskill
                 {
                     case 5:
-                        if GetKeyState(forceStandingKey)
+                        if useSkillQueue
                         {
-                            if useSkillQueue
-                            {
-                                if (skillQueue.Count() < 100){
-                                    skillQueue.Push(k)
-                                }
-                            }
-                            Else
-                            {
-                                Send {Blind}{%k%}
+                            if (skillQueue.Count() < 100){
+                                skillQueue.Push([k, 4])
                             }
                         }
                         Else
                         {
-                            if useSkillQueue
+                            if GetKeyState(forceStandingKey)
                             {
-                                if (skillQueue.Count() < 100){
-                                    skillQueue.Push(" ")
-                                }
+                                Send {Blind}{%k%}
                             }
                             Else
                             {
                                 Send {Blind}{%forceStandingKey% down}{%k% down}
-                                Send {Blind}{%forceStandingKey% up}{%k% up}
+                                Send {Blind}{%k% up}{%forceStandingKey% up}
                             }
                         }
                     Default:
                         if useSkillQueue
                         {
                             if (skillQueue.Count() < 100){
-                                skillQueue.Push(k)
+                                skillQueue.Push([k, 4])
                             }
                         }
                         Else
@@ -663,19 +654,40 @@ SetSkillQueue(){
     Return
 }
 
-spamSkillQueue(){
+spamSkillQueue(inv){
     local
-    global skillQueue, forceStandingKey
-    if (skillQueue.Count() > 0)
+    global skillQueue, forceStandingKey, keysOnHold
+    while (skillQueue.Count() > 0)
     {
-        k:=skillQueue.RemoveAt(1)
-        switch k
+        _k:=skillQueue.RemoveAt(1)
+        k:=_k[1]
+        switch _k[1]
         {
-            case " ":
-                Send {Blind}{%forceStandingKey% down}{LButton down}
-                Send {Blind}{%forceStandingKey% up}{LButton up}
+            case "LButton":
+                switch _k[2]
+                {
+                    case 4:
+                        if GetKeyState(forceStandingKey)
+                        {
+                            Send {Blind}{%k%}
+                        }
+                        Else
+                        {
+                            Send {Blind}{%forceStandingKey% down}{%k% down}
+                            Send {Blind}{%k% up}{%forceStandingKey% up}
+                        }
+                    Default:
+                        Send {Blind}{%k%}
+                }
             Default:
+                if (_k[2] = 3){
+                    sleep inv*0.4
+                }
                 Send {Blind}{%k%}
+                if (_k[2] = 3){
+                    sleep inv*0.6
+                    Break
+                }
         }
     }
     Return
@@ -1048,14 +1060,17 @@ RunMarco:
     }
     if skillset%currentProfile%useskillqueueckbox{
         GuiControlGet, skillset%currentProfile%useskillqueueupdown
-        SetTimer, spamSkillQueue, % skillset%currentProfile%useskillqueueupdown
+        sqfunc:=Func("spamSkillQueue").Bind(skillset%currentProfile%useskillqueueupdown)
+        SetTimer, %sqfunc%, % skillset%currentProfile%useskillqueueupdown
     }
     vRunning:=True 
     vPausing:=False
 Return
 
 StopMarco:
-    SetTimer, spamSkillQueue, off
+    if IsObject(sqfunc){
+        SetTimer, %sqfunc%, off
+    }
     skillQueue:=[]
     Loop, 6
     {
@@ -1099,7 +1114,7 @@ gambleHelper:
     Loop, %extragambleedit%
     {
         Send {RButton}
-        sleep 35
+        sleep 20
     }
 Return
 
