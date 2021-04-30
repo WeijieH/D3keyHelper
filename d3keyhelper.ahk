@@ -16,10 +16,11 @@
 SetWorkingDir %A_ScriptDir%
 SetBatchLines -1
 CoordMode, Pixel, Client
+CoordMode, Mouse, Client
 Process, Priority, , High
 
-VERSION:=210427
-TITLE:=Format("暗黑3技能连点器 v1.1.{:d}   by Oldsand", VERSION)
+VERSION:=210501
+TITLE:=Format("暗黑3技能连点器 v1.2.{:d}   by Oldsand", VERSION)
 MainWindowW:=850
 MainWindowH:=500
 
@@ -29,16 +30,25 @@ tabsarray:=StrSplit(tabs, "`|")
 tabslen:= ObjCount(tabsarray)
 vRunning:=False
 vPausing:=False
+helperDelay:=100
+helperRunning:=False
+helperBreak:=False
+helperNonEmpty:=[]
+safezone:={}
+Loop, Parse, % generals.safezone, CSV
+{
+    safezone[A_LoopField]:=1
+}
 profileKeybinding:={}
 keysOnHold:={}
 DblClickTime:=DllCall("GetDoubleClickTime", "UInt")
 
-tabw:=MainWindowW-10
+tabw:=MainWindowW-350
 tabh:=MainWindowH-30
 extraSettingGroupy:=310
 helperSettingGroupx:=510
 helperSettingGroupy:=40
-helperSettingExtra1y:=helperSettingGroupy+250
+helperSettingExtra1y:=helperSettingGroupy+265
 helperSettingExtra2y:=helperSettingExtra1y+30
 helperSettingExtra3y:=helperSettingExtra2y+30
 helperSettingExtra4y:=helperSettingExtra3y+30
@@ -53,11 +63,12 @@ extraSettingLine2yo:=extraSettingLine2y-3
 extraSettingLine3yo:=extraSettingLine3y-3
 extraSettingLine4yo:=extraSettingLine4y-3
 helperSettingLinex:=helperSettingGroupx+20
-helperSettingLine1y:=helperSettingGroupy+35
+helperSettingLine1y:=helperSettingGroupy+30
 helperSettingLine2y:=helperSettingLine1y+35
 helperSettingLine3y:=helperSettingLine2y+35
 helperSettingLine4y:=helperSettingLine3y+35
 helperSettingLine5y:=helperSettingLine4y+35
+helperSettingLine6y:=helperSettingLine5y+35
 helperSettingLine1yo:=helperSettingLine1y-3
 helperSettingLine2yo:=helperSettingLine2y-3
 helperSettingLine3yo:=helperSettingLine3y-3
@@ -135,53 +146,49 @@ Loop, parse, tabs, `|
     Gui Add, Updown, vskillset%currentTab%clickpauseupdown Range500-5000, % others[currentTab].quickpausedelay
     Gui Add, Text, x+5 y%extraSettingLine4y% vskillset%currentTab%clickpausetext2, 毫秒
     
-    if (currentTab>1)
-    {
-        Gui Font, s20
-        Gui Add, Text, center x540 y240 w270, 辅助功能见主设置
-        Gui Font
-    }
-    Else
-    {
-        oldsandhelperhk:=generals.oldsandhelperhk
-        oldsandhelpermethod:=generals.oldsandhelpermethod
-        smartpause:=generals.enablesmartpause
-        enablegamblehelper:=generals.enablegamblehelper
-        enablesalvagehelper:=generals.enablesalvagehelper
-        salvagehelpermethod:=generals.salvagehelpermethod
-        playsound:=generals.enablesoundplay
-        usecustomstanding:=generals.customstanding
-        usecustommoving:=generals.custommoving
-        Gui Font, cRed s10
-        Gui Add, Text, x%helperSettingLinex% y%helperSettingLine1y%, 助手宏启动快捷键：
-        Gui Font
-        Gui Add, DropDownList, x+0 y%helperSettingLine1yo% w70 AltSubmit Choose%oldsandhelpermethod% vhelperKeybindingdropdown gSetHelperKeybinding, 无||鼠标中键||滚轮向上||滚轮向下||侧键1||侧键2||键盘按键
-        Gui Add, Hotkey, x+5 w70 vhelperKeybindingHK gSetHelperKeybinding, %oldsandhelperhk%
-        Gui Add, CheckBox, x%helperSettingLinex% y%helperSettingLine2y% vextragambleckbox gSetGambleHelper Checked%enablegamblehelper%, 血岩赌博助手：
-        Gui Add, Text, vextragambletext x+5 y%helperSettingLine2y%, 发送右键次数
-        Gui Add, Edit, vextragambleedit x+5 y%helperSettingLine2yo% w60 Number
-        Gui Add, Updown, vextragambleupdown Range2-30, % generals.gamblehelpertimes
-        Gui Add, CheckBox, x%helperSettingLinex% y%helperSettingLine3y% hwndextraSalvageHelperCkboxID vextraSalvageHelperCkbox gSetSalvageHelper Checked%enablesalvagehelper%, 铁匠分解助手：
-        Gui Add, DropDownList, x+5 y%helperSettingLine3yo% w150 AltSubmit vextraSalvageHelperDropdown Choose%salvagehelpermethod%, 快速分解||Coming Soon||Coming Soon
-        AddToolTip(extraSalvageHelperCkboxID, "快速分解：按下快捷键即等同于点击鼠标左键+回车`nComing Soon：该功能正在开发中`nComing Soon：该功能正在开发中")
-        Gui Add, CheckBox, x%helperSettingLinex% y%helperSettingLine4y% vextramore3 +Disabled, 魔盒重铸助手（Coming Soon）
-        Gui Add, CheckBox, x%helperSettingLinex% y%helperSettingLine5y% vextramore4 +Disabled, 魔盒升级助手（Coming Soon）
-        Gui Add, CheckBox, x%helperSettingLinex% y%helperSettingExtra1y% vextraSoundonProfileSwitch Checked%playsound%, 使用快捷键切换配置成功时播放声音
-        Gui Add, CheckBox, x%helperSettingLinex% y%helperSettingExtra2y% hwndextraSmartPauseID vextraSmartPause Checked%smartpause%, 智能暂停
-        AddToolTip(extraSmartPauseID, "开启后，游戏中按tab键可以暂停宏`n回车键，M键，T键会停止宏")
-        Gui Add, CheckBox, x%helperSettingLinex% y%helperSettingExtra3y% vextraCustomStanding gSetCustomStanding Checked%usecustomstanding%, 使用自定义强制站立按键：
-        Gui Add, Hotkey, x+5 y%helperSettingExtra3yo% w70 vextraCustomStandingHK gSetCustomStanding, % generals.customstandinghk
-        Gui Add, CheckBox, x%helperSettingLinex% y%helperSettingExtra4y% vextraCustomMoving gSetCustomMoving Checked%usecustommoving%, 使用自定义强制移动按键：
-        Gui Add, Hotkey, x+5 y%helperSettingExtra4yo% w70 Limit14 vextraCustomMovingHK gSetCustomMoving, % generals.custommovinghk
-        Gui Add, CheckBox, x%helperSettingLinex% y+20 vextramore2 +Disabled, Coming Soon
-        
-    }
     Gui Add, GroupBox, x20 y%helperSettingGroupy% w475 h260, 按键宏设置
-    Gui Add, GroupBox, x%helperSettingGroupx% y%helperSettingGroupy% w320 h420, 辅助功能
     Gui Add, GroupBox, x20 y%extraSettingGroupy% w475 h150, 额外设置
 }
 Gui Tab
 GuiControl , Choose, ActiveTab, % currentProfile
+
+Gui Add, GroupBox, x%helperSettingGroupx% y%helperSettingGroupy% w330 h435, 辅助功能
+oldsandhelperhk:=generals.oldsandhelperhk
+oldsandhelpermethod:=generals.oldsandhelpermethod
+smartpause:=generals.enablesmartpause
+enablegamblehelper:=generals.enablegamblehelper
+enablesalvagehelper:=generals.enablesalvagehelper
+salvagehelpermethod:=generals.salvagehelpermethod
+playsound:=generals.enablesoundplay
+usecustomstanding:=generals.customstanding
+usecustommoving:=generals.custommoving
+helperspeed:=generals.helperspeed
+Gui Font, cRed s10
+Gui Add, Text, x%helperSettingLinex% y%helperSettingLine1y%, 助手宏启动快捷键：
+Gui Font
+Gui Add, DropDownList, x+0 y%helperSettingLine1yo% w70 AltSubmit Choose%oldsandhelpermethod% vhelperKeybindingdropdown gSetHelperKeybinding, 无||鼠标中键||滚轮向上||滚轮向下||侧键1||侧键2||键盘按键
+Gui Add, Hotkey, x+5 w70 vhelperKeybindingHK gSetHelperKeybinding, %oldsandhelperhk%
+Gui Add, Text, x%helperSettingLinex% y%helperSettingLine2y%, 助手宏动画速度：
+Gui Add, DropDownList, x+5 y%helperSettingLine2yo% w80 AltSubmit Choose%helperspeed% vhelperAnimationSpeedDropdown, 非常快||快速||中等||慢速
+Gui Add, Text, x+20 y%helperSettingLine2y% w80 hwndhelperSafeZoneTextID vhelperSafeZoneText gdummyFunction
+AddToolTip(helperSafeZoneTextID, "修改配置文件中Generals区块下的safezone值来设置安全格")
+Gui Add, CheckBox, x%helperSettingLinex% y%helperSettingLine3y% vextragambleckbox gSetGambleHelper Checked%enablegamblehelper%, 血岩赌博助手：
+Gui Add, Text, vextragambletext x+5 y%helperSettingLine3y%, 发送右键次数
+Gui Add, Edit, vextragambleedit x+5 y%helperSettingLine3yo% w60 Number
+Gui Add, Updown, vextragambleupdown Range2-30, % generals.gamblehelpertimes
+Gui Add, CheckBox, x%helperSettingLinex% y%helperSettingLine4y% hwndextraSalvageHelperCkboxID vextraSalvageHelperCkbox gSetSalvageHelper Checked%enablesalvagehelper%, 铁匠分解助手：
+Gui Add, DropDownList, x+5 y%helperSettingLine4yo% w150 AltSubmit vextraSalvageHelperDropdown gSetSalvageHelper Choose%salvagehelpermethod%, 快速分解||一键分解||Coming Soon
+AddToolTip(extraSalvageHelperCkboxID, "快速分解：按下快捷键即等同于点击鼠标左键+回车`n一键分解：一键分解背包内所有非安全格的装备`n智能分解：同一键分解，但会跳过远古，太古（该功能正在开发中）")
+Gui Add, CheckBox, x%helperSettingLinex% y%helperSettingLine5y% vextramore3 +Disabled, 魔盒重铸助手（Coming Soon）
+Gui Add, CheckBox, x%helperSettingLinex% y%helperSettingLine6y% vextramore4 +Disabled, 魔盒升级助手（Coming Soon）
+Gui Add, CheckBox, x%helperSettingLinex% y%helperSettingExtra1y% vextraSoundonProfileSwitch Checked%playsound%, 使用快捷键切换配置成功时播放声音
+Gui Add, CheckBox, x%helperSettingLinex% y%helperSettingExtra2y% hwndextraSmartPauseID vextraSmartPause Checked%smartpause%, 智能暂停
+AddToolTip(extraSmartPauseID, "开启后，游戏中按tab键可以暂停宏`n回车键，M键，T键会停止宏")
+Gui Add, CheckBox, x%helperSettingLinex% y%helperSettingExtra3y% vextraCustomStanding gSetCustomStanding Checked%usecustomstanding%, 使用自定义强制站立按键：
+Gui Add, Hotkey, x+5 y%helperSettingExtra3yo% w70 vextraCustomStandingHK gSetCustomStanding, % generals.customstandinghk
+Gui Add, CheckBox, x%helperSettingLinex% y%helperSettingExtra4y% vextraCustomMoving gSetCustomMoving Checked%usecustommoving%, 使用自定义强制移动按键：
+Gui Add, Hotkey, x+5 y%helperSettingExtra4yo% w70 Limit14 vextraCustomMovingHK gSetCustomMoving, % generals.custommovinghk
+Gui Add, CheckBox, x%helperSettingLinex% y+20 vextramore2 +Disabled, Coming Soon
 
 startRunHK:=generals.starthotkey
 startmethod:=generals.startmethod
@@ -249,12 +256,15 @@ ReadCfgFile(cfgFileName, ByRef tabs, ByRef hotkeys, ByRef actions, ByRef interva
         IniRead, custommovinghk, %cfgFileName%, General, custommovinghk, e
         IniRead, customstanding, %cfgFileName%, General, customstanding, 0
         IniRead, customstandinghk, %cfgFileName%, General, customstandinghk, LShift
+        IniRead, safezone, %cfgFileName%, General, safezone, "61,62,63"
+        IniRead, helperspeed, %cfgFileName%, General, helperspeed, 3
         generals:={"oldsandhelpermethod":oldsandhelpermethod, "oldsandhelperhk":oldsandhelperhk
         , "enablesalvagehelper":enablesalvagehelper, "salvagehelpermethod":salvagehelpermethod
         , "enablegamblehelper":enablegamblehelper, "gamblehelpertimes":gamblehelpertimes
         , "startmethod":startmethod, "starthotkey":starthotkey
         , "enablesmartpause":enablesmartpause, "enablesoundplay":enablesoundplay
-        , "custommoving":custommoving, "custommovinghk":custommovinghk, "customstanding":customstanding, "customstandinghk":customstandinghk}
+        , "custommoving":custommoving, "custommovinghk":custommovinghk, "customstanding":customstanding, "customstandinghk":customstandinghk
+        , "safezone":safezone, "helperspeed":helperspeed}
 
         IniRead, tabs, %cfgFileName%
         tabs:=StrReplace(StrReplace(tabs, "`n", "`|"), "General|", "")
@@ -326,12 +336,13 @@ ReadCfgFile(cfgFileName, ByRef tabs, ByRef hotkeys, ByRef actions, ByRef interva
         generals:={"enablegamblehelper":1 ,"gamblehelpertimes":15, "oldsandhelperhk":"F5"
         , "startmethod":7, "starthotkey":"F2", "enablesmartpause":1, "salvagehelpermethod":1
         , "oldsandhelpermethod":7, "enablesalvagehelper":0, "enablesoundplay":1
-        , "custommoving":0, "custommovinghk":"e", "customstanding":0, "customstandinghk":"LShift"}
+        , "custommoving":0, "custommovinghk":"e", "customstanding":0, "customstandinghk":"LShift"
+        , "safezone":"61,62,63", "helperspeed":3}
     }
     Return currentProfile
 }
 
-SaveCfgFile(cfgFileName, tabs, currentProfile, VERSION){
+SaveCfgFile(cfgFileName, tabs, currentProfile, safezone, VERSION){
     createOrTruncateFile(cfgFileName)
 
     GuiControlGet, extragambleckbox
@@ -346,6 +357,7 @@ SaveCfgFile(cfgFileName, tabs, currentProfile, VERSION){
     GuiControlGet, extraCustomMovingHK
     GuiControlGet, extraCustomStanding
     GuiControlGet, extraCustomStandingHK
+    GuiControlGet, helperAnimationSpeedDropdown
 
     IniWrite, %VERSION%, %cfgFileName%, General, version
     IniWrite, %currentProfile%, %cfgFileName%, General, activatedprofile
@@ -361,6 +373,9 @@ SaveCfgFile(cfgFileName, tabs, currentProfile, VERSION){
     IniWrite, %extraCustomMovingHK%, %cfgFileName%, General, custommovinghk
     IniWrite, %extraCustomStanding%, %cfgFileName%, General, customstanding
     IniWrite, %extraCustomStandingHK%, %cfgFileName%, General, customstandinghk
+    IniWrite, %helperAnimationSpeedDropdown%, %cfgFileName%, General, helperspeed
+    safezone:=keyJoin(",", safezone)
+    IniWrite, %safezone%, %cfgFileName%, General, safezone
     
 
     GuiControlGet, StartRunDropdown
@@ -516,26 +531,220 @@ createOrTruncateFile(FileName){
 }
 
 oldsandHelper(){
-    WinGetPos, , , D3W, D3H, A
+    local
+    global helperRunning, helperBreak, helperDelay
+    if helperRunning{
+        helperBreak:=True
+        helperRunning:=False
+        Sleep, 200
+        Return
+    }
+    helperRunning:=True
+    helperBreak:=False
+    VarSetCapacity(rect, 16)
+    DllCall("GetClientRect", "ptr", WinExist("A"), "ptr", &rect)
+    D3W:=NumGet(rect, 8, "int")
+    D3H:=NumGet(rect, 12, "int")
     MouseGetPos, xpos, ypos
     GuiControlGet, extragambleckbox
     GuiControlGet, extraSalvageHelperCkbox
     GuiControlGet, extraSalvageHelperDropdown
-    if (xpos<D3W/2)
+    GuiControlGet, helperAnimationSpeedDropdown
+    switch helperAnimationSpeedDropdown
     {
-        if extragambleckbox
+        case 1:
+            mouseDelay:=0
+            helperDelay:=50
+        case 2:
+            mouseDelay:=2
+            helperDelay:=100
+        case 3:
+            mouseDelay:=3
+            helperDelay:=150
+        case 4:
+            mouseDelay:=5
+            helperDelay:=200
+    }
+    SetDefaultMouseSpeed, mouseDelay
+    if (xpos<680*D3H/1440)
+    {
+        if (extragambleckbox and isGambleOpen(D3W, D3H))
         {
-            Gosub, gambleHelper
+            SetTimer, gambleHelper, -1
+            Return
         }
     }
-    Else
+    Else if(xpos>D3W-(3440-2740)*D3H/1440)
     {
         if (extraSalvageHelperCkbox and extraSalvageHelperDropdown=1)
         {
-            Gosub, SalvageHelper
+            quickSalvageHelper(D3W, D3H, helperDelay)
+            helperRunning:=False
+            Return
+        }
+    }
+    if (extraSalvageHelperCkbox and extraSalvageHelperDropdown=2)
+    {
+        r:=isSalvagePageOpen(D3W, D3H)
+        switch r[1]
+        {
+            case 2:
+                salvageIconXY:=getSalvageIconXY(D3W, D3H, "center")
+                MouseMove, salvageIconXY[1][1], salvageIconXY[1][2]
+                if (r[2][3]<10 and r[2][1]+r[2][2]>400)
+                {
+                    if helperBreak
+                    {
+                        helperRunning:=False
+                        Return
+                    }
+                    Click, Right
+                    Sleep, helperDelay
+                    p:=getSalvageIconXY(D3W, D3H, "edge")
+                    PixelGetColor, cpixel, p[2][1], p[2][2], rgb
+                    r[3]:=splitRGB(cpixel)
+                    PixelGetColor, cpixel, p[3][1], p[3][2], rgb
+                    r[4]:=splitRGB(cpixel)
+                    PixelGetColor, cpixel, p[4][1], p[4][2], rgb
+                    r[5]:=splitRGB(cpixel)
+                }
+                if (r[5][1]>50)
+                {
+                    if helperBreak
+                    {
+                        helperRunning:=False
+                        Return
+                    }
+                    MouseMove, salvageIconXY[4][1], salvageIconXY[4][2]
+                    Click
+                    Sleep, helperDelay
+                    Send {Enter}
+                }
+                if (r[4][3]>70)
+                {
+                    if helperBreak
+                    {
+                        helperRunning:=False
+                        Return
+                    }
+                    MouseMove, salvageIconXY[3][1], salvageIconXY[3][2]
+                    Click
+                    Sleep, helperDelay
+                    Send {Enter}
+                }
+                if (r[3][1]>65)
+                {
+                    if helperBreak
+                    {
+                        helperRunning:=False
+                        Return
+                    }
+                    MouseMove, salvageIconXY[2][1], salvageIconXY[2][2]
+                    Click
+                    Sleep, helperDelay
+                    Send {Enter}
+                }
+                MouseMove, salvageIconXY[1][1], salvageIconXY[1][2]
+                Click
+                Sleep, helperDelay
+                if helperBreak
+                {
+                    helperRunning:=False
+                    Return
+                }
+                fn:=Func("oneButtonSalvageHelper").Bind(D3W, D3H, xpos, ypos, mouseDelay)
+                SetTimer, %fn%, -1
+                Return
+            case 1:
+                helperRunning:=False
+                Return
+            Default:
+                helperRunning:=False
+                Return
         }
     }
     Return
+}
+
+gambleHelper(){
+    local
+    global helperDelay, helperBreak, helperRunning
+    GuiControlGet, extragambleedit
+    Loop, %extragambleedit%
+    {
+        if helperBreak{
+            Break
+        }
+        Send {RButton}
+        sleep helperDelay*0.5
+    }
+    helperRunning:=False
+    Return
+}
+
+quickSalvageHelper(D3W, D3H, helperDelay){
+    Click
+    Sleep, helperDelay
+    if isDialogBoXOnScreen(D3W, D3H){
+        Send {Enter}
+    }
+    Return
+}
+
+oneButtonSalvageHelper(D3W, D3H, xpos, ypos, mouseDelay){
+    local
+    global helperBreak, helperRunning, helperDelay, safezone, helperNonEmpty
+    helperNonEmpty:=[]
+    helperSkip:={}
+    i:=0
+    SetDefaultMouseSpeed, mouseDelay
+    fn1:=Func("listNonEmptyInventorySpaceIDs").Bind(D3W, D3H)
+    SetTimer, %fn1%, -1
+    Loop
+    {
+        if helperNonEmpty.Count()>0 {
+            i:=helperNonEmpty.RemoveAt(1)
+        }
+        if (helperBreak or i<0) {
+            helperRunning:=False
+            Click, Right
+            MouseMove, xpos, ypos
+            Return
+        }
+        Else if (i>0 and !helperSkip.HasKey(i)) {
+            m:=getInventorySpaceXY(D3W, D3H, i)
+            MouseMove, m[1], m[2]
+            Click
+            Sleep, helperDelay
+            if isDialogBoXOnScreen(D3W, D3H)
+            {
+                Send {Enter}
+                Sleep, Round(helperDelay*2.5)
+                if (i<=50)
+                {
+                    newID:=i+10
+                    if (isInventorySpaceEmpty(D3W, D3H, newID, [[0.65625,0.714285714], [0.375,0.365079365]])){
+                        helperSkip[newID]:=1
+                    }
+                }
+            }
+            Continue
+        }
+        Sleep, Round(helperDelay*0.5)
+    }
+}
+
+listNonEmptyInventorySpaceIDs(D3W, D3H){
+    local
+    global safezone, helperNonEmpty
+    e:=[[0.65625,0.714285714], [0.375,0.365079365]]
+    Loop, 60
+    {
+        if (!safezone.HasKey(A_Index) and !isInventorySpaceEmpty(D3W, D3H, A_Index, e)){
+            helperNonEmpty.Push(A_Index)
+        }
+    }
+    helperNonEmpty.Push(-1)
 }
 
 clickPauseMarco(keysOnHold, pausetime, vRunning){
@@ -620,16 +829,46 @@ SetGambleHelper(){
 }
 
 SetSalvageHelper(){
+    local
+    global safezone
     Gui, Submit, NoHide
     GuiControlGet, extraSalvageHelperCkbox
     GuiControlGet, extraSalvageHelperHK
+    GuiControlGet, extraSalvageHelperDropdown
     If extraSalvageHelperCkbox
     {
         GuiControl, Enable, extraSalvageHelperDropdown
+        switch extraSalvageHelperDropdown
+        {
+            case 1,3:
+                GuiControl, hide, helperSafeZoneText
+            case 2:
+                hasSafeZone:=False
+                Loop, 60
+                {
+                    if safezone.HasKey(A_Index)
+                    {
+                        hasSafeZone:=True
+                        Break
+                    }
+                }
+                if hasSafeZone
+                {
+                    GuiControl, +c348017, helperSafeZoneText
+                    GuiControl,, helperSafeZoneText, 安全格已设置
+                }
+                Else
+                {
+                    GuiControl, +cFF0000, helperSafeZoneText
+                    GuiControl,, helperSafeZoneText, 安全格未设置
+                }
+                GuiControl, show, helperSafeZoneText
+        }
     }
     Else
     {
         GuiControl, Disable, extraSalvageHelperDropdown
+        GuiControl, Hide, helperSafeZoneText
     }
     Return
 }
@@ -681,11 +920,11 @@ spamSkillQueue(inv){
                 }
             Default:
                 if (_k[2] = 3){
-                    sleep inv*0.4
+                    sleep Round(inv*0.5)
                 }
                 Send {Blind}{%k%}
                 if (_k[2] = 3){
-                    sleep inv*0.6
+                    sleep Round(inv*0.5)
                     Break
                 }
         }
@@ -693,6 +932,170 @@ spamSkillQueue(inv){
     Return
 }
 
+isDialogBoXOnScreen(ww, wh){
+    point1:=[ww/2-(3440/2-1655)*wh/1440, 500*wh/1440]
+    point2:=[ww/2+(3440/2-1800)*wh/1440, 500*wh/1440]
+    PixelGetColor, cpixel, Round(point1[1]), Round(point1[2]), rgb
+    c1:=splitRGB(cpixel)
+    PixelGetColor, cpixel, Round(point2[1]), Round(point2[2]), rgb
+    c2:=splitRGB(cpixel)
+    if (c1[1]>c1[2] and c1[2]>c1[3] and c1[3]<5 and c1[2]<15 and c1[1]>25 and c2[1]>c2[2] and c2[2]>c2[3] and c2[3]<5 and c2[2]<15 and c2[1]>25)
+    {
+        Return True
+    }
+    Else
+    {
+        Return False
+    }
+}
+
+isRedXonScreen(ww, wh, position){
+    _centerWhiteL:=[680, 24]
+    _centerWhiteR:=[3417, 24]
+    _XsizeInside:=29
+    _XsizeOutside:=35
+    switch position
+    {
+        case "left":
+            centerPoint:=[Round(_centerWhiteL[1]*wh/1440), Round(_centerWhiteL[2]*wh/1440)]
+            upPoint:=[Round(_centerWhiteL[1]*wh/1440), Round((_centerWhiteL[2]-_XsizeInside/3)*wh/1440)]
+            leftPoint:=[Round((_centerWhiteL[1]-_XsizeOutside/2)*wh/1440), Round(_centerWhiteL[2]*wh/1440)]
+        case "right":
+            centerPoint:=[Round(ww-((3440-_centerWhiteR[1])*wh/1440)), Round(_centerWhiteR[2]*wh/1440)]
+            upPoint:=[Round(ww-((3440-_centerWhiteR[1])*wh/1440)), Round((_centerWhiteR[2]-_XsizeInside/3)*wh/1440)]
+            leftPoint:=[Round(ww-((3440-_centerWhiteR[1]-_XsizeOutside/2)*wh/1440)), Round(_centerWhiteR[2]*wh/1440)]
+    }
+    PixelGetColor, cpixel, centerPoint[1], centerPoint[2], rgb
+    centerrgb:=splitRGB(cpixel)
+    PixelGetColor, cpixel, upPoint[1], upPoint[2], rgb
+    uprgb:=splitRGB(cpixel)
+    PixelGetColor, cpixel, leftPoint[1], leftPoint[2], rgb
+    leftrgb:=splitRGB(cpixel)
+    if (centerrgb[1]+centerrgb[2]>370 and uprgb[3]<5 and uprgb[1]>40 and leftrgb[1]>leftrgb[2] and leftrgb[1]>leftrgb[3])
+    {
+        Return True
+    }
+    Else
+    {
+        Return False
+    }
+}
+
+getInventorySpaceXY(ww, wh, ID){
+    _firstSpaceUL:=[2753, 747]
+    _spaceSizeInnerW:=64
+    _spaceSizeInnerH:=63
+    _spaceSizeW:=67
+    _spaceSizeH:=66
+    targetColumn:=Mod(ID-1,10)
+    targetRow:=Floor((ID-1)/10)
+    Return [Round(ww-((3440-_firstSpaceUL[1]-_spaceSizeW*targetColumn-_spaceSizeInnerW/2)*wh/1440)), Round((_firstSpaceUL[2]+targetRow*_spaceSizeH+_spaceSizeInnerH/2)*wh/1440)
+    , Round(ww-((3440-_firstSpaceUL[1]-_spaceSizeW*targetColumn)*wh/1440)), Round((_firstSpaceUL[2]+targetRow*_spaceSizeH)*wh/1440)]
+}
+
+isSalvagePageOpen(ww, wh){
+    point1:=[Round(321*wh/1440),Round(86*wh/1440)]
+    point2:=[Round(351*wh/1440),Round(107*wh/1440)]
+    point3:=[Round(388*wh/1440),Round(86*wh/1440)]
+    point4:=[Round(673*wh/1440),Round(1040*wh/1440)]
+    PixelGetColor, cpixel, point1[1], point1[2], rgb
+    c1:=splitRGB(cpixel)
+    PixelGetColor, cpixel, point2[1], point2[2], rgb
+    c2:=splitRGB(cpixel)
+    PixelGetColor, cpixel, point3[1], point3[2], rgb
+    c3:=splitRGB(cpixel)
+    PixelGetColor, cpixel, point4[1], point4[2], rgb
+    c4:=splitRGB(cpixel)
+    if (c1[3]>c1[2] and c1[2]>c1[1] and c1[3]>110 and c3[3]>c3[2] and c3[2]>c3[1] and c3[3]>110 and c2[1]+c2[2]>350 and c4[1]>50 and c4[2]<15 and c4[3]<15 and isRedXonScreen(ww, wh, "left")){
+        p:=getSalvageIconXY(ww, wh, "edge")
+        PixelGetColor, cpixel, p[1][1], p[1][2], rgb
+        cLeg:=splitRGB(cpixel)
+        PixelGetColor, cpixel, p[2][1], p[2][2], rgb
+        cWhite:=splitRGB(cpixel)
+        PixelGetColor, cpixel, p[3][1], p[3][2], rgb
+        cBlue:=splitRGB(cpixel)
+        PixelGetColor, cpixel, p[4][1], p[4][2], rgb
+        cRare:=splitRGB(cpixel)
+        if (cBlue[3]>cBlue[2] and cBlue[2]>cBlue[1] and cRare[3]<20 and cRare[1]>cRare[2] and cRare[2]>cRare[3]) {
+            Return [2, cLeg, cWhite, cBlue, cRare]
+        } Else {
+            Return [1]
+        }
+    }
+    Else{
+        Return [0]
+    }
+}
+
+getSalvageIconXY(ww, wh, c)
+{
+    switch c
+    {
+        case "center":
+            centerLeg:=[Round(221*wh/1440),Round(388*wh/1440)]
+            centerWhite:=[Round(335*wh/1440),Round(388*wh/1440)]
+            centerBlue:=[Round(424*wh/1440),Round(388*wh/1440)]
+            centerRare:=[Round(514*wh/1440),Round(388*wh/1440)]
+            Return [centerLeg, centerWhite, centerBlue, centerRare]
+        case "edge":
+            edgeColorLeg:=[Round(203*wh/1440),Round(337*wh/1440)]
+            edgeColorWhite:=[Round(335*wh/1440),Round(371*wh/1440)]
+            edgeColorBlue:=[Round(424*wh/1440),Round(371*wh/1440)]
+            edgeColorRare:=[Round(514*wh/1440),Round(371*wh/1440)]
+            Return [edgeColorLeg, edgeColorWhite, edgeColorBlue, edgeColorRare]
+    }
+}
+
+isGambleOpen(ww, wh){
+    point1:=[Round(320*wh/1440),Round(96*wh/1440)]
+    point2:=[Round(351*wh/1440),Round(100*wh/1440)]
+    point3:=[Round(390*wh/1440),Round(96*wh/1440)]
+    point4:=[Round(194*wh/1440),Round(67*wh/1440)]
+    point5:=[Round(147*wh/1440),Round(94*wh/1440)]
+    PixelGetColor, cpixel, point1[1], point1[2], rgb
+    c1:=splitRGB(cpixel)
+    PixelGetColor, cpixel, point2[1], point2[2], rgb
+    c2:=splitRGB(cpixel)
+    PixelGetColor, cpixel, point3[1], point3[2], rgb
+    c3:=splitRGB(cpixel)
+    PixelGetColor, cpixel, point4[1], point4[2], rgb
+    c4:=splitRGB(cpixel)
+    PixelGetColor, cpixel, point5[1], point5[2], rgb
+    c5:=splitRGB(cpixel)
+    if (c1[3]>c1[1] and c1[1]>c1[2] and c1[3]>130 and c3[3]>c3[1] and c3[1]>c3[2] and c3[3]>130 and c2[1]+c2[2]>330 and c4[1]+c4[2]+c4[3]+c5[1]+c5[2]+c5[3]<10){
+        Return True
+    }
+    Else{
+        Return False
+    }
+}
+
+isInventorySpaceEmpty(ww, wh, ID, ckpoints){
+    _spaceSizeInnerW:=64
+    _spaceSizeInnerH:=63
+    m:=getInventorySpaceXY(ww, wh, ID)
+    for i, p in ckpoints
+    {
+        xy:=[Round(m[3]+_spaceSizeInnerW*ckpoints[A_Index][1]*wh/1440), Round(m[4]+_spaceSizeInnerH*ckpoints[A_Index][2]*wh/1440)]
+        PixelGetColor, cpixel, xy[1], xy[2], rgb
+        c:=splitRGB(cpixel)
+        if !(c[1]<22 and c[2]<20 and c[3]<15 and c[1]>c[3] and c[2]>c[3])
+        {
+            Return False
+        }
+    }
+    Return True
+}
+
+keyJoin(sep, dict) {
+    for key,value in dict
+        str .= key . sep
+    return SubStr(str, 1, -StrLen(sep))
+}
+
+dummyFunction(){
+    Return
+}
 ; https://gist.github.com/andreberg/55d003569f0564cd8695
 AddToolTip(con, text, Modify=0){
     Static TThwnd, GuiHwnd
@@ -1109,21 +1512,6 @@ forceMoving:
     }
 Return
 
-gambleHelper:
-    GuiControlGet, extragambleedit
-    Loop, %extragambleedit%
-    {
-        Send {RButton}
-        sleep 20
-    }
-Return
-
-SalvageHelper:
-    Click
-    sleep 100
-    Send {enter}
-Return
-
 safeGuard:
     If !WinActive("ahk_class D3 Main Window Class")
     {
@@ -1167,6 +1555,7 @@ Return
 Return
 
 ~Tab::
+~+Tab::
     GuiControlGet, extraSmartPause
     if extraSmartPause
     {
@@ -1194,7 +1583,7 @@ Return
 GuiEscape:
 GuiClose:
     Gui, Submit
-    SaveCfgFile("d3oldsand.ini", tabs, currentProfile, VERSION)
+    SaveCfgFile("d3oldsand.ini", tabs, currentProfile, safezone, VERSION)
 Return
 
 设置:
@@ -1202,5 +1591,5 @@ Return
 Return
 
 退出:
-    SaveCfgFile("d3oldsand.ini", tabs, currentProfile, VERSION)
+    SaveCfgFile("d3oldsand.ini", tabs, currentProfile, safezone, VERSION)
 ExitApp
