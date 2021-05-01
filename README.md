@@ -1,4 +1,6 @@
 # D3keyHelper
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 D3KeyHelper是一个有图形界面，可自定义配置的暗黑3自动宏工具。
 
 运行代码请使用最新版的AHK软件，所有测试在v1.1.33.06版本下运行通过。
