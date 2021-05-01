@@ -1049,20 +1049,17 @@ getSalvageIconXY(ww, wh, c)
 isGambleOpen(ww, wh){
     point1:=[Round(320*wh/1440),Round(96*wh/1440)]
     point2:=[Round(351*wh/1440),Round(100*wh/1440)]
-    point3:=[Round(390*wh/1440),Round(96*wh/1440)]
     point4:=[Round(194*wh/1440),Round(67*wh/1440)]
     point5:=[Round(147*wh/1440),Round(94*wh/1440)]
     PixelGetColor, cpixel, point1[1], point1[2], rgb
     c1:=splitRGB(cpixel)
     PixelGetColor, cpixel, point2[1], point2[2], rgb
     c2:=splitRGB(cpixel)
-    PixelGetColor, cpixel, point3[1], point3[2], rgb
-    c3:=splitRGB(cpixel)
     PixelGetColor, cpixel, point4[1], point4[2], rgb
     c4:=splitRGB(cpixel)
     PixelGetColor, cpixel, point5[1], point5[2], rgb
     c5:=splitRGB(cpixel)
-    if (c1[3]>c1[1] and c1[1]>c1[2] and c1[3]>130 and c3[3]>c3[1] and c3[1]>c3[2] and c3[3]>130 and c2[1]+c2[2]>330 and c4[1]+c4[2]+c4[3]+c5[1]+c5[2]+c5[3]<10){
+    if (c1[3]>c1[1] and c1[1]>c1[2] and c1[3]>130 and c2[1]+c2[2]>330 and c4[1]+c4[2]+c4[3]+c5[1]+c5[2]+c5[3]<10){
         Return True
     }
     Else{
