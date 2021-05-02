@@ -463,8 +463,8 @@ SaveCfgFile(cfgFileName, tabs, currentProfile, safezone, VERSION){
     [x坐标，y坐标]
 */
 getSkillButtonPos(buttonID, D3W, D3H){
-    x:=D3W/2+(90.031*buttonID-523.26)*D3W/1440
-    y:=0.9222*D3W-0.4304
+    x:=D3W/2+(90.031*buttonID-523.26)*D3H/1440
+    y:=0.9222*D3H-0.4304
     Return [Round(x), Round(y)]
 }
 
