@@ -1299,8 +1299,7 @@ isSalvagePageOpen(D3W, D3H){
 返回：
     [大拆解按钮坐标xy，白色解按钮坐标xy，蓝色解按钮坐标xy，黄色解按钮坐标xy]
 */
-getSalvageIconXY(D3W, D3H, c)
-{
+getSalvageIconXY(D3W, D3H, c){
     switch c
     {
         case "center":
@@ -1382,7 +1381,7 @@ isInventorySpaceEmpty(D3W, D3H, ID, ckpoints){
 返回：
     String
 */
-keyJoin(sep, dict) {
+keyJoin(sep, dict){
     for key,value in dict
         str .= key . sep
     return SubStr(str, 1, -StrLen(sep))
