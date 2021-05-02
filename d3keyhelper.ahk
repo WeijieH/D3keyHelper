@@ -1,5 +1,5 @@
 ﻿; =================================================================
-;                   暗黑3 “老沙”按键助手
+;                  暗黑3 “老沙”按键助手  (MIT License)
 ; Designed by Oldsand
 ; 转载请注明原作者
 ; 
@@ -19,7 +19,7 @@ CoordMode, Pixel, Client
 CoordMode, Mouse, Client
 Process, Priority, , High
 
-VERSION:=210501
+VERSION:=210502
 TITLE:=Format("暗黑3技能连点器 v1.2.{:d}   by Oldsand", VERSION)
 MainWindowW:=850
 MainWindowH:=500
@@ -48,6 +48,7 @@ tabh:=MainWindowH-30
 extraSettingGroupy:=310
 helperSettingGroupx:=510
 helperSettingGroupy:=40
+labelStartx:=35
 helperSettingExtra1y:=helperSettingGroupy+265
 helperSettingExtra2y:=helperSettingExtra1y+30
 helperSettingExtra3y:=helperSettingExtra2y+30
@@ -94,7 +95,7 @@ Loop, parse, tabs, `|
     Loop, 6
     {
         yl:=y+2
-        Gui Add, Text, x40 w60 y%yl% center, % skillLabels[A_Index]
+        Gui Add, Text, x%labelStartx% w60 y%yl% center, % skillLabels[A_Index]
         ac:=actions[currentTab][A_Index]
         switch A_Index
         {
@@ -113,12 +114,12 @@ Loop, parse, tabs, `|
         AddToolTip(skillset%currentTab%s%A_Index%delayeditID, "这里填入随机延迟的最大值，设为0可以关闭随即延迟")
         y+=35
     }
-    Gui Add, Text, x40 y%extraSettingLine1y%, 快速切换至本配置：
+    Gui Add, Text, x%labelStartx% y%extraSettingLine1y%, 快速切换至本配置：
     pfmd:=others[currentTab].profilemethod
     Gui Add, DropDownList, x+5 y%extraSettingLine1yo% w90 AltSubmit Choose%pfmd% vskillset%currentTab%profilekeybindingdropdown gSetProfileKeybinding, 无||鼠标中键||滚轮向上||滚轮向下||侧键1||侧键2||键盘按键
     Gui Add, Hotkey, x+15 w100 vskillset%currentTab%profilekeybindinghkbox gSetProfileKeybinding, % others[currentTab].profilehotkey
     
-    Gui Add, Text, x40 y%extraSettingLine2y%, 走位辅助：
+    Gui Add, Text, x%labelStartx% y%extraSettingLine2y%, 走位辅助：
     pfmv:=others[currentTab].movingmethod
     pflm:=others[currentTab].lazymode
     Gui Add, DropDownList, x+5 y%extraSettingLine2yo% w130 AltSubmit Choose%pfmv% vskillset%currentTab%movingdropdown gSetMovingHelper, 无||强制站立||强制走位（按住不放）||强制走位（连点）
@@ -127,7 +128,7 @@ Loop, parse, tabs, `|
     Gui Add, Updown, vskillset%currentTab%movingupdown Range20-3000, % others[currentTab].movinginterval
     
     pfusq:=others[currentTab].useskillqueue
-    Gui Add, Text, x40 y%extraSettingLine3y%, 宏启动方式：
+    Gui Add, Text, x%labelStartx% y%extraSettingLine3y%, 宏启动方式：
     Gui Add, DropDownList, x+5 y%extraSettingLine3yo% w90 AltSubmit Choose%pflm% vskillset%currentTab%profilestartmodedropdown, 懒人模式||仅按下时
     Gui Add, Checkbox, x+10 y%extraSettingLine3y% Checked%pfusq% hwnduseskillqueueckbox%currentTab%ID vskillset%currentTab%useskillqueueckbox gSetSkillQueue, 使用单线程按键队列（毫秒）：
     AddToolTip(useskillqueueckbox%currentTab%ID, "开启后按键不会被立刻按下而是存储至一个按键队列中`n连点会使技能加入队列头部，保持buff会使技能加入队列尾部")
@@ -138,7 +139,7 @@ Loop, parse, tabs, `|
     pfqp:=others[currentTab].enablequickpause
     pfqpm1:=others[currentTab].quickpausemethod1
     pfqpm2:=others[currentTab].quickpausemethod2
-    Gui Add, Checkbox, x40 y%extraSettingLine4y% Checked%pfqp% vskillset%currentTab%clickpauseckbox gSetQuickPause, 快速暂停：
+    Gui Add, Checkbox, x%labelStartx% y%extraSettingLine4y% Checked%pfqp% vskillset%currentTab%clickpauseckbox gSetQuickPause, 快速暂停：
     Gui Add, DropDownList, x+0 y%extraSettingLine4yo% w50 AltSubmit Choose%pfqpm1% vskillset%currentTab%clickpausedropdown1 gSetQuickPause, 双击||单击
     Gui Add, DropDownList, x+5 y%extraSettingLine4yo% w100 AltSubmit Choose%pfqpm2% vskillset%currentTab%clickpausedropdown2 gSetQuickPause, 鼠标左键||鼠标右键||鼠标中键||侧键1||侧键2
     Gui Add, Text, x+5 y%extraSettingLine4y% vskillset%currentTab%clickpausetext1, 则暂停压键
@@ -146,8 +147,8 @@ Loop, parse, tabs, `|
     Gui Add, Updown, vskillset%currentTab%clickpauseupdown Range500-5000, % others[currentTab].quickpausedelay
     Gui Add, Text, x+5 y%extraSettingLine4y% vskillset%currentTab%clickpausetext2, 毫秒
     
-    Gui Add, GroupBox, x20 y%helperSettingGroupy% w475 h260, 按键宏设置
-    Gui Add, GroupBox, x20 y%extraSettingGroupy% w475 h150, 额外设置
+    Gui Add, GroupBox, x15 y%helperSettingGroupy% w475 h260, 按键宏设置
+    Gui Add, GroupBox, x15 y%extraSettingGroupy% w475 h150, 额外设置
 }
 Gui Tab
 GuiControl , Choose, ActiveTab, % currentProfile
@@ -169,16 +170,16 @@ Gui Font
 Gui Add, DropDownList, x+0 y%helperSettingLine1yo% w70 AltSubmit Choose%oldsandhelpermethod% vhelperKeybindingdropdown gSetHelperKeybinding, 无||鼠标中键||滚轮向上||滚轮向下||侧键1||侧键2||键盘按键
 Gui Add, Hotkey, x+5 w70 vhelperKeybindingHK gSetHelperKeybinding, %oldsandhelperhk%
 Gui Add, Text, x%helperSettingLinex% y%helperSettingLine2y%, 助手宏动画速度：
-Gui Add, DropDownList, x+5 y%helperSettingLine2yo% w80 AltSubmit Choose%helperspeed% vhelperAnimationSpeedDropdown, 非常快||快速||中等||慢速
+Gui Add, DropDownList, x+5 y%helperSettingLine2yo% w90 AltSubmit Choose%helperspeed% vhelperAnimationSpeedDropdown, 非常快||快速||中等||慢速
 Gui Add, Text, x+20 y%helperSettingLine2y% w80 hwndhelperSafeZoneTextID vhelperSafeZoneText gdummyFunction
 AddToolTip(helperSafeZoneTextID, "修改配置文件中Generals区块下的safezone值来设置安全格")
 Gui Add, CheckBox, x%helperSettingLinex% y%helperSettingLine3y% vextragambleckbox gSetGambleHelper Checked%enablegamblehelper%, 血岩赌博助手：
 Gui Add, Text, vextragambletext x+5 y%helperSettingLine3y%, 发送右键次数
-Gui Add, Edit, vextragambleedit x+5 y%helperSettingLine3yo% w60 Number
+Gui Add, Edit, vextragambleedit x+10 y%helperSettingLine3yo% w60 Number
 Gui Add, Updown, vextragambleupdown Range2-30, % generals.gamblehelpertimes
 Gui Add, CheckBox, x%helperSettingLinex% y%helperSettingLine4y% hwndextraSalvageHelperCkboxID vextraSalvageHelperCkbox gSetSalvageHelper Checked%enablesalvagehelper%, 铁匠分解助手：
-Gui Add, DropDownList, x+5 y%helperSettingLine4yo% w150 AltSubmit vextraSalvageHelperDropdown gSetSalvageHelper Choose%salvagehelpermethod%, 快速分解||一键分解||Coming Soon
-AddToolTip(extraSalvageHelperCkboxID, "快速分解：按下快捷键即等同于点击鼠标左键+回车`n一键分解：一键分解背包内所有非安全格的装备`n智能分解：同一键分解，但会跳过远古，太古（该功能正在开发中）")
+Gui Add, DropDownList, x+5 y%helperSettingLine4yo% w150 AltSubmit vextraSalvageHelperDropdown gSetSalvageHelper Choose%salvagehelpermethod%, 快速分解||一键分解||智能分解||智能分解（只留太古）
+AddToolTip(extraSalvageHelperCkboxID, "快速分解：按下快捷键即等同于点击鼠标左键+回车`n一键分解：一键分解背包内所有非安全格的装备`n智能分解：同一键分解，但会跳过远古，太古`n智能分解（只留太古）：只保留太古装备")
 Gui Add, CheckBox, x%helperSettingLinex% y%helperSettingLine5y% vextramore3 +Disabled, 魔盒重铸助手（Coming Soon）
 Gui Add, CheckBox, x%helperSettingLinex% y%helperSettingLine6y% vextramore4 +Disabled, 魔盒升级助手（Coming Soon）
 Gui Add, CheckBox, x%helperSettingLinex% y%helperSettingExtra1y% vextraSoundonProfileSwitch Checked%playsound%, 使用快捷键切换配置成功时播放声音
@@ -197,11 +198,11 @@ Gui Add, Text, x530 y8, 战斗宏启动快捷键：
 Gui Font
 Gui Add, DropDownList, x+5 y5 w90 AltSubmit Choose%startmethod% vStartRunDropdown gSetStartRun, 鼠标右键||鼠标中键||滚轮向上||滚轮向下||侧键1||侧键2||键盘按键
 Gui Add, Hotkey, x+5 y5 w70 vStartRunHKinput gSetStartRun, %startRunHK%
-skillsetText:=tabsarray[currentProfile]
+
 ybottomtext:=MainWindowH-20
 Gui Add, Text, x10 y%ybottomtext%, 当前激活配置:
 Gui Font, cRed s10
-Gui Add, Text, x+5 w350 vStatuesSkillsetText, % skillsetText
+Gui Add, Text, x+5 w350 vStatuesSkillsetText, % tabsarray[currentProfile]
 Gui Font
 Gui Add, Link, x510 y%ybottomtext%, 提交bug，检查更新: <a href="https://github.com/WeijieH/D3keyHelper">https://github.com/WeijieH/D3keyHelper</a>
 
@@ -230,6 +231,20 @@ Return
 
 
 ; =================================== User Functions =====================================
+/*
+读取配置文件，无配置文件则返回默认设置
+参数：
+    cfgFileName：文件名
+    tabs：ByRef String，存储由竖线“|”分隔的配置名，用于初始化Tab控件
+    hotkeys：ByRef Array，存储配置的技能快捷键
+    actions：ByRef Array，存储配置的技能策略选择
+    intervals：ByRef Array，存储配置的技能施放间隔
+    ivdelays Array，存储配置的技能施放间隔延迟
+    others：ByRef Array，存储额外配置
+    generals：ByRef Array，存储一些通用配置
+返回：
+    上次退出时激活的配置编号，用于初始化Tab控件
+*/
 ReadCfgFile(cfgFileName, ByRef tabs, ByRef hotkeys, ByRef actions, ByRef intervals, ByRef ivdelays, ByRef others, ByRef generals){
     local
     global VERSION
@@ -342,6 +357,17 @@ ReadCfgFile(cfgFileName, ByRef tabs, ByRef hotkeys, ByRef actions, ByRef interva
     Return currentProfile
 }
 
+/*
+保存配置文件
+参数：
+    cfgFileName：文件名
+    tabs：String，由竖线“|”分隔的配置名
+    currentProfile：int， 当前激活的配置页面编号
+    safezone： Array，安全区域的配置int
+    VERSION：int，版本
+返回：
+    无
+*/
 SaveCfgFile(cfgFileName, tabs, currentProfile, safezone, VERSION){
     createOrTruncateFile(cfgFileName)
 
@@ -427,12 +453,28 @@ SaveCfgFile(cfgFileName, tabs, currentProfile, safezone, VERSION){
     Return
 }
 
-getSkillButtonPos(buttonID, ww, wh){
-    x:=ww/2+(90.031*buttonID-523.26)*wh/1440
-    y:=0.9222*wh-0.4304
+/*
+计算当前分辨率下技能buff条最左边像素的坐标
+参数：
+    buttonID：int，按钮的ID，最左为1，最右（鼠标右键）为6
+    D3W：int，窗口区域的宽度
+    D3H：int，窗口区域的高度
+返回：H
+    [x坐标，y坐标]
+*/
+getSkillButtonPos(buttonID, D3W, D3H){
+    x:=D3W/2+(90.031*buttonID-523.26)*D3W/1440
+    y:=0.9222*D3W-0.4304
     Return [Round(x), Round(y)]
 }
 
+/*
+将16进制的颜色标签转化为RGB array。 FFFFFF -> [255, 255, 255]
+参数：
+    vthiscolor：16进制的RGB颜色标签，PixelGetColor直出
+返回：
+    [R，G，B]
+*/
 splitRGB(vthiscolor){
     vblue := (vthiscolor & 0xFF)
     vgreen := ((vthiscolor & 0xFF00) >> 8)
@@ -440,6 +482,18 @@ splitRGB(vthiscolor){
     Return [vred, vgreen, vblue]
 }
 
+/*
+负责发送技能按键
+参数：
+    currentProfile：int，当前激活的配置编号
+    nskill: int, 技能按钮编号 1-6
+    D3W：int，窗口区域的宽度
+    D3H：int，窗口区域的高度
+    forceStandingKey：强制站立按键
+    useSkillQueue：Bool，是否使用技能列表
+返回：
+    无
+*/
 skillKey(currentProfile, nskill, D3W, D3H, forceStandingKey, useSkillQueue){
     local
     global vPausing, skillQueue
@@ -449,6 +503,7 @@ skillKey(currentProfile, nskill, D3W, D3H, forceStandingKey, useSkillQueue){
     k:=skillset%currentProfile%s%nskill%hotkey
     switch skillset%currentProfile%s%nskill%dropdown
     {
+        ; 连点
         case 3:
             if (skillset%currentProfile%s%nskill%delayupdown>1)
             {
@@ -459,7 +514,10 @@ skillKey(currentProfile, nskill, D3W, D3H, forceStandingKey, useSkillQueue){
             {
                 if useSkillQueue
                 {
+                    ; 当技能列表大于100时什么都不做，防止占用过多内存
                     if (skillQueue.Count() < 100){
+                        ; 按键加入技能列表头部
+                        ; [k, 3] k是具体按键，3代表因为连点加入
                         skillQueue.InsertAt(1, [k, 3])
                     }
                 }
@@ -468,23 +526,29 @@ skillKey(currentProfile, nskill, D3W, D3H, forceStandingKey, useSkillQueue){
                     Send {Blind}{%k%}
                 }
             }
+        ; 保持buff
         case 4:
+            ; 获得对应按键buff条最左侧坐标
             magicXY:=getSkillButtonPos(nskill, D3W, D3H)
             PixelGetColor, cpixel, magicXY[1], magicXY[2], rgb
             crgb:=splitRGB(cpixel)
+            ; 具体判断是否需要补buff
             If (!vPausing and crgb[1]+crgb[2]+crgb[3] < 220)
             {
                 switch nskill
                 {
                     case 5:
+                        ; 判断按键是否是左键
                         if useSkillQueue
                         {
                             if (skillQueue.Count() < 100){
+                                ; 4代表因为补buff加入
                                 skillQueue.Push([k, 4])
                             }
                         }
                         Else
                         {
+                            ; 判断是否需要强制站立再点击左键
                             if GetKeyState(forceStandingKey)
                             {
                                 Send {Blind}{%k%}
@@ -512,6 +576,13 @@ skillKey(currentProfile, nskill, D3W, D3H, forceStandingKey, useSkillQueue){
     Return
 }
 
+/*
+清空配置文件，并写入默认的文件头
+参数：
+    FileName：配置文件名
+返回：
+    无
+*/
 createOrTruncateFile(FileName){
     if (FileName = "")
     {
@@ -530,10 +601,19 @@ createOrTruncateFile(FileName){
     file.Close()
 }
 
+/*
+负责开启助手宏
+参数：
+    无
+返回：
+    无
+*/
 oldsandHelper(){
     local
     global helperRunning, helperBreak, helperDelay
     if helperRunning{
+        ; 防止过快连按
+        ; 宏在执行中再按可以打断
         helperBreak:=True
         helperRunning:=False
         Sleep, 200
@@ -541,15 +621,16 @@ oldsandHelper(){
     }
     helperRunning:=True
     helperBreak:=False
+    ; 获得当前游戏分辨率
     VarSetCapacity(rect, 16)
     DllCall("GetClientRect", "ptr", WinExist("A"), "ptr", &rect)
     D3W:=NumGet(rect, 8, "int")
     D3H:=NumGet(rect, 12, "int")
-    MouseGetPos, xpos, ypos
     GuiControlGet, extragambleckbox
     GuiControlGet, extraSalvageHelperCkbox
     GuiControlGet, extraSalvageHelperDropdown
     GuiControlGet, helperAnimationSpeedDropdown
+    ; 载入预设动画速度
     switch helperAnimationSpeedDropdown
     {
         case 1:
@@ -566,6 +647,7 @@ oldsandHelper(){
             helperDelay:=200
     }
     SetDefaultMouseSpeed, mouseDelay
+    ; 当鼠标在左侧
     if (xpos<680*D3H/1440)
     {
         if (extragambleckbox and isGambleOpen(D3W, D3H))
@@ -576,21 +658,27 @@ oldsandHelper(){
     }
     Else if(xpos>D3W-(3440-2740)*D3H/1440)
     {
+        ; 当鼠标在右侧
         if (extraSalvageHelperCkbox and extraSalvageHelperDropdown=1)
         {
+            ; 快速分解
             quickSalvageHelper(D3W, D3H, helperDelay)
             helperRunning:=False
             Return
         }
     }
-    if (extraSalvageHelperCkbox and extraSalvageHelperDropdown=2)
+    ; 一键分解
+    if (extraSalvageHelperCkbox and extraSalvageHelperDropdown>1)
     {
+        ; 判断分解页面是否打开
         r:=isSalvagePageOpen(D3W, D3H)
         switch r[1]
         {
+            ; 铁匠页面打开且分解页面打开
             case 2:
                 salvageIconXY:=getSalvageIconXY(D3W, D3H, "center")
                 MouseMove, salvageIconXY[1][1], salvageIconXY[1][2]
+                ; 判断拆解按钮是否已经按下
                 if (r[2][3]<10 and r[2][1]+r[2][2]>400)
                 {
                     if helperBreak
@@ -598,6 +686,7 @@ oldsandHelper(){
                         helperRunning:=False
                         Return
                     }
+                    ; 分解按钮已经按下，右键取消然后重新获得颜色信息
                     Click, Right
                     Sleep, helperDelay
                     p:=getSalvageIconXY(D3W, D3H, "edge")
@@ -610,6 +699,7 @@ oldsandHelper(){
                 }
                 if (r[5][1]>50)
                 {
+                    ; 一键分解黄
                     if helperBreak
                     {
                         helperRunning:=False
@@ -622,6 +712,7 @@ oldsandHelper(){
                 }
                 if (r[4][3]>70)
                 {
+                    ; 一键分解蓝
                     if helperBreak
                     {
                         helperRunning:=False
@@ -634,6 +725,7 @@ oldsandHelper(){
                 }
                 if (r[3][1]>65)
                 {
+                    ; 一键分解白/灰
                     if helperBreak
                     {
                         helperRunning:=False
@@ -644,21 +736,24 @@ oldsandHelper(){
                     Sleep, helperDelay
                     Send {Enter}
                 }
+                ; 点击分解按钮
                 MouseMove, salvageIconXY[1][1], salvageIconXY[1][2]
                 Click
-                Sleep, helperDelay
                 if helperBreak
                 {
                     helperRunning:=False
                     Return
                 }
+                ; 执行一键分解
                 fn:=Func("oneButtonSalvageHelper").Bind(D3W, D3H, xpos, ypos, mouseDelay)
                 SetTimer, %fn%, -1
                 Return
             case 1:
+                ; 铁匠页面打开但是不在分解页面
                 helperRunning:=False
                 Return
             Default:
+                ; 铁匠页面未打卡 
                 helperRunning:=False
                 Return
         }
@@ -666,6 +761,13 @@ oldsandHelper(){
     Return
 }
 
+/*
+负责一键赌博（连按右键）
+参数：
+    无
+返回：
+    无
+*/
 gambleHelper(){
     local
     global helperDelay, helperBreak, helperRunning
@@ -682,6 +784,15 @@ gambleHelper(){
     Return
 }
 
+/*
+负责快速分解（左键+回车）
+参数：
+    D3W：int，窗口区域的宽度
+    D3H：int，窗口区域的高度
+    helperDelay：按键延迟
+返回：
+    无
+*/
 quickSalvageHelper(D3W, D3H, helperDelay){
     Click
     Sleep, helperDelay
@@ -691,20 +802,35 @@ quickSalvageHelper(D3W, D3H, helperDelay){
     Return
 }
 
-oneButtonSalvageHelper(D3W, D3H, xpos, ypos, mouseDelay){
+/*
+负责一键分解
+参数：
+    D3W：int，窗口区域的宽度
+    D3H：int，窗口区域的高度
+    xpos：之前鼠标x坐标
+    ypos：之前鼠标y坐标
+返回：
+    无
+*/
+oneButtonSalvageHelper(D3W, D3H, xpos, ypos){
     local
     global helperBreak, helperRunning, helperDelay, safezone, helperNonEmpty
+    GuiControlGet, extraSalvageHelperDropdown
     helperNonEmpty:=[]
     helperSkip:={}
-    i:=0
+    i:=0    ; 格子编号
+    q:=0    ; 当前格子装备品质，1：普通传奇，2：远古传奇，3：太古传奇
     SetDefaultMouseSpeed, mouseDelay
+    ; 开启一单独线程查找空格子
     fn1:=Func("listNonEmptyInventorySpaceIDs").Bind(D3W, D3H)
     SetTimer, %fn1%, -1
     Loop
     {
+        ; 如果找到了空格子
         if helperNonEmpty.Count()>0 {
             i:=helperNonEmpty.RemoveAt(1)
         }
+        ; 如果找完了
         if (helperBreak or i<0) {
             helperRunning:=False
             Click, Right
@@ -712,16 +838,41 @@ oneButtonSalvageHelper(D3W, D3H, xpos, ypos, mouseDelay){
             Return
         }
         Else if (i>0 and !helperSkip.HasKey(i)) {
+            ; 得到空格子坐标
             m:=getInventorySpaceXY(D3W, D3H, i)
             MouseMove, m[1], m[2]
+            ; 智能分解判断
+            if (extraSalvageHelperDropdown > 2)
+            {
+                Sleep, Min(helperDelay*2, 300)  ; 等待边框显示完毕
+                ; 获取三个位于边框上的点颜色
+                PixelGetColor, cpixel, Round(m[3]-1-10*D3H/1440), m[2], RGB
+                c1:=splitRGB(cpixel)
+                PixelGetColor, cpixel, Round(m[3]-10*D3H/1440), m[2], RGB
+                c2:=splitRGB(cpixel)
+                PixelGetColor, cpixel, Round(m[3]+1-10*D3H/1440), m[2], RGB
+                c3:=splitRGB(cpixel)
+                c:=[Max(c1[1],c2[1],c3[1]),Max(c1[2],c2[2],c3[2]),Max(c1[3],c2[3],c3[3])]
+                if (c[1]>100 or c[3]<20) {
+                    ; 装备是太古或者远古
+                    q:=(c[2]<35) ? 4:3
+                } else {
+                    ; 装备是普通传奇
+                    q:=2
+                }
+            }
+            if (q>=extraSalvageHelperDropdown) {
+                Continue
+            }
             Click
-            Sleep, helperDelay
+            Sleep, helperDelay  ; 等待对话框显示完毕
             if isDialogBoXOnScreen(D3W, D3H)
             {
                 Send {Enter}
-                Sleep, Round(helperDelay*2.5)
                 if (i<=50)
                 {
+                    ; 如果不是最后一行，判断下方格子是否变为空格
+                    Sleep, Min(Round(helperDelay*2.5), 300) ; 等待装备消失动画显示完毕
                     newID:=i+10
                     if (isInventorySpaceEmpty(D3W, D3H, newID, [[0.65625,0.714285714], [0.375,0.365079365]])){
                         helperSkip[newID]:=1
@@ -734,19 +885,38 @@ oneButtonSalvageHelper(D3W, D3H, xpos, ypos, mouseDelay){
     }
 }
 
+/*
+枚举所有空格子
+参数：
+    D3W：int，窗口区域的宽度
+    D3H：int，窗口区域的高度
+返回：
+    无
+*/
 listNonEmptyInventorySpaceIDs(D3W, D3H){
     local
     global safezone, helperNonEmpty
     e:=[[0.65625,0.714285714], [0.375,0.365079365]]
     Loop, 60
     {
+        ; 跳过安全区域，将找到的空格子压入列表中
         if (!safezone.HasKey(A_Index) and !isInventorySpaceEmpty(D3W, D3H, A_Index, e)){
             helperNonEmpty.Push(A_Index)
         }
     }
+    ; 如果找完了则压入-1
     helperNonEmpty.Push(-1)
 }
 
+/*
+负责快速暂停
+参数：
+    keysOnHold：object，当前所有压下的按键
+    pausetime: int, 暂停的时间
+    vRunning：Bool，战斗宏是否在运行
+返回：
+    无
+*/
 clickPauseMarco(keysOnHold, pausetime, vRunning){
     if vRunning
     {
@@ -757,15 +927,24 @@ clickPauseMarco(keysOnHold, pausetime, vRunning){
                 Send {%key% up}
             }
         }
+        ; 自动恢复
         SetTimer, clickResumeMarco, off
         SetTimer, clickResumeMarco, -%pausetime%
     }
     Return
 }
 
+/*
+负责快速暂停恢复
+参数：
+    无
+返回：
+    无
+*/
 clickResumeMarco(){
     local
     global keysOnHold, vRunning
+    ; 重新压下所有压键
     for key, value in keysOnHold
     {
         if (vRunning and !GetKeyState(key))
@@ -776,6 +955,13 @@ clickResumeMarco(){
     Return
 }
 
+/*
+设置自定义强制站立按键相关的控件动画
+参数：
+    无
+返回：
+    无
+*/
 SetCustomStanding(){
     GuiControlGet, extraCustomStanding
     if extraCustomStanding
@@ -794,6 +980,13 @@ SetCustomStanding(){
     Return
 }
 
+/*
+设置自定义强制移动按键相关的控件动画
+参数：
+    无
+返回：
+    无
+*/
 SetCustomMoving(){
     GuiControlGet, extraCustomMoving
     if extraCustomMoving
@@ -812,6 +1005,13 @@ SetCustomMoving(){
     Return
 }
 
+/*
+设置赌博助手相关的控件动画
+参数：
+    无
+返回：
+    无
+*/
 SetGambleHelper(){
     Gui, Submit, NoHide
     GuiControlGet, extragambleckbox
@@ -828,6 +1028,13 @@ SetGambleHelper(){
     Return
 }
 
+/*
+设置分解助手相关的控件动画
+参数：
+    无
+返回：
+    无
+*/
 SetSalvageHelper(){
     local
     global safezone
@@ -840,9 +1047,10 @@ SetSalvageHelper(){
         GuiControl, Enable, extraSalvageHelperDropdown
         switch extraSalvageHelperDropdown
         {
-            case 1,3:
+            case 1:
                 GuiControl, hide, helperSafeZoneText
-            case 2:
+            case 2,3,4:
+                ; 如果是一键分解，检查安全区域设置
                 hasSafeZone:=False
                 Loop, 60
                 {
@@ -873,6 +1081,13 @@ SetSalvageHelper(){
     Return
 }
 
+/*
+设置技能队列相关的控件动画
+参数：
+    无
+返回：
+    无
+*/
 SetSkillQueue(){
     local
     global tabslen
@@ -893,11 +1108,19 @@ SetSkillQueue(){
     Return
 }
 
+/*
+设置发送技能队列按键
+参数：
+    inv：int，技能队列延迟
+返回：
+    无
+*/
 spamSkillQueue(inv){
     local
     global skillQueue, forceStandingKey, keysOnHold
     while (skillQueue.Count() > 0)
     {
+        ; 取出排在第一的按键
         _k:=skillQueue.RemoveAt(1)
         k:=_k[1]
         switch _k[1]
@@ -906,6 +1129,7 @@ spamSkillQueue(inv){
                 switch _k[2]
                 {
                     case 4:
+                        ; 如果是左键保持buff
                         if GetKeyState(forceStandingKey)
                         {
                             Send {Blind}{%k%}
@@ -919,6 +1143,7 @@ spamSkillQueue(inv){
                         Send {Blind}{%k%}
                 }
             Default:
+                ; 如果是连点，按键前后停止一段时间
                 if (_k[2] = 3){
                     sleep Round(inv*0.5)
                 }
@@ -932,9 +1157,18 @@ spamSkillQueue(inv){
     Return
 }
 
-isDialogBoXOnScreen(ww, wh){
-    point1:=[ww/2-(3440/2-1655)*wh/1440, 500*wh/1440]
-    point2:=[ww/2+(3440/2-1800)*wh/1440, 500*wh/1440]
+/*
+判断屏幕上是否有对话框
+参数：
+    D3W：int，窗口区域的宽度
+    D3H：int，窗口区域的高度
+返回：
+    bool
+*/
+isDialogBoXOnScreen(D3W, D3H){
+    ; 2点取色判断
+    point1:=[D3W/2-(3440/2-1655)*D3H/1440, 500*D3H/1440]
+    point2:=[D3W/2+(3440/2-1800)*D3H/1440, 500*D3H/1440]
     PixelGetColor, cpixel, Round(point1[1]), Round(point1[2]), rgb
     c1:=splitRGB(cpixel)
     PixelGetColor, cpixel, Round(point2[1]), Round(point2[2]), rgb
@@ -949,7 +1183,16 @@ isDialogBoXOnScreen(ww, wh){
     }
 }
 
-isRedXonScreen(ww, wh, position){
+/*
+判断屏幕左侧或者右侧是否有关闭按钮（红X）
+参数：
+    D3W：int，窗口区域的宽度
+    D3H：int，窗口区域的高度B
+    position：string，“left”或者“right”
+返回：
+    Bool
+*/
+isRedXonScreen(D3W, D3H, position){
     _centerWhiteL:=[680, 24]
     _centerWhiteR:=[3417, 24]
     _XsizeInside:=29
@@ -957,14 +1200,15 @@ isRedXonScreen(ww, wh, position){
     switch position
     {
         case "left":
-            centerPoint:=[Round(_centerWhiteL[1]*wh/1440), Round(_centerWhiteL[2]*wh/1440)]
-            upPoint:=[Round(_centerWhiteL[1]*wh/1440), Round((_centerWhiteL[2]-_XsizeInside/3)*wh/1440)]
-            leftPoint:=[Round((_centerWhiteL[1]-_XsizeOutside/2)*wh/1440), Round(_centerWhiteL[2]*wh/1440)]
+            centerPoint:=[Round(_centerWhiteL[1]*D3H/1440), Round(_centerWhiteL[2]*D3H/1440)]
+            upPoint:=[Round(_centerWhiteL[1]*D3H/1440), Round((_centerWhiteL[2]-_XsizeInside/3)*D3H/1440)]
+            leftPoint:=[Round((_centerWhiteL[1]-_XsizeOutside/2)*D3H/1440), Round(_centerWhiteL[2]*D3H/1440)]
         case "right":
-            centerPoint:=[Round(ww-((3440-_centerWhiteR[1])*wh/1440)), Round(_centerWhiteR[2]*wh/1440)]
-            upPoint:=[Round(ww-((3440-_centerWhiteR[1])*wh/1440)), Round((_centerWhiteR[2]-_XsizeInside/3)*wh/1440)]
-            leftPoint:=[Round(ww-((3440-_centerWhiteR[1]-_XsizeOutside/2)*wh/1440)), Round(_centerWhiteR[2]*wh/1440)]
+            centerPoint:=[Round(D3W-((3440-_centerWhiteR[1])*D3H/1440)), Round(_centerWhiteR[2]*D3H/1440)]
+            upPoint:=[Round(D3W-((3440-_centerWhiteR[1])*D3H/1440)), Round((_centerWhiteR[2]-_XsizeInside/3)*D3H/1440)]
+            leftPoint:=[Round(D3W-((3440-_centerWhiteR[1]-_XsizeOutside/2)*D3H/1440)), Round(_centerWhiteR[2]*D3H/1440)]
     }
+    ; 3点取色判断
     PixelGetColor, cpixel, centerPoint[1], centerPoint[2], rgb
     centerrgb:=splitRGB(cpixel)
     PixelGetColor, cpixel, upPoint[1], upPoint[2], rgb
@@ -981,7 +1225,16 @@ isRedXonScreen(ww, wh, position){
     }
 }
 
-getInventorySpaceXY(ww, wh, ID){
+/*
+获取背包格子的坐标
+参数：
+    D3W：int，窗口区域的宽度
+    D3H：int，窗口区域的高度
+    ID：int，格子的编号
+返回：
+    [格子中心x，格子中心y，格子左上角x，格子左上角y]
+*/
+getInventorySpaceXY(D3W, D3H, ID){
     _firstSpaceUL:=[2753, 747]
     _spaceSizeInnerW:=64
     _spaceSizeInnerH:=63
@@ -989,15 +1242,25 @@ getInventorySpaceXY(ww, wh, ID){
     _spaceSizeH:=66
     targetColumn:=Mod(ID-1,10)
     targetRow:=Floor((ID-1)/10)
-    Return [Round(ww-((3440-_firstSpaceUL[1]-_spaceSizeW*targetColumn-_spaceSizeInnerW/2)*wh/1440)), Round((_firstSpaceUL[2]+targetRow*_spaceSizeH+_spaceSizeInnerH/2)*wh/1440)
-    , Round(ww-((3440-_firstSpaceUL[1]-_spaceSizeW*targetColumn)*wh/1440)), Round((_firstSpaceUL[2]+targetRow*_spaceSizeH)*wh/1440)]
+    Return [Round(D3W-((3440-_firstSpaceUL[1]-_spaceSizeW*targetColumn-_spaceSizeInnerW/2)*D3H/1440)), Round((_firstSpaceUL[2]+targetRow*_spaceSizeH+_spaceSizeInnerH/2)*D3H/1440)
+    , Round(D3W-((3440-_firstSpaceUL[1]-_spaceSizeW*targetColumn)*D3H/1440)), Round((_firstSpaceUL[2]+targetRow*_spaceSizeH)*D3H/1440)]
 }
 
-isSalvagePageOpen(ww, wh){
-    point1:=[Round(321*wh/1440),Round(86*wh/1440)]
-    point2:=[Round(351*wh/1440),Round(107*wh/1440)]
-    point3:=[Round(388*wh/1440),Round(86*wh/1440)]
-    point4:=[Round(673*wh/1440),Round(1040*wh/1440)]
+/*
+判断铁匠/分解页面是否开启
+参数：
+    D3W：int，窗口区域的宽度
+    D3H：int，窗口区域的高度
+返回：
+    [0]：如果没有开启
+    [1]: 如果铁匠页面开启但拆解页面没开启
+    [2, 大拆解按钮边缘坐标xy, 白色解按钮边缘坐标xy, 蓝色解按钮边缘坐标xy, 黄色解按钮边缘坐标xy]：如果铁匠开启且同时在拆解页面
+*/
+isSalvagePageOpen(D3W, D3H){
+    point1:=[Round(321*D3H/1440),Round(86*D3H/1440)]
+    point2:=[Round(351*D3H/1440),Round(107*D3H/1440)]
+    point3:=[Round(388*D3H/1440),Round(86*D3H/1440)]
+    point4:=[Round(673*D3H/1440),Round(1040*D3H/1440)]
     PixelGetColor, cpixel, point1[1], point1[2], rgb
     c1:=splitRGB(cpixel)
     PixelGetColor, cpixel, point2[1], point2[2], rgb
@@ -1006,8 +1269,8 @@ isSalvagePageOpen(ww, wh){
     c3:=splitRGB(cpixel)
     PixelGetColor, cpixel, point4[1], point4[2], rgb
     c4:=splitRGB(cpixel)
-    if (c1[3]>c1[2] and c1[2]>c1[1] and c1[3]>110 and c3[3]>c3[2] and c3[2]>c3[1] and c3[3]>110 and c2[1]+c2[2]>350 and c4[1]>50 and c4[2]<15 and c4[3]<15 and isRedXonScreen(ww, wh, "left")){
-        p:=getSalvageIconXY(ww, wh, "edge")
+    if (c1[3]>c1[2] and c1[2]>c1[1] and c1[3]>110 and c3[3]>c3[2] and c3[2]>c3[1] and c3[3]>110 and c2[1]+c2[2]>350 and c4[1]>50 and c4[2]<15 and c4[3]<15 and isRedXonScreen(D3W, D3H, "left")){
+        p:=getSalvageIconXY(D3W, D3H, "edge")
         PixelGetColor, cpixel, p[1][1], p[1][2], rgb
         cLeg:=splitRGB(cpixel)
         PixelGetColor, cpixel, p[2][1], p[2][2], rgb
@@ -1027,30 +1290,47 @@ isSalvagePageOpen(ww, wh){
     }
 }
 
-getSalvageIconXY(ww, wh, c)
+/*
+获得拆解页面4个按钮的坐标
+参数：
+    D3W：int，窗口区域的宽度
+    D3H：int，窗口区域的高度
+    c: string，“center”-中心坐标，“edge”-边缘颜色带内坐标
+返回：
+    [大拆解按钮坐标xy，白色解按钮坐标xy，蓝色解按钮坐标xy，黄色解按钮坐标xy]
+*/
+getSalvageIconXY(D3W, D3H, c)
 {
     switch c
     {
         case "center":
-            centerLeg:=[Round(221*wh/1440),Round(388*wh/1440)]
-            centerWhite:=[Round(335*wh/1440),Round(388*wh/1440)]
-            centerBlue:=[Round(424*wh/1440),Round(388*wh/1440)]
-            centerRare:=[Round(514*wh/1440),Round(388*wh/1440)]
+            centerLeg:=[Round(221*D3H/1440),Round(388*D3H/1440)]
+            centerWhite:=[Round(335*D3H/1440),Round(388*D3H/1440)]
+            centerBlue:=[Round(424*D3H/1440),Round(388*D3H/1440)]
+            centerRare:=[Round(514*D3H/1440),Round(388*D3H/1440)]
             Return [centerLeg, centerWhite, centerBlue, centerRare]
         case "edge":
-            edgeColorLeg:=[Round(203*wh/1440),Round(337*wh/1440)]
-            edgeColorWhite:=[Round(335*wh/1440),Round(371*wh/1440)]
-            edgeColorBlue:=[Round(424*wh/1440),Round(371*wh/1440)]
-            edgeColorRare:=[Round(514*wh/1440),Round(371*wh/1440)]
+            edgeColorLeg:=[Round(203*D3H/1440),Round(337*D3H/1440)]
+            edgeColorWhite:=[Round(335*D3H/1440),Round(371*D3H/1440)]
+            edgeColorBlue:=[Round(424*D3H/1440),Round(371*D3H/1440)]
+            edgeColorRare:=[Round(514*D3H/1440),Round(371*D3H/1440)]
             Return [edgeColorLeg, edgeColorWhite, edgeColorBlue, edgeColorRare]
     }
 }
 
-isGambleOpen(ww, wh){
-    point1:=[Round(320*wh/1440),Round(96*wh/1440)]
-    point2:=[Round(351*wh/1440),Round(100*wh/1440)]
-    point4:=[Round(194*wh/1440),Round(67*wh/1440)]
-    point5:=[Round(147*wh/1440),Round(94*wh/1440)]
+/*
+判断赌博页面是否开启
+参数：
+    D3W：int，窗口区域的宽度
+    D3H：int，窗口区域的高度
+返回：
+    Bool
+*/
+isGambleOpen(D3W, D3H){
+    point1:=[Round(320*D3H/1440),Round(96*D3H/1440)]
+    point2:=[Round(351*D3H/1440),Round(100*D3H/1440)]
+    point4:=[Round(194*D3H/1440),Round(67*D3H/1440)]
+    point5:=[Round(147*D3H/1440),Round(94*D3H/1440)]
     PixelGetColor, cpixel, point1[1], point1[2], rgb
     c1:=splitRGB(cpixel)
     PixelGetColor, cpixel, point2[1], point2[2], rgb
@@ -1067,13 +1347,23 @@ isGambleOpen(ww, wh){
     }
 }
 
-isInventorySpaceEmpty(ww, wh, ID, ckpoints){
+/*
+判断格子是否为空
+参数：
+    D3W：int，窗口区域的宽度
+    D3H：int，窗口区域的高度
+    ID：int，格子编号
+    ckpoints：object，要检查的位置的xy百分比list
+返回：
+    Bool
+*/
+isInventorySpaceEmpty(D3W, D3H, ID, ckpoints){
     _spaceSizeInnerW:=64
     _spaceSizeInnerH:=63
-    m:=getInventorySpaceXY(ww, wh, ID)
+    m:=getInventorySpaceXY(D3W, D3H, ID)
     for i, p in ckpoints
     {
-        xy:=[Round(m[3]+_spaceSizeInnerW*ckpoints[A_Index][1]*wh/1440), Round(m[4]+_spaceSizeInnerH*ckpoints[A_Index][2]*wh/1440)]
+        xy:=[Round(m[3]+_spaceSizeInnerW*ckpoints[A_Index][1]*D3H/1440), Round(m[4]+_spaceSizeInnerH*ckpoints[A_Index][2]*D3H/1440)]
         PixelGetColor, cpixel, xy[1], xy[2], rgb
         c:=splitRGB(cpixel)
         if !(c[1]<22 and c[2]<20 and c[3]<15 and c[1]>c[3] and c[2]>c[3])
@@ -1084,16 +1374,41 @@ isInventorySpaceEmpty(ww, wh, ID, ckpoints){
     Return True
 }
 
+/*
+转化Object的所有key为字符串
+参数：
+    sep：分隔符
+    dict：输入的字典
+返回：
+    String
+*/
 keyJoin(sep, dict) {
     for key,value in dict
         str .= key . sep
     return SubStr(str, 1, -StrLen(sep))
 }
 
+/*
+一个空方程，用于绑定Text控件的gLabel从而使tooltip可以工作
+参数：
+    无
+返回：
+    无
+*/
 dummyFunction(){
     Return
 }
-; https://gist.github.com/andreberg/55d003569f0564cd8695
+
+/*
+为控件添加tooltip
+https://gist.github.com/andreberg/55d003569f0564cd8695
+参数：
+    con：控件的hwnd
+    text：tooltip字符串
+    Modify：为1则修改一个已创建的tooltip
+返回：
+    无
+*/
 AddToolTip(con, text, Modify=0){
     Static TThwnd, GuiHwnd
     TInfo =
@@ -1174,6 +1489,7 @@ spamSkillKey6:
     }
 Return
 
+; 将currentProfile值关联到当前激活的tab
 SetTabFocus:
     Gui, Submit, NoHide
     GuiControl, , StatuesSkillsetText, % tabsarray[ActiveTab]
@@ -1181,6 +1497,7 @@ SetTabFocus:
     Gosub, SetQuickPause
 Return
 
+; 设置快速暂停相关的快捷键和控件动画
 SetQuickPause:
     Gui, Submit, NoHide
     GuiControlGet, skillset%currentProfile%clickpauseckbox
@@ -1196,11 +1513,9 @@ SetQuickPause:
         GuiControl, Enable, skillset%currentProfile%clickpauseupdown
         GuiControl, Enable, skillset%currentProfile%clickpausetext2
         Try {
-            Hotkey, ~%quickPauseHK%, quickPause, off
-            Hotkey, ~+%quickPauseHK%, quickPause, off
+            Hotkey, ~*%quickPauseHK%, quickPause, off
         } 
-        Hotkey, ~%currentQuickPauseHK%, quickPause, on
-        Hotkey, ~+%currentQuickPauseHK%, quickPause, on
+        Hotkey, ~*%currentQuickPauseHK%, quickPause, on
         quickPauseHK:=currentQuickPauseHK
     }
     Else
@@ -1211,12 +1526,12 @@ SetQuickPause:
         GuiControl, Disable, skillset%currentProfile%clickpauseedit
         GuiControl, Disable, skillset%currentProfile%clickpauseupdown
         GuiControl, Disable, skillset%currentProfile%clickpausetext2
-        Hotkey, ~%currentQuickPauseHK%, quickPause, off
-        Hotkey, ~+%currentQuickPauseHK%, quickPause, off
+        Hotkey, ~*%currentQuickPauseHK%, quickPause, off
         quickPauseHK:=""
     }
 Return
 
+; 设置助手宏相关的控件动画
 SetHelperKeybinding:
     Gui, Submit, NoHide
     mouseKeyArray:=["", "MButton", "WheelUp", "WheelDown", "XButton1", "XButton2", ""]
@@ -1224,7 +1539,7 @@ SetHelperKeybinding:
     GuiControlGet, HelperKeybindingHK
     Try
     {
-        Hotkey, ~%oldsandHelperHK%, oldsandHelper, off
+        Hotkey, ~*%oldsandHelperHK%, oldsandHelper, off
     }
     switch HelperKeybindingdropdown
     {
@@ -1240,12 +1555,13 @@ SetHelperKeybinding:
     }
     Try
     {
-        Hotkey, ~%oldsandHelperHK%, oldsandHelper, off
-        Hotkey, ~%newoldsandHelperHK%, oldsandHelper, on
+        Hotkey, ~*%oldsandHelperHK%, oldsandHelper, off
+        Hotkey, ~*%newoldsandHelperHK%, oldsandHelper, on
         oldsandHelperHK:=newoldsandHelperHK
     }
 Return
 
+; 设置配置的快速切换功能，以及相关控件动画
 SetProfileKeybinding:
     Gui, Submit, NoHide
     mouseKeyArray:=["", "MButton", "WheelUp", "WheelDown", "XButton1", "XButton2", ""]
@@ -1256,8 +1572,7 @@ SetProfileKeybinding:
         {
             if (value = currentPage)
             {
-                Hotkey, ~%key%, SwitchProfile, Off
-                Hotkey, ~+%key%, SwitchProfile, Off
+                Hotkey, ~*%key%, SwitchProfile, Off
                 profileKeybinding.Delete(key)
             }
         }
@@ -1268,24 +1583,24 @@ SetProfileKeybinding:
             case 2,3,4,5,6:
                 GuiControl, Disable, skillset%currentPage%profilekeybindinghkbox
                 ckey:=mouseKeyArray[skillset%currentPage%profilekeybindingdropdown]
-                Hotkey, ~%ckey%, SwitchProfile, on
-                Hotkey, ~+%ckey%, SwitchProfile, on
+                Hotkey, ~*%ckey%, SwitchProfile, on
                 profileKeybinding[ckey]:=currentPage
             case 7:
                 GuiControl, Enable, skillset%currentPage%profilekeybindinghkbox
                 ckey:=skillset%currentPage%profilekeybindinghkbox
                 if (ckey)
                 {
-                    Hotkey, ~%ckey%, SwitchProfile, on
-                    Hotkey, ~+%ckey%, SwitchProfile, on
+                    Hotkey, ~*%ckey%, SwitchProfile, on
                     profileKeybinding[ckey]:=currentPage
                 } 
         }
     }
 Return
 
+; 处理配置快速切换逻辑
 SwitchProfile:
-    currentHK:=StrReplace(StrReplace(A_ThisHotkey, "+"), "~")
+    ;移除快捷键的modifier 
+    currentHK:=StrReplace(StrReplace(A_ThisHotkey, "*"), "~")
     if (currentProfile!=profileKeybinding[currentHK])
     {
         currentProfile:=profileKeybinding[currentHK]
@@ -1301,6 +1616,7 @@ SwitchProfile:
     }
 Return
 
+; 设置开启战斗宏快捷键和相关控件动画
 SetStartRun:
     Gui, Submit, NoHide
     startRunMouseKeyArray:=["RButton", "MButton", "WheelUp", "WheelDown", "XButton1", "XButton2", ""]
@@ -1339,14 +1655,13 @@ SetStartRun:
     }
     Try
     {
-        Hotkey, ~%startRunHK%, MainMacro, off
-        Hotkey, ~+%startRunHK%, MainMacro, off
-        Hotkey, ~%newstartRunHK%, MainMacro, on
-        Hotkey, ~+%newstartRunHK%, MainMacro, on
+        Hotkey, ~*%startRunHK%, MainMacro, off
+        Hotkey, ~*%newstartRunHK%, MainMacro, on
         startRunHK = %newstartRunHK%
     }
 Return
 
+; 设置强制移动相关控件动画
 SetMovingHelper:
     Gui, Submit, NoHide
     Loop, %tabslen%{
@@ -1366,6 +1681,7 @@ SetMovingHelper:
     }
 Return
 
+; 设置按键宏策略控件动画
 SetSkillsetDropdown:
     Gui, Submit, NoHide
     Loop, %tabslen%{
@@ -1394,6 +1710,7 @@ SetSkillsetDropdown:
     }
 Return
 
+; 处理战斗宏的执行逻辑
 MainMacro:
     VarSetCapacity(rect, 16)
     DllCall("GetClientRect", "ptr", WinExist("A"), "ptr", &rect)
@@ -1402,6 +1719,7 @@ MainMacro:
     GuiControlGet, skillset%currentProfile%profilestartmodedropdown
     switch skillset%currentProfile%profilestartmodedropdown
     {
+        ; 懒人模式
         case 1:
             if !vRunning
             {
@@ -1412,12 +1730,14 @@ MainMacro:
                 Gosub, StopMarco
             } 
         case 2:
+        ; 仅按下时
             Gosub, RunMarco
             KeyWait, %startRunHK%
             Gosub, StopMarco
     }
 Return
 
+; 开启战斗宏
 RunMarco:
     Gui, Submit, NoHide
     GuiControlGet, extraCustomStanding
@@ -1427,6 +1747,7 @@ RunMarco:
     GuiControlGet, extraCustomMovingHK
     forceMovingKey:=extraCustomMoving? extraCustomMovingHK:"e"
     skillQueue:=[]
+    ; 处理技能按键
     Loop, 6
     {
         GuiControlGet, skillset%currentProfile%s%A_Index%dropdown
@@ -1444,6 +1765,7 @@ RunMarco:
             SetTimer, spamSkillKey%A_Index%, off
         }
     }
+    ; 处理位移按键
     GuiControlGet, skillset%currentProfile%movingdropdown
     Switch skillset%currentProfile%movingdropdown
     {
@@ -1458,6 +1780,7 @@ RunMarco:
             SetTimer, forceMoving, % skillset%currentProfile%movingedit
 
     }
+    ; 处理按键队列
     if skillset%currentProfile%useskillqueueckbox{
         GuiControlGet, skillset%currentProfile%useskillqueueupdown
         sqfunc:=Func("spamSkillQueue").Bind(skillset%currentProfile%useskillqueueupdown)
@@ -1467,6 +1790,7 @@ RunMarco:
     vPausing:=False
 Return
 
+; 停止战斗宏
 StopMarco:
     if IsObject(sqfunc){
         SetTimer, %sqfunc%, off
@@ -1487,12 +1811,14 @@ StopMarco:
     vPausing:=False
 Return
 
+; 处理快速暂停按键
 quickPause:
     GuiControlGet, skillset%currentProfile%clickpausedropdown1
     GuiControlGet, skillset%currentProfile%clickpauseupdown
     switch skillset%currentProfile%clickpausedropdown1
     {
         case 1:
+            ; 双击
             If (A_PriorHotkey=A_ThisHotkey and A_TimeSincePriorHotkey < DblClickTime)
             {
                 clickPauseMarco(keysOnHold, skillset%currentProfile%clickpauseupdown, vRunning)
@@ -1502,6 +1828,7 @@ quickPause:
     }
 Return
 
+; 发送强制移动按键
 forceMoving:
     if !vPausing
     {
@@ -1509,11 +1836,14 @@ forceMoving:
     }
 Return
 
+; 安全宏
 safeGuard:
+    ; 暗黑三不是焦点时停止宏
     If !WinActive("ahk_class D3 Main Window Class")
     {
         Gosub, StopMarco
     }
+    ; 如果宏在运行，关闭一些控件防止误输入
     if vRunning
     {
         Loop, %tabslen%
@@ -1538,22 +1868,16 @@ safeGuard:
     }
 Return
 ; ========================================= Hotkeys =======================================
-~Enter::
-~T::
-~M::
-~+Enter::
-~+T::
-~+M::
-    GuiControlGet, extraSmartPause
+~*Enter::
+~*T::
+~*M::
     if extraSmartPause
     {
         Gosub, StopMarco
     }
 Return
 
-~Tab::
-~+Tab::
-    GuiControlGet, extraSmartPause
+~*Tab::
     if extraSmartPause
     {
         vPausing:=!vPausing
