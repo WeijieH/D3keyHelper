@@ -19,18 +19,21 @@ CoordMode, Pixel, Client
 CoordMode, Mouse, Client
 Process, Priority, , High
 
-VERSION:=210502
+VERSION:=210503
 TITLE:=Format("暗黑3技能连点器 v1.2.{:d}   by Oldsand", VERSION)
 MainWindowW:=850
 MainWindowH:=500
 
 currentProfile:=ReadCfgFile("d3oldsand.ini", tabs, hotkeys, actions, intervals, ivdelays, others, generals)
+SendMode, % generals.sendmode
+OutputDebug, % A_Sendmode
 Gui -MaximizeBox -MinimizeBox +Owner
 tabsarray:=StrSplit(tabs, "`|")
 tabslen:= ObjCount(tabsarray)
 vRunning:=False
 vPausing:=False
 helperDelay:=100
+mouseDelay:=2
 helperRunning:=False
 helperBreak:=False
 helperNonEmpty:=[]
@@ -201,11 +204,16 @@ Gui Add, DropDownList, x+5 y5 w90 AltSubmit Choose%startmethod% vStartRunDropdow
 Gui Add, Hotkey, x+5 y5 w70 vStartRunHKinput gSetStartRun, %startRunHK%
 
 ybottomtext:=MainWindowH-20
+ybottomredtext:=ybottomtext-2
 Gui Add, Text, x10 y%ybottomtext%, 当前激活配置:
 Gui Font, cRed s10
-Gui Add, Text, x+5 w350 vStatuesSkillsetText, % tabsarray[currentProfile]
+Gui Add, Text, x+5 y%ybottomtext% w350 vStatuesSkillsetText, % tabsarray[currentProfile]
+Gui Add, Text, x465 y%ybottomredtext% hwndCurrentmodeTextID gdummyFunction, % A_SendMode
 Gui Font
-Gui Add, Link, x510 y%ybottomtext%, 提交bug，检查更新: <a href="https://github.com/WeijieH/D3keyHelper">https://github.com/WeijieH/D3keyHelper</a>
+Gui Add, Text, x380 y%ybottomtext% hwndSendmodeTextID gdummyFunction, 按键发送模式:
+AddToolTip(SendmodeTextID, "可以通过修改配置文件General区块下的sendmode值来设置按键发送模式")
+AddToolTip(CurrentmodeTextID, "Event：默认模式，最佳兼容性`nInput：推荐模式，最佳速度但在旧操作系统上可能无效")
+Gui Add, Link, x515 y%ybottomtext%, 提交bug，检查更新: <a href="https://github.com/WeijieH/D3keyHelper">https://github.com/WeijieH/D3keyHelper</a>
 
 Menu, Tray, NoStandard
 Menu, Tray, Add, 设置
@@ -275,13 +283,14 @@ ReadCfgFile(cfgFileName, ByRef tabs, ByRef hotkeys, ByRef actions, ByRef interva
         IniRead, safezone, %cfgFileName%, General, safezone, "61,62,63"
         IniRead, helperspeed, %cfgFileName%, General, helperspeed, 3
         IniRead, gamegamma, %cfgFileName%, General, gamegamma, 1.000000
+        IniRead, sendmode, %cfgFileName%, General, sendmode, "Event"
         generals:={"oldsandhelpermethod":oldsandhelpermethod, "oldsandhelperhk":oldsandhelperhk
         , "enablesalvagehelper":enablesalvagehelper, "salvagehelpermethod":salvagehelpermethod
         , "enablegamblehelper":enablegamblehelper, "gamblehelpertimes":gamblehelpertimes
         , "startmethod":startmethod, "starthotkey":starthotkey
         , "enablesmartpause":enablesmartpause, "enablesoundplay":enablesoundplay
         , "custommoving":custommoving, "custommovinghk":custommovinghk, "customstanding":customstanding, "customstandinghk":customstandinghk
-        , "safezone":safezone, "helperspeed":helperspeed, "gamegamma":gamegamma}
+        , "safezone":safezone, "helperspeed":helperspeed, "gamegamma":gamegamma, "sendmode":sendmode}
 
         IniRead, tabs, %cfgFileName%
         tabs:=StrReplace(StrReplace(tabs, "`n", "`|"), "General|", "")
@@ -354,7 +363,7 @@ ReadCfgFile(cfgFileName, ByRef tabs, ByRef hotkeys, ByRef actions, ByRef interva
         , "startmethod":7, "starthotkey":"F2", "enablesmartpause":1, "salvagehelpermethod":1
         , "oldsandhelpermethod":7, "enablesalvagehelper":0, "enablesoundplay":1
         , "custommoving":0, "custommovinghk":"e", "customstanding":0, "customstandinghk":"LShift"
-        , "safezone":"61,62,63", "helperspeed":3, "gamegamma":1.000000}
+        , "safezone":"61,62,63", "helperspeed":3, "gamegamma":1.000000, "sendmode":"Event"}
     }
     Return currentProfile
 }
@@ -406,6 +415,7 @@ SaveCfgFile(cfgFileName, tabs, currentProfile, safezone, VERSION){
     IniWrite, %safezone%, %cfgFileName%, General, safezone
     global gameGamma
     IniWrite, %gameGamma%, %cfgFileName%, General, gamegamma
+    IniWrite, %A_SendMode%, %cfgFileName%, General, sendmode
     
 
     GuiControlGet, StartRunDropdown
@@ -623,7 +633,7 @@ createOrTruncateFile(FileName){
 */
 oldsandHelper(){
     local
-    global helperRunning, helperBreak, helperDelay
+    global helperRunning, helperBreak, helperDelay, mouseDelay
     if helperRunning{
         ; 防止过快连按
         ; 宏在执行中再按可以打断
@@ -643,6 +653,7 @@ oldsandHelper(){
     GuiControlGet, extraSalvageHelperCkbox
     GuiControlGet, extraSalvageHelperDropdown
     GuiControlGet, helperAnimationSpeedDropdown
+    MouseGetPos, xpos, ypos ; 当前鼠标位置，用于宏结束后返回
     ; 载入预设动画速度
     switch helperAnimationSpeedDropdown
     {
@@ -653,10 +664,10 @@ oldsandHelper(){
             mouseDelay:=2
             helperDelay:=100
         case 3:
-            mouseDelay:=3
+            mouseDelay:=5
             helperDelay:=150
         case 4:
-            mouseDelay:=5
+            mouseDelay:=10
             helperDelay:=200
     }
     SetDefaultMouseSpeed, mouseDelay
@@ -751,14 +762,16 @@ oldsandHelper(){
                 }
                 ; 点击分解按钮
                 MouseMove, salvageIconXY[1][1], salvageIconXY[1][2]
+                Sleep, helperDelay*0.5
                 Click
                 if helperBreak
                 {
                     helperRunning:=False
                     Return
                 }
+                Sleep, helperDelay*0.5
                 ; 执行一键分解
-                fn:=Func("oneButtonSalvageHelper").Bind(D3W, D3H, xpos, ypos, mouseDelay)
+                fn:=Func("oneButtonSalvageHelper").Bind(D3W, D3H, xpos, ypos)
                 SetTimer, %fn%, -1
                 Return
             case 1:
@@ -827,7 +840,7 @@ quickSalvageHelper(D3W, D3H, helperDelay){
 */
 oneButtonSalvageHelper(D3W, D3H, xpos, ypos){
     local
-    global helperBreak, helperRunning, helperDelay, safezone, helperNonEmpty
+    global helperBreak, helperRunning, helperDelay, safezone, helperNonEmpty, mouseDelay
     GuiControlGet, extraSalvageHelperDropdown
     helperNonEmpty:=[]
     helperSkip:={}
@@ -885,7 +898,7 @@ oneButtonSalvageHelper(D3W, D3H, xpos, ypos){
                 if (i<=50)
                 {
                     ; 如果不是最后一行，判断下方格子是否变为空格
-                    Sleep, Min(Round(helperDelay*2.5), 300) ; 等待装备消失动画显示完毕
+                    Sleep, Min(Round(helperDelay*3), 300) ; 等待装备消失动画显示完毕
                     newID:=i+10
                     if (isInventorySpaceEmpty(D3W, D3H, newID, [[0.65625,0.714285714], [0.375,0.365079365]])){
                         helperSkip[newID]:=1
