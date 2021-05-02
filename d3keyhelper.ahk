@@ -41,6 +41,7 @@ Loop, Parse, % generals.safezone, CSV
 }
 profileKeybinding:={}
 keysOnHold:={}
+gameGamma:=(generals.gamegamma>=0.5 and generals.gamegamma<=1.5)? generals.gamegamma:1
 DblClickTime:=DllCall("GetDoubleClickTime", "UInt")
 
 tabw:=MainWindowW-350
@@ -273,13 +274,14 @@ ReadCfgFile(cfgFileName, ByRef tabs, ByRef hotkeys, ByRef actions, ByRef interva
         IniRead, customstandinghk, %cfgFileName%, General, customstandinghk, LShift
         IniRead, safezone, %cfgFileName%, General, safezone, "61,62,63"
         IniRead, helperspeed, %cfgFileName%, General, helperspeed, 3
+        IniRead, gamegamma, %cfgFileName%, General, gamegamma, 1.000000
         generals:={"oldsandhelpermethod":oldsandhelpermethod, "oldsandhelperhk":oldsandhelperhk
         , "enablesalvagehelper":enablesalvagehelper, "salvagehelpermethod":salvagehelpermethod
         , "enablegamblehelper":enablegamblehelper, "gamblehelpertimes":gamblehelpertimes
         , "startmethod":startmethod, "starthotkey":starthotkey
         , "enablesmartpause":enablesmartpause, "enablesoundplay":enablesoundplay
         , "custommoving":custommoving, "custommovinghk":custommovinghk, "customstanding":customstanding, "customstandinghk":customstandinghk
-        , "safezone":safezone, "helperspeed":helperspeed}
+        , "safezone":safezone, "helperspeed":helperspeed, "gamegamma":gamegamma}
 
         IniRead, tabs, %cfgFileName%
         tabs:=StrReplace(StrReplace(tabs, "`n", "`|"), "General|", "")
@@ -352,7 +354,7 @@ ReadCfgFile(cfgFileName, ByRef tabs, ByRef hotkeys, ByRef actions, ByRef interva
         , "startmethod":7, "starthotkey":"F2", "enablesmartpause":1, "salvagehelpermethod":1
         , "oldsandhelpermethod":7, "enablesalvagehelper":0, "enablesoundplay":1
         , "custommoving":0, "custommovinghk":"e", "customstanding":0, "customstandinghk":"LShift"
-        , "safezone":"61,62,63", "helperspeed":3}
+        , "safezone":"61,62,63", "helperspeed":3, "gamegamma":1.000000}
     }
     Return currentProfile
 }
@@ -402,6 +404,8 @@ SaveCfgFile(cfgFileName, tabs, currentProfile, safezone, VERSION){
     IniWrite, %helperAnimationSpeedDropdown%, %cfgFileName%, General, helperspeed
     safezone:=keyJoin(",", safezone)
     IniWrite, %safezone%, %cfgFileName%, General, safezone
+    global gameGamma
+    IniWrite, %gameGamma%, %cfgFileName%, General, gamegamma
     
 
     GuiControlGet, StartRunDropdown
@@ -459,7 +463,7 @@ SaveCfgFile(cfgFileName, tabs, currentProfile, safezone, VERSION){
     buttonID：int，按钮的ID，最左为1，最右（鼠标右键）为6
     D3W：int，窗口区域的宽度
     D3H：int，窗口区域的高度
-返回：H
+返回：
     [x坐标，y坐标]
 */
 getSkillButtonPos(buttonID, D3W, D3H){
@@ -470,15 +474,24 @@ getSkillButtonPos(buttonID, D3W, D3H){
 
 /*
 将16进制的颜色标签转化为RGB array。 FFFFFF -> [255, 255, 255]
+当游戏gamma不为1时，会尝试进行gamma修正。
 参数：
     vthiscolor：16进制的RGB颜色标签，PixelGetColor直出
 返回：
     [R，G，B]
 */
 splitRGB(vthiscolor){
-    vblue := (vthiscolor & 0xFF)
-    vgreen := ((vthiscolor & 0xFF00) >> 8)
-    vred := ((vthiscolor & 0xFF0000) >> 16)
+    local
+    global gameGamma
+    vblue:=(vthiscolor & 0xFF)
+    vgreen:=((vthiscolor & 0xFF00) >> 8)
+    vred:=((vthiscolor & 0xFF0000) >> 16)
+    if (Abs(gameGamma-1)>0.05)
+    {
+        vblue:=((vblue / 255) ** (1.75*gameGamma-0.75)) * 255
+        vgreen:=((vgreen / 255) ** (1.9*gameGamma-0.9)) * 255
+        vred:=((vred / 255) ** (1.9*gameGamma-0.9)) * 255
+    }
     Return [vred, vgreen, vblue]
 }
 
