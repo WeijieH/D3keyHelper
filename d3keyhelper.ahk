@@ -19,7 +19,7 @@ CoordMode, Pixel, Client
 CoordMode, Mouse, Client
 Process, Priority, , High
 
-VERSION:=210503
+VERSION:=210504
 TITLE:=Format("暗黑3技能连点器 v1.2.{:d}   by Oldsand", VERSION)
 MainWindowW:=850
 MainWindowH:=500
@@ -46,6 +46,7 @@ Loop, Parse, % generals.safezone, CSV
 profileKeybinding:={}
 keysOnHold:={}
 gameGamma:=(generals.gamegamma>=0.5 and generals.gamegamma<=1.5)? generals.gamegamma:1
+buffpercent:=(generals.buffpercent>=0 and generals.buffpercent<=1)? generals.buffpercent:0.05
 DblClickTime:=DllCall("GetDoubleClickTime", "UInt")
 
 Gui -MaximizeBox -MinimizeBox +Owner +DPIScale +LastFound
@@ -254,13 +255,14 @@ ReadCfgFile(cfgFileName, ByRef tabs, ByRef hotkeys, ByRef actions, ByRef interva
         IniRead, helperspeed, %cfgFileName%, General, helperspeed, 3
         IniRead, gamegamma, %cfgFileName%, General, gamegamma, 1.000000
         IniRead, sendmode, %cfgFileName%, General, sendmode, "Event"
+        IniRead, buffpercent, %cfgFileName%, General, buffpercent, 0.050000
         generals:={"oldsandhelpermethod":oldsandhelpermethod, "oldsandhelperhk":oldsandhelperhk
         , "enablesalvagehelper":enablesalvagehelper, "salvagehelpermethod":salvagehelpermethod
         , "enablegamblehelper":enablegamblehelper, "gamblehelpertimes":gamblehelpertimes
         , "startmethod":startmethod, "starthotkey":starthotkey
         , "enablesmartpause":enablesmartpause, "enablesoundplay":enablesoundplay
         , "custommoving":custommoving, "custommovinghk":custommovinghk, "customstanding":customstanding, "customstandinghk":customstandinghk
-        , "safezone":safezone, "helperspeed":helperspeed, "gamegamma":gamegamma, "sendmode":sendmode}
+        , "safezone":safezone, "helperspeed":helperspeed, "gamegamma":gamegamma, "sendmode":sendmode, "buffpercent":buffpercent}
 
         IniRead, tabs, %cfgFileName%
         tabs:=StrReplace(StrReplace(tabs, "`n", "`|"), "General|", "")
@@ -333,7 +335,8 @@ ReadCfgFile(cfgFileName, ByRef tabs, ByRef hotkeys, ByRef actions, ByRef interva
         , "startmethod":7, "starthotkey":"F2", "enablesmartpause":1, "salvagehelpermethod":1
         , "oldsandhelpermethod":7, "enablesalvagehelper":0, "enablesoundplay":1
         , "custommoving":0, "custommovinghk":"e", "customstanding":0, "customstandinghk":"LShift"
-        , "safezone":"61,62,63", "helperspeed":3, "gamegamma":1.000000, "sendmode":"Event"}
+        , "safezone":"61,62,63", "helperspeed":3, "gamegamma":1.000000, "sendmode":"Event"
+        , "buffpercent":0.050000}
     }
     Return currentProfile
 }
@@ -383,9 +386,10 @@ SaveCfgFile(cfgFileName, tabs, currentProfile, safezone, VERSION){
     IniWrite, %helperAnimationSpeedDropdown%, %cfgFileName%, General, helperspeed
     safezone:=keyJoin(",", safezone)
     IniWrite, %safezone%, %cfgFileName%, General, safezone
-    global gameGamma
+    global gameGamma, buffpercent
     IniWrite, %gameGamma%, %cfgFileName%, General, gamegamma
     IniWrite, %A_SendMode%, %cfgFileName%, General, sendmode
+    IniWrite, %buffpercent%, %cfgFileName%, General, buffpercent
     
 
     GuiControlGet, StartRunDropdown
@@ -440,16 +444,18 @@ SaveCfgFile(cfgFileName, tabs, currentProfile, safezone, VERSION){
 /*
 计算当前分辨率下技能buff条最左边像素的坐标
 参数：
-    buttonID：int，按钮的ID，最左为1，最右（鼠标右键）为6
     D3W：int，窗口区域的宽度
     D3H：int，窗口区域的高度
+    buttonID：int，按钮的ID，最左为1，最右（鼠标右键）为6
+    percent： float，从左计算，取样点在Buff条上位置的百分比
 返回：
     [x坐标，y坐标]
 */
-getSkillButtonPos(buttonID, D3W, D3H){
-    x:=D3W/2+(90.031*buttonID-523.26)*D3H/1440
-    y:=0.9222*D3H-0.4304
-    Return [Round(x), Round(y)]
+getSkillButtonBuffPos(D3W, D3H, buttonID, percent){
+    x:=[1288, 1377, 1465, 1554, 1647, 1734]
+    w:=63
+    y:=1328*D3H/1440
+    Return [Round(D3W/2-(3440/2-x[buttonID]-percent*w)*D3H/1440), Round(y)]
 }
 
 /*
@@ -489,7 +495,7 @@ splitRGB(vthiscolor){
 */
 skillKey(currentProfile, nskill, D3W, D3H, forceStandingKey, useSkillQueue){
     local
-    global vPausing, skillQueue
+    global vPausing, skillQueue, buffpercent
     GuiControlGet, skillset%currentProfile%s%nskill%hotkey
     GuiControlGet, skillset%currentProfile%s%nskill%dropdown
     GuiControlGet, skillset%currentProfile%s%nskill%delayupdown
@@ -522,7 +528,7 @@ skillKey(currentProfile, nskill, D3W, D3H, forceStandingKey, useSkillQueue){
         ; 保持buff
         case 4:
             ; 获得对应按键buff条最左侧坐标
-            magicXY:=getSkillButtonPos(nskill, D3W, D3H)
+            magicXY:=getSkillButtonBuffPos(D3W, D3H, nskill, buffpercent)
             PixelGetColor, cpixel, magicXY[1], magicXY[2], rgb
             crgb:=splitRGB(cpixel)
             ; 具体判断是否需要补buff
@@ -1396,15 +1402,16 @@ dummyFunction(){
 
 /*
 为控件添加tooltip
-https://gist.github.com/andreberg/55d003569f0564cd8695
+修改自：https://gist.github.com/andreberg/55d003569f0564cd8695
 参数：
     con：控件的hwnd
     text：tooltip字符串
+    duration: tooltip的持续时间
     Modify：为1则修改一个已创建的tooltip
 返回：
     无
 */
-AddToolTip(con, text, Modify=0){
+AddToolTip(con, text, duration=30000, Modify=0){
     Static TThwnd, GuiHwnd
     TInfo =
     UInt := "UInt"
@@ -1415,6 +1422,7 @@ AddToolTip(con, text, Modify=0){
     TTM_ADDTOOL := (A_IsUnicode ? WM_USER+50 : WM_USER+4)
     TTM_UPDATETIPTEXT := (A_IsUnicode ? WM_USER+57 : WM_USER+12)
     TTM_SETMAXTIPWIDTH := WM_USER+24
+    TTM_SETDELAYTIME := WM_USER+3
     TTF_IDISHWND := 1
     TTF_CENTERTIP := 2
     TTF_RTLREADING := 4
@@ -1423,6 +1431,7 @@ AddToolTip(con, text, Modify=0){
     TTF_ABSOLUTE := 0x0080
     TTF_TRANSPARENT := 0x0100
     TTF_PARSELINKS := 0x1000
+    TTF_AUTOPOP := 2
     If (!TThwnd) {
         Gui, +LastFound
         GuiHwnd := WinExist()
@@ -1451,24 +1460,11 @@ AddToolTip(con, text, Modify=0){
     NumPut(0,TInfo, 6*4+6*PtrSize)
     DetectHiddenWindows, On
     If (!Modify) {
-        DllCall("SendMessage"
-            ,Ptr,TThwnd
-            ,UInt,TTM_ADDTOOL
-            ,Ptr,0
-            ,Ptr,&TInfo
-            ,Ptr) 
-        DllCall("SendMessage"
-            ,Ptr,TThwnd
-            ,UInt,TTM_SETMAXTIPWIDTH
-            ,Ptr,0
-            ,Ptr,A_ScreenWidth) 
+        DllCall("SendMessage", Ptr, TThwnd, UInt, TTM_ADDTOOL, Ptr, 0, Ptr, &TInfo, Ptr) 
+        DllCall("SendMessage", Ptr, TThwnd, UInt, TTM_SETMAXTIPWIDTH, Ptr, 0, Ptr, A_ScreenWidth) 
+        DllCall("SendMessage", Ptr, TThwnd, UInt, TTM_SETDELAYTIME, Ptr, TTF_AUTOPOP, Ptr, duration)
     }
-    DllCall("SendMessage"
-        ,Ptr,TThwnd
-        ,UInt,TTM_UPDATETIPTEXT
-        ,Ptr,0
-        ,Ptr,&TInfo
-        ,Ptr)
+    DllCall("SendMessage", Ptr, TThwnd, UInt, TTM_UPDATETIPTEXT, Ptr, 0, Ptr, &TInfo, Ptr)
 }
 ; =====================================Subroutines===================================
 spamSkillKey1:
@@ -1618,7 +1614,7 @@ SetStartRun:
     if (StartRunDropdown = 7)
     {
         GuiControl, Enable, StartRunHKinput
-        newstartRunHK=%StartRunHKinput%
+        newstartRunHK:=StartRunHKinput
         Loop, %tabslen%
         {
             GuiControl, Enable, skillset%A_Index%s6dropdown
@@ -1652,7 +1648,7 @@ SetStartRun:
     {
         Hotkey, ~*%startRunHK%, MainMacro, off
         Hotkey, ~*%newstartRunHK%, MainMacro, on
-        startRunHK = %newstartRunHK%
+        startRunHK:=newstartRunHK
     }
 Return
 
