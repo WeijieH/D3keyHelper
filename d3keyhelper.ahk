@@ -48,17 +48,17 @@ keysOnHold:={}
 gameGamma:=(generals.gamegamma>=0.5 and generals.gamegamma<=1.5)? generals.gamegamma:1
 DblClickTime:=DllCall("GetDoubleClickTime", "UInt")
 
-Gui -MaximizeBox -MinimizeBox +Owner +DPIScale
+Gui -MaximizeBox -MinimizeBox +Owner +DPIScale +LastFound
 Gui, Margin, 5, 5
 Gui Font, s11
-Gui Add, Tab3, x5 y5 w%tabw% h%tabh% vActiveTab gSetTabFocus AltSubmit, %tabs%
+Gui Add, Tab3, xm ym w%tabw% h%tabh% vActiveTab gSetTabFocus AltSubmit, %tabs%
 Gui Font
 Loop, parse, tabs, `|
 {
-    Gui Add, GroupBox, xm+10 ym+30 w480 h260 section, 按键宏设置
     currentTab := A_Index
     Gui Tab, %currentTab%
     Gui Add, Hotkey, x0 y0 w0 w0
+    Gui Add, GroupBox, xm+10 ym+30 w480 h260 section, 按键宏设置
     skillLabels:=["技能一：", "技能二：", "技能三：", "技能四：", "左键技能：", "右键技能："]
     Gui Add, Text, xs+85 ys+20 w60 center section, 快捷键
     Gui Add, Text, x+10 w80 center, 策略
@@ -136,7 +136,7 @@ helperspeed:=generals.helperspeed
 Gui Font, cRed s10
 Gui Add, Text, xs+20 ys+30, 助手宏启动快捷键：
 Gui Font
-Gui Add, DropDownList, x+0 yp-2 w70 AltSubmit Choose%oldsandhelpermethod% vhelperKeybindingdropdown gSetHelperKeybinding, 无||鼠标中键||滚轮向上||滚轮向下||侧键1||侧键2||键盘按键
+Gui Add, DropDownList, x+0 yp-2 w75 AltSubmit Choose%oldsandhelpermethod% vhelperKeybindingdropdown gSetHelperKeybinding, 无||鼠标中键||滚轮向上||滚轮向下||侧键1||侧键2||键盘按键
 Gui Add, Hotkey, x+5 w70 vhelperKeybindingHK gSetHelperKeybinding, %oldsandhelperhk%
 
 Gui Add, Text, xs+20 yp+40, 助手宏动画速度：
@@ -169,10 +169,10 @@ Gui Add, CheckBox, xs+20 yp+35 vextramore2 +Disabled, Coming Soon
 startRunHK:=generals.starthotkey
 startmethod:=generals.startmethod
 Gui Font, cRed s10
-Gui Add, Text, x530 y8, 战斗宏启动快捷键：
+Gui Add, Text, x530 ym+3, 战斗宏启动快捷键：
 Gui Font
-Gui Add, DropDownList, x+5 y5 w90 AltSubmit Choose%startmethod% vStartRunDropdown gSetStartRun, 鼠标右键||鼠标中键||滚轮向上||滚轮向下||侧键1||侧键2||键盘按键
-Gui Add, Hotkey, x+5 y5 w70 vStartRunHKinput gSetStartRun, %startRunHK%
+Gui Add, DropDownList, x+5 yp-3 w90 AltSubmit Choose%startmethod% vStartRunDropdown gSetStartRun, 鼠标右键||鼠标中键||滚轮向上||滚轮向下||侧键1||侧键2||键盘按键
+Gui Add, Hotkey, x+5 yp w70 vStartRunHKinput gSetStartRun, %startRunHK%
 
 ybottomtext:=MainWindowH-20
 Gui Add, Text, x10 y%ybottomtext%, 当前激活配置:
@@ -181,7 +181,7 @@ Gui Add, Text, x+5 yp w350 vStatuesSkillsetText, % tabsarray[currentProfile]
 Gui Add, Text, x465 yp hwndCurrentmodeTextID gdummyFunction, % A_SendMode
 Gui Font
 Gui Add, Text, x380 yp hwndSendmodeTextID gdummyFunction, 按键发送模式:
-AddToolTip(SendmodeTextID, "可以通过修改配置文件General区块下的sendmode值来设置按键发送模式")
+AddToolTip(SendmodeTextID, "修改配置文件General区块下的sendmode值来设置按键发送模式")
 AddToolTip(CurrentmodeTextID, "Event：默认模式，最佳兼容性`nInput：推荐模式，最佳速度但在旧操作系统上可能无效")
 Gui Add, Link, x520 yp, 提交bug，检查更新: <a href="https://github.com/WeijieH/D3keyHelper">https://github.com/WeijieH/D3keyHelper</a>
 
