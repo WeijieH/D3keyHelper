@@ -8,6 +8,9 @@
 ; 欢迎提交bug，PR
 ; =================================================================
 
+AHK_MIN_VERSION:="1.1.33.06"
+if (A_AhkVersion < AHK_MIN_VERSION)
+    MsgBox, 0x40, 请升级AHK软件！, % Format("本按键助手基于AHK_L v{:s}开发。`n你的AHK版本为：v{:s}。", AHK_MIN_VERSION, A_AhkVersion)
 
 #SingleInstance Force
 #IfWinActive, ahk_class D3 Main Window Class
