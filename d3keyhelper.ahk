@@ -70,7 +70,6 @@ SetSalvageHelper()
 SetCustomStanding()
 SetCustomMoving()
 SetSkillQueue()
-SetTimer, safeGuard, 300
 Gui Show, w%MainWindowW% h%MainWindowH%, %TITLE%
 Return
 
@@ -1525,6 +1524,36 @@ AddToolTip(con, text, duration=30000, Modify=0){
     }
     DllCall("SendMessage", Ptr, TThwnd, UInt, TTM_UPDATETIPTEXT, Ptr, 0, Ptr, &TInfo, Ptr)
 }
+
+/*
+windows钩子，当前窗口发生变化时激活
+修改自：https://www.autohotkey.com/boards/viewtopic.php?t=32532
+参数：
+    windows callback
+返回：
+    无
+*/
+Watchdog(wParam, lParam := ""){
+    static init   := DllCall("RegisterShellHookWindow", "Ptr", A_ScriptHwnd)
+        , MsgNum  := DllCall("RegisterWindowMessage", "Str", "SHELLHOOK")
+        , neglect := OnMessage(MsgNum, "Watchdog")
+        , CleanUp := {base: {__Delete: "Watchdog"}}
+    global vRunning
+
+    If !IsObject(CleanUp) {
+        OnMessage(MsgNum, "")
+        DllCall("DeregisterShellHookWindow", "Ptr", A_ScriptHwnd)
+    }
+
+    If (vRunning and (wParam = 32772 or wParam = 4))     ; HSHELL_WINDOWCREATED 1, HSHELL_WINDOWACTIVATED 4, HSHELL_RUDEAPPACTIVATED 32772
+    {
+        WinGetClass, AClass, ahk_id %lParam%
+        if (AClass != "D3 Main Window Class")
+        {
+            Gosub, StopMarco
+        }
+    }
+}
 ; =====================================Subroutines===================================
 spamSkillKey1:
 spamSkillKey2:
@@ -1638,7 +1667,7 @@ SetProfileKeybinding:
             case 7:
                 GuiControl, Enable, skillset%currentPage%profilekeybindinghkbox
                 ckey:=skillset%currentPage%profilekeybindinghkbox
-                if (ckey)
+                if (ckey!="")
                 {
                     Hotkey, ~*%ckey%, SwitchProfile, on
                     profileKeybinding[ckey]:=currentPage
@@ -1650,7 +1679,7 @@ Return
 ; 处理配置快速切换逻辑
 SwitchProfile:
     ;移除快捷键的modifier 
-    currentHK:=StrReplace(StrReplace(A_ThisHotkey, "*"), "~")
+    currentHK:=RegExReplace(A_ThisHotkey, "[~*]")
     if (currentProfile!=profileKeybinding[currentHK])
     {
         currentProfile:=profileKeybinding[currentHK]
@@ -1814,6 +1843,10 @@ RunMarco:
         Default:
             SetTimer, spamSkillKey%A_Index%, off
         }
+        if (A_Index <=4)
+        {
+            GuiControl, Disable, skillset%currentProfile%s%A_Index%hotkey
+        }
     }
     ; 处理位移按键
     GuiControlGet, skillset%currentProfile%movingdropdown
@@ -1849,6 +1882,17 @@ StopMarco:
     Loop, 6
     {
         SetTimer, spamSkillKey%A_Index%, off
+        if (A_Index <=4)
+        {
+            si:=A_Index
+            Loop, %tabslen%
+            {
+                Loop, 4
+                {
+                    GuiControl, Enable, skillset%A_Index%s%si%hotkey
+                }
+            }
+        }
     }
     SetTimer, forceMoving, off
     for key, value in keysOnHold{
@@ -1885,38 +1929,6 @@ forceMoving:
         Send {%forceMovingKey%}
     }
 Return
-
-; 安全宏
-safeGuard:
-    ; 暗黑三不是焦点时停止宏
-    If !WinActive("ahk_class D3 Main Window Class")
-    {
-        Gosub, StopMarco
-    }
-    ; 如果宏在运行，关闭一些控件防止误输入
-    if vRunning
-    {
-        Loop, %tabslen%
-        {
-            currentTab:=A_Index
-            Loop, 4
-            {
-                GuiControl, Disable, skillset%currentTab%s%A_Index%hotkey
-            }
-        }
-    }
-    Else
-    {
-        Loop, %tabslen%
-        {
-            currentTab:=A_Index
-            Loop, 4
-            {
-                GuiControl, Enable, skillset%currentTab%s%A_Index%hotkey
-            }
-        }
-    }
-Return
 ; ========================================= Hotkeys =======================================
 ~*Enter::
 ~*T::
@@ -1950,6 +1962,18 @@ Return
     }
 Return
 
+; 重映射小键盘按键，防止按住shift时无效的问题
+NumpadIns::Numpad0
+NumpadEnd::Numpad1
+NumpadDown::Numpad2
+NumpadPgDn::Numpad3
+NumpadLeft::Numpad4
+NumpadClear::Numpad5
+NumpadRight::Numpad6
+NumpadHome::Numpad7
+NumpadUp::Numpad8
+NumpadPgUp::Numpad9
+NumpadDel::NumpadDot
 ; ===================================== System Functions ==================================
 GuiEscape:
 GuiClose:
