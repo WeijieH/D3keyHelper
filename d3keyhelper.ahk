@@ -22,7 +22,7 @@ CoordMode, Pixel, Client
 CoordMode, Mouse, Client
 Process, Priority, , High
 
-VERSION:=210504
+VERSION:=210505
 TITLE:=Format("暗黑3技能连点器 v1.2.{:d}   by Oldsand", VERSION)
 MainWindowW:=850
 MainWindowH:=500
@@ -66,6 +66,7 @@ Gosub, SetMovingHelper
 Gosub, SetHelperKeybinding
 Gosub, SetQuickPause
 SetGambleHelper()
+SetLootHelper()
 SetSalvageHelper()
 SetCustomStanding()
 SetCustomMoving()
@@ -164,58 +165,53 @@ GuiCreate(){
 
     Gui Add, GroupBox, x%helperSettingGroupx% ym+30 w327 h440 section, 辅助功能
     oldsandhelperhk:=generals.oldsandhelperhk
-    oldsandhelpermethod:=generals.oldsandhelpermethod
-    smartpause:=generals.enablesmartpause
-    enablegamblehelper:=generals.enablegamblehelper
-    enablesalvagehelper:=generals.enablesalvagehelper
-    salvagehelpermethod:=generals.salvagehelpermethod
-    playsound:=generals.enablesoundplay
-    usecustomstanding:=generals.customstanding
-    usecustommoving:=generals.custommoving
-    helperspeed:=generals.helperspeed
     Gui Font, cRed s10
     Gui Add, Text, xs+20 ys+30, 助手宏启动快捷键：
     Gui Font
-    Gui Add, DropDownList, x+0 yp-2 w75 AltSubmit Choose%oldsandhelpermethod% vhelperKeybindingdropdown gSetHelperKeybinding, 无||鼠标中键||滚轮向上||滚轮向下||侧键1||侧键2||键盘按键
+    Gui Add, DropDownList, % "x+0 yp-2 w75 vhelperKeybindingdropdown gSetHelperKeybinding AltSubmit Choose" generals.oldsandhelpermethod, 无||鼠标中键||滚轮向上||滚轮向下||侧键1||侧键2||键盘按键
     Gui Add, Hotkey, x+5 w70 vhelperKeybindingHK gSetHelperKeybinding, %oldsandhelperhk%
 
     Gui Add, Text, xs+20 yp+40, 助手宏动画速度：
-    Gui Add, DropDownList, x+5 yp-2 w90 AltSubmit Choose%helperspeed% vhelperAnimationSpeedDropdown, 非常快||快速||中等||慢速
+    Gui Add, DropDownList, % "x+5 yp-2 w90 vhelperAnimationSpeedDropdown AltSubmit Choose" generals.helperspeed, 非常快||快速||中等||慢速
     Gui Add, Text, x+20 yp+2 w80 hwndhelperSafeZoneTextID vhelperSafeZoneText gdummyFunction
     AddToolTip(helperSafeZoneTextID, "修改配置文件中Generals区块下的safezone值来设置安全格")
 
-    Gui Add, CheckBox, xs+20 yp+35 vextragambleckbox gSetGambleHelper Checked%enablegamblehelper%, 血岩赌博助手：
-    Gui Add, Text, vextragambletext x+5 yp, 发送右键次数
-    Gui Add, Edit, vextragambleedit x+10 yp-2 w60 Number
-    Gui Add, Updown, vextragambleupdown Range2-30, % generals.gamblehelpertimes
+    Gui Add, CheckBox, % "xs+20 yp+35 hwndextraGambleHelperCKboxID vextraGambleHelperCKbox gSetGambleHelper Checked" generals.enablegamblehelper, 血岩赌博助手：
+    AddToolTip(extraGambleHelperCKboxID, "赌博时按下助手快捷键可以自动点击右键")
+    Gui Add, Text, vextraGambleHelperText x+5 yp, 发送右键次数
+    Gui Add, Edit, vextraGambleHelperEdit x+10 yp-3 w60 Number
+    Gui Add, Updown, vextraGambleHelperUpdown Range2-60, % generals.gamblehelpertimes
 
-    Gui Add, CheckBox, xs+20 yp+37 hwndextraSalvageHelperCkboxID vextraSalvageHelperCkbox gSetSalvageHelper Checked%enablesalvagehelper%, 铁匠分解助手：
-    Gui Add, DropDownList, x+5 yp-3 w150 AltSubmit vextraSalvageHelperDropdown gSetSalvageHelper Choose%salvagehelpermethod%, 快速分解||一键分解||智能分解||智能分解（只留太古）
-    AddToolTip(extraSalvageHelperCkboxID, "快速分解：按下快捷键即等同于点击鼠标左键+回车`n一键分解：一键分解背包内所有非安全格的装备`n智能分解：同一键分解，但会跳过远古，太古`n智能分解（只留太古）：只保留太古装备")
+    Gui Add, CheckBox, % "xs+20 yp+37 hwndextraSalvageHelperCkboxID vextraSalvageHelperCkbox gSetSalvageHelper Checked" generals.enablesalvagehelper, 铁匠分解助手：
+    Gui Add, DropDownList, % "x+5 yp-4 w150 AltSubmit hwndextraSalvageHelperDropdownID vextraSalvageHelperDropdown gSetSalvageHelper Choose" generals.salvagehelpermethod, 快速分解||一键分解||智能分解||智能分解（只留太古）
+    AddToolTip(extraSalvageHelperCkboxID, "分解装备时按下助手快捷键可以自动执行所选择的策略")
+    AddToolTip(extraSalvageHelperDropdownID, "快速分解：按下快捷键即等同于点击鼠标左键+回车`n一键分解：一键分解背包内所有非安全格的装备`n智能分解：同一键分解，但会跳过远古，太古`n智能分解（只留太古）：只保留太古装备")
 
     Gui Add, CheckBox, xs+20 yp+37 vextramore3 +Disabled, 魔盒重铸助手（Coming Soon）
     Gui Add, CheckBox, xs+20 yp+35 vextramore4 +Disabled, 魔盒升级助手（Coming Soon）
+    Gui Add, CheckBox, % "xs+20 yp+35 hwndextraLootHelperCkboxID vextraLootHelperCkbox gSetLootHelper Checked" generals.enableloothelper, 快速拾取助手：
+    AddToolTip(extraLootHelperCkboxID, "拾取装备时按下助手快捷键可以自动点击左键")
+    Gui Add, Text, vextraLootHelperText x+5 yp, 发送左键次数
+    Gui Add, Edit, vextraLootHelperEdit x+10 yp-3 w60 Number
+    Gui Add, Updown, vextraLootHelperUpdown Range2-99, % generals.loothelpertimes
 
-    Gui Add, CheckBox, xs+20 yp+60 vextraSoundonProfileSwitch Checked%playsound%, 使用快捷键切换配置成功时播放声音
-    Gui Add, CheckBox, xs+20 yp+35 hwndextraSmartPauseID vextraSmartPause Checked%smartpause%, 智能暂停
+    Gui Add, CheckBox, % "xs+20 yp+60 vextraSoundonProfileSwitch Checked" generals.enablesoundplay, 使用快捷键切换配置成功时播放声音
+    Gui Add, CheckBox, % "xs+20 yp+35 hwndextraSmartPauseID vextraSmartPause Checked" generals.enablesmartpause, 智能暂停
     AddToolTip(extraSmartPauseID, "开启后，游戏中按tab键可以暂停宏`n回车键，M键，T键会停止宏")
-    Gui Add, CheckBox, xs+20 yp+35 vextraCustomStanding gSetCustomStanding Checked%usecustomstanding%, 使用自定义强制站立按键：
+    Gui Add, CheckBox, % "xs+20 yp+35 vextraCustomStanding gSetCustomStanding Checked" generals.customstanding, 使用自定义强制站立按键：
     Gui Add, Hotkey, x+5 yp-2 w70 vextraCustomStandingHK gSetCustomStanding, % generals.customstandinghk
 
-    Gui Add, CheckBox, xs+20 yp+35 vextraCustomMoving gSetCustomMoving Checked%usecustommoving%, 使用自定义强制移动按键：
+    Gui Add, CheckBox, % "xs+20 yp+35 vextraCustomMoving gSetCustomMoving Checked" generals.custommoving, 使用自定义强制移动按键：
     Gui Add, Hotkey, x+5 yp-2 w70 Limit14 vextraCustomMovingHK gSetCustomMoving, % generals.custommovinghk
-    Gui Add, CheckBox, xs+20 yp+35 vextramore2 +Disabled, Coming Soon
 
     startRunHK:=generals.starthotkey
-    startmethod:=generals.startmethod
     Gui Font, cRed s10
     Gui Add, Text, x530 ym+3, 战斗宏启动快捷键：
     Gui Font
-    Gui Add, DropDownList, x+5 yp-3 w90 AltSubmit Choose%startmethod% vStartRunDropdown gSetStartRun, 鼠标右键||鼠标中键||滚轮向上||滚轮向下||侧键1||侧键2||键盘按键
+    Gui Add, DropDownList, % "x+5 yp-3 w90 vStartRunDropdown gSetStartRun AltSubmit Choose" generals.startmethod, 鼠标右键||鼠标中键||滚轮向上||滚轮向下||侧键1||侧键2||键盘按键
     Gui Add, Hotkey, x+5 yp w70 vStartRunHKinput gSetStartRun, %startRunHK%
 
-    ybottomtext:=MainWindowH-20
-    Gui Add, Text, x10 y%ybottomtext%, 当前激活配置:
+    Gui Add, Text, % "x10 y" MainWindowH-20, 当前激活配置:
     Gui Font, cRed s11
     Gui Add, Text, x+5 yp w350 vStatuesSkillsetText, % tabsarray[currentProfile]
     Gui Add, Text, x465 yp hwndCurrentmodeTextID gdummyFunction, % A_SendMode
@@ -272,13 +268,16 @@ ReadCfgFile(cfgFileName, ByRef tabs, ByRef hotkeys, ByRef actions, ByRef interva
         IniRead, gamegamma, %cfgFileName%, General, gamegamma, 1.000000
         IniRead, sendmode, %cfgFileName%, General, sendmode, "Event"
         IniRead, buffpercent, %cfgFileName%, General, buffpercent, 0.050000
+        IniRead, enableloothelper, %cfgFileName%, General, enableloothelper, 0
+        IniRead, loothelpertimes, %cfgFileName%, General, loothelpertimes, 30
         generals:={"oldsandhelpermethod":oldsandhelpermethod, "oldsandhelperhk":oldsandhelperhk
         , "enablesalvagehelper":enablesalvagehelper, "salvagehelpermethod":salvagehelpermethod
         , "enablegamblehelper":enablegamblehelper, "gamblehelpertimes":gamblehelpertimes
         , "startmethod":startmethod, "starthotkey":starthotkey
         , "enablesmartpause":enablesmartpause, "enablesoundplay":enablesoundplay
         , "custommoving":custommoving, "custommovinghk":custommovinghk, "customstanding":customstanding, "customstandinghk":customstandinghk
-        , "safezone":safezone, "helperspeed":helperspeed, "gamegamma":gamegamma, "sendmode":sendmode, "buffpercent":buffpercent}
+        , "safezone":safezone, "helperspeed":helperspeed, "gamegamma":gamegamma, "sendmode":sendmode, "buffpercent":buffpercent
+        , "enableloothelper":enableloothelper, "loothelpertimes":loothelpertimes}
 
         IniRead, tabs, %cfgFileName%
         tabs:=StrReplace(StrReplace(tabs, "`n", "`|"), "General|", "")
@@ -352,7 +351,7 @@ ReadCfgFile(cfgFileName, ByRef tabs, ByRef hotkeys, ByRef actions, ByRef interva
         , "oldsandhelpermethod":7, "enablesalvagehelper":0, "enablesoundplay":1
         , "custommoving":0, "custommovinghk":"e", "customstanding":0, "customstandinghk":"LShift"
         , "safezone":"61,62,63", "helperspeed":3, "gamegamma":1.000000, "sendmode":"Event"
-        , "buffpercent":0.050000}
+        , "buffpercent":0.050000, "enableloothelper":0, "loothelpertimes":30}
     }
     Return currentProfile
 }
@@ -371,10 +370,12 @@ ReadCfgFile(cfgFileName, ByRef tabs, ByRef hotkeys, ByRef actions, ByRef interva
 SaveCfgFile(cfgFileName, tabs, currentProfile, safezone, VERSION){
     createOrTruncateFile(cfgFileName)
 
-    GuiControlGet, extragambleckbox
+    GuiControlGet, extraGambleHelperCKbox
+    GuiControlGet, extraGambleHelperUpdown
     GuiControlGet, helperKeybindingdropdown
-    GuiControlGet, helperKeybindingHK
-    GuiControlGet, extragambleedit
+    GuiControlGet, helperKeybindingHK  
+    GuiControlGet, extraLootHelperCkbox
+    GuiControlGet, extraLootHelperUpdown
     GuiControlGet, extraSmartPause
     GuiControlGet, extraSalvageHelperCkbox
     GuiControlGet, extraSalvageHelperDropdown
@@ -387,11 +388,13 @@ SaveCfgFile(cfgFileName, tabs, currentProfile, safezone, VERSION){
 
     IniWrite, %VERSION%, %cfgFileName%, General, version
     IniWrite, %currentProfile%, %cfgFileName%, General, activatedprofile
-    IniWrite, %extragambleckbox%, %cfgFileName%, General, enablegamblehelper
-    IniWrite, %extragambleedit%, %cfgFileName%, General, gamblehelpertimes
+    IniWrite, %extraGambleHelperCKbox%, %cfgFileName%, General, enablegamblehelper
+    IniWrite, %extraGambleHelperUpdown%, %cfgFileName%, General, gamblehelpertimes
     IniWrite, %extraSmartPause%, %cfgFileName%, General, enablesmartpause
     IniWrite, %extraSalvageHelperCkbox%, %cfgFileName%, General, enablesalvagehelper
     IniWrite, %extraSalvageHelperDropdown%, %cfgFileName%, General, salvagehelpermethod
+    IniWrite, %extraLootHelperCkbox%, %cfgFileName%, General, enableloothelper
+    IniWrite, %extraLootHelperUpdown%, %cfgFileName%, General, loothelpertimes
     IniWrite, %extraSoundonProfileSwitch%, %cfgFileName%, General, enablesoundplay
     IniWrite, %helperKeybindingHK%, %cfgFileName%, General, oldsandhelperhk
     IniWrite, %helperKeybindingdropdown%, %cfgFileName%, General, oldsandhelpermethod
@@ -407,7 +410,6 @@ SaveCfgFile(cfgFileName, tabs, currentProfile, safezone, VERSION){
     IniWrite, %A_SendMode%, %cfgFileName%, General, sendmode
     IniWrite, %buffpercent%, %cfgFileName%, General, buffpercent
     
-
     GuiControlGet, StartRunDropdown
     GuiControlGet, StartRunHKInput
     IniWrite, %StartRunDropdown%, %cfgFileName%, General, startmethod
@@ -625,13 +627,17 @@ createOrTruncateFile(FileName){
 */
 oldsandHelper(){
     local
-    global helperRunning, helperBreak, helperDelay, mouseDelay
+    global helperRunning, helperBreak, helperDelay, mouseDelay, vRunning
     if helperRunning{
         ; 防止过快连按
         ; 宏在执行中再按可以打断
         helperBreak:=True
         helperRunning:=False
         Sleep, 200
+        Return
+    }
+    ; 如果战斗宏开启，则返回
+    if vRunning{
         Return
     }
     helperRunning:=True
@@ -641,7 +647,8 @@ oldsandHelper(){
     DllCall("GetClientRect", "ptr", WinExist("A"), "ptr", &rect)
     D3W:=NumGet(rect, 8, "int")
     D3H:=NumGet(rect, 12, "int")
-    GuiControlGet, extragambleckbox
+    GuiControlGet, extraGambleHelperCKbox
+    GuiControlGet, extraLootHelperCkbox
     GuiControlGet, extraSalvageHelperCkbox
     GuiControlGet, extraSalvageHelperDropdown
     GuiControlGet, helperAnimationSpeedDropdown
@@ -666,7 +673,7 @@ oldsandHelper(){
     ; 当鼠标在左侧
     if (xpos<680*D3H/1440)
     {
-        if (extragambleckbox and isGambleOpen(D3W, D3H))
+        if (extraGambleHelperCKbox and isGambleOpen(D3W, D3H))
         {
             SetTimer, gambleHelper, -1
             Return
@@ -772,9 +779,13 @@ oldsandHelper(){
                 Return
             Default:
                 ; 铁匠页面未打卡 
-                helperRunning:=False
-                Return
         }
+    }
+    ; 一键拾取
+    if (extraLootHelperCkbox)
+    {
+        fn:=Func("lootHelper").Bind(D3W, D3H, helperDelay)
+        SetTimer, %fn%, -1
     }
     Return
 }
@@ -789,14 +800,48 @@ oldsandHelper(){
 gambleHelper(){
     local
     global helperDelay, helperBreak, helperRunning
-    GuiControlGet, extragambleedit
-    Loop, %extragambleedit%
+    GuiControlGet, extraGambleHelperEdit
+    Loop, %extraGambleHelperEdit%
     {
         if helperBreak{
             Break
         }
         Send {RButton}
-        sleep helperDelay*0.5
+        sleep Min(helperDelay*0.5, 100)
+    }
+    helperRunning:=False
+    Return
+}
+
+/*
+负责一键拾取（连按左键）
+参数：
+    D3W：int，窗口区域的宽度
+    D3H：int，窗口区域的高度
+    helperDelay：按键延迟
+返回：
+    无
+*/
+lootHelper(D3W, D3H, helperDelay){
+    local
+    global helperBreak, helperRunning
+    MouseGetPos, xpos, ypos
+    ; 如果鼠标在人物周围，连点左键
+    if (Abs(xpos - D3W/2)<180*1440/D3H and Abs(ypos - D3H/2)<100*1440/D3H)
+    {
+        GuiControlGet, extraLootHelperEdit
+        Loop, %extraLootHelperEdit%
+        {
+            if helperBreak{
+                Break
+            }
+            Click
+            sleep helperDelay*0.5
+        }
+    }
+    Else    ; 否则就点一次左键
+    {
+        Click
     }
     helperRunning:=False
     Return
@@ -832,15 +877,16 @@ quickSalvageHelper(D3W, D3H, helperDelay){
 */
 oneButtonSalvageHelper(D3W, D3H, xpos, ypos){
     local
-    global helperBreak, helperRunning, helperDelay, safezone, helperBagZone, mouseDelay
-    GuiControlGet, extraSalvageHelperDropdown
+    global helperBreak, helperRunning, helperDelay, helperBagZone, mouseDelay
     helperBagZone:=make1DArray(60, -1)
-    q:=0    ; 当前格子装备品质，1：普通传奇，2：远古传奇，3：太古传奇
-    i:=1    ; 当前格子ID
-    SetDefaultMouseSpeed, mouseDelay
     ; 开启一单独线程查找空格子
     fn1:=Func("scanInventorySpace").Bind(D3W, D3H)
     SetTimer, %fn1%, -1
+
+    q:=0    ; 当前格子装备品质，1：普通传奇，2：远古传奇，3：太古传奇
+    i:=1    ; 当前格子ID
+    SetDefaultMouseSpeed, mouseDelay
+    GuiControlGet, extraSalvageHelperDropdown
     while (i<=60)
     {
         if (helperBreak) {
@@ -851,7 +897,7 @@ oneButtonSalvageHelper(D3W, D3H, xpos, ypos){
         {
             case -1:
             ; 当前格子还未探开
-                Sleep, Round(helperDelay*0.5)
+                Sleep, 20
             case 10:
             ; 当前格子有装备
                 m:=getInventorySpaceXY(D3W, D3H, i)
@@ -1038,17 +1084,38 @@ SetCustomMoving(){
     无
 */
 SetGambleHelper(){
-    Gui, Submit, NoHide
-    GuiControlGet, extragambleckbox
-    If extragambleckbox
+    GuiControlGet, extraGambleHelperCKbox
+    If extraGambleHelperCKbox
     {
-        GuiControl, Enable, extragambletext
-        GuiControl, Enable, extragambleedit
+        GuiControl, Enable, extraGambleHelperText
+        GuiControl, Enable, extraGambleHelperEdit
     }
     Else
     {
-        GuiControl, Disable, extragambletext
-        GuiControl, Disable, extragambleedit
+        GuiControl, Disable, extraGambleHelperText
+        GuiControl, Disable, extraGambleHelperEdit
+    }
+    Return
+}
+
+/*
+设置拾取助手相关的控件动画
+参数：
+    无
+返回：
+    无
+*/
+SetLootHelper(){
+    GuiControlGet, extraLootHelperCkbox
+    If extraLootHelperCkbox
+    {
+        GuiControl, Enable, extraLootHelperText
+        GuiControl, Enable, extraLootHelperEdit
+    }
+    Else
+    {
+        GuiControl, Disable, extraLootHelperText
+        GuiControl, Disable, extraLootHelperEdit
     }
     Return
 }
@@ -1744,18 +1811,17 @@ Return
 SetMovingHelper:
     Gui, Submit, NoHide
     Loop, %tabslen%{
-        npage:=A_Index
         if (skillset%npage%movingdropdown = 4)
         {
-            GuiControl, Enable, skillset%npage%movingtext
-            GuiControl, Enable, skillset%npage%movingedit
-            GuiControl, Enable, skillset%npage%movingupdown
+            GuiControl, Enable, skillset%A_Index%movingtext
+            GuiControl, Enable, skillset%A_Index%movingedit
+            GuiControl, Enable, skillset%A_Index%movingupdown
         }
         Else
         { 
-            GuiControl, Disable, skillset%npage%movingtext
-            GuiControl, Disable, skillset%npage%movingedit
-            GuiControl, Disable, skillset%npage%movingupdown
+            GuiControl, Disable, skillset%A_Index%movingtext
+            GuiControl, Disable, skillset%A_Index%movingedit
+            GuiControl, Disable, skillset%A_Index%movingupdown
         }
     }
 Return
