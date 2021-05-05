@@ -8,6 +8,9 @@
 ; 欢迎提交bug，PR
 ; =================================================================
 
+AHK_MIN_VERSION:="1.1.33.08"
+if (A_AhkVersion < AHK_MIN_VERSION)
+    MsgBox, 0x40, 若遇到错误请升级AHK软件！, % Format("本按键助手基于AHK v{:s}开发。`n你的AHK版本为：v{:s}。", AHK_MIN_VERSION, A_AhkVersion)
 
 #SingleInstance Force
 #IfWinActive, ahk_class D3 Main Window Class
@@ -19,172 +22,34 @@ CoordMode, Pixel, Client
 CoordMode, Mouse, Client
 Process, Priority, , High
 
-VERSION:=210504
+VERSION:=210505
 TITLE:=Format("暗黑3技能连点器 v1.2.{:d}   by Oldsand", VERSION)
 MainWindowW:=850
 MainWindowH:=500
-tabw:=MainWindowW-347
-tabh:=MainWindowH-30
-helperSettingGroupx:=515
-
-currentProfile:=ReadCfgFile("d3oldsand.ini", tabs, hotkeys, actions, intervals, ivdelays, others, generals)
-SendMode, % generals.sendmode
-tabsarray:=StrSplit(tabs, "`|")
-tabslen:= ObjCount(tabsarray)
+; ============================================全局变量===========================================================
 vRunning:=False
 vPausing:=False
 helperDelay:=100
 mouseDelay:=2
 helperRunning:=False
 helperBreak:=False
-helperNonEmpty:=[]
+profileKeybinding:={}
+keysOnHold:={}
+DblClickTime:=DllCall("GetDoubleClickTime", "UInt")
+; ========================================来自配置文件的全局变量===================================================
+currentProfile:=ReadCfgFile("d3oldsand.ini", tabs, hotkeys, actions, intervals, ivdelays, others, generals)
+SendMode, % generals.sendmode
+tabsarray:=StrSplit(tabs, "`|")
+tabslen:= ObjCount(tabsarray)
 safezone:={}
 Loop, Parse, % generals.safezone, CSV
 {
     safezone[A_LoopField]:=1
 }
-profileKeybinding:={}
-keysOnHold:={}
 gameGamma:=(generals.gamegamma>=0.5 and generals.gamegamma<=1.5)? generals.gamegamma:1
 buffpercent:=(generals.buffpercent>=0 and generals.buffpercent<=1)? generals.buffpercent:0.05
-DblClickTime:=DllCall("GetDoubleClickTime", "UInt")
-
-Gui -MaximizeBox -MinimizeBox +Owner +DPIScale +LastFound
-Gui, Margin, 5, 5
-Gui Font, s11
-Gui Add, Tab3, xm ym w%tabw% h%tabh% vActiveTab gSetTabFocus AltSubmit, %tabs%
-Gui Font
-Loop, parse, tabs, `|
-{
-    currentTab := A_Index
-    Gui Tab, %currentTab%
-    Gui Add, Hotkey, x0 y0 w0 w0
-    Gui Add, GroupBox, xm+10 ym+30 w480 h260 section, 按键宏设置
-    skillLabels:=["技能一：", "技能二：", "技能三：", "技能四：", "左键技能：", "右键技能："]
-    Gui Add, Text, xs+85 ys+20 w60 center section, 快捷键
-    Gui Add, Text, x+10 w80 center, 策略
-    Gui Add, Text, x+30 w100 center, 执行间隔（毫秒）
-    Gui Add, Text, x+10 w100 center, 随机延迟（毫秒）
-    Loop, 6
-    {
-        Gui Add, Text, xs-65 w60 yp+36 center, % skillLabels[A_Index]
-        ac:=actions[currentTab][A_Index]
-        switch A_Index
-        {
-            case 1,2,3,4:
-                Gui Add, Hotkey, x+5 yp-2 w60 vskillset%currentTab%s%A_Index%hotkey, % hotkeys[currentTab][A_Index]
-            case 5:
-                Gui Add, Edit, x+5 yp-2 w60 vskillset%currentTab%s%A_Index%hotkey +Disabled, LButton
-            case 6:
-                Gui Add, Edit, x+5 yp-2 w60 vskillset%currentTab%s%A_Index%hotkey +Disabled, RButton
-        }
-        Gui Add, DropDownList, x+10 w85 AltSubmit Choose%ac% gSetSkillsetDropdown vskillset%currentTab%s%A_Index%dropdown, 禁用||按住不放||连点||保持Buff
-        Gui Add, Edit, vskillset%currentTab%s%A_Index%edit x+20 w100 Number
-        Gui Add, Updown, vskillset%currentTab%s%A_Index%updown Range20-30000, % intervals[currentTab][A_Index]
-        Gui Add, Edit, vskillset%currentTab%s%A_Index%delayedit hwndskillset%currentTab%s%A_Index%delayeditID x+25 w70 Number
-        Gui Add, Updown, vskillset%currentTab%s%A_Index%delayupdown Range0-3000, % ivdelays[currentTab][A_Index]
-        AddToolTip(skillset%currentTab%s%A_Index%delayeditID, "这里填入随机延迟的最大值，设为0可以关闭随即延迟")
-    }
-
-    Gui Add, GroupBox, xm+10 yp+45 w480 h160 section, 额外设置
-    Gui Add, Text, xs+20 ys+30, 快速切换至本配置：
-    pfmd:=others[currentTab].profilemethod
-    Gui Add, DropDownList, x+5 yp-2 w90 AltSubmit Choose%pfmd% vskillset%currentTab%profilekeybindingdropdown gSetProfileKeybinding, 无||鼠标中键||滚轮向上||滚轮向下||侧键1||侧键2||键盘按键
-    Gui Add, Hotkey, x+15 w100 vskillset%currentTab%profilekeybindinghkbox gSetProfileKeybinding, % others[currentTab].profilehotkey
-    
-    Gui Add, Text, xs+20 yp+35, 走位辅助：
-    pfmv:=others[currentTab].movingmethod
-    pflm:=others[currentTab].lazymode
-    Gui Add, DropDownList, x+5 yp-2 w130 AltSubmit Choose%pfmv% vskillset%currentTab%movingdropdown gSetMovingHelper, 无||强制站立||强制走位（按住不放）||强制走位（连点）
-    Gui Add, Text, vskillset%currentTab%movingtext x+10 yp+2, 间隔（毫秒）：
-    Gui Add, Edit, vskillset%currentTab%movingedit x+5 yp-2 w60 Number
-    Gui Add, Updown, vskillset%currentTab%movingupdown Range20-3000, % others[currentTab].movinginterval
-    
-    pfusq:=others[currentTab].useskillqueue
-    Gui Add, Text, xs+20 yp+35, 宏启动方式：
-    Gui Add, DropDownList, x+5 yp-2 w90 AltSubmit Choose%pflm% vskillset%currentTab%profilestartmodedropdown, 懒人模式||仅按下时
-    Gui Add, Checkbox, x+10 yp+2 Checked%pfusq% hwnduseskillqueueckbox%currentTab%ID vskillset%currentTab%useskillqueueckbox gSetSkillQueue, 使用单线程按键队列（毫秒）：
-    AddToolTip(useskillqueueckbox%currentTab%ID, "开启后按键不会被立刻按下而是存储至一个按键队列中`n连点会使技能加入队列头部，保持buff会使技能加入队列尾部")
-    Gui Add, Edit, vskillset%currentTab%useskillqueueedit hwnduseskillqueueedit%currentTab%ID x+0 yp-2 w50 Number
-    Gui Add, Updown, vskillset%currentTab%useskillqueueupdown Range30-1000, % others[currentTab].useskillqueueinterval
-    AddToolTip(useskillqueueedit%currentTab%ID, "按键队列中的连点按键会以此间隔一一发送至游戏窗口")
-
-    pfqp:=others[currentTab].enablequickpause
-    pfqpm1:=others[currentTab].quickpausemethod1
-    pfqpm2:=others[currentTab].quickpausemethod2
-    Gui Add, Checkbox, xs+20 yp+35 Checked%pfqp% vskillset%currentTab%clickpauseckbox gSetQuickPause, 快速暂停：
-    Gui Add, DropDownList, x+0 yp-2 w50 AltSubmit Choose%pfqpm1% vskillset%currentTab%clickpausedropdown1 gSetQuickPause, 双击||单击
-    Gui Add, DropDownList, x+5 yp w100 AltSubmit Choose%pfqpm2% vskillset%currentTab%clickpausedropdown2 gSetQuickPause, 鼠标左键||鼠标右键||鼠标中键||侧键1||侧键2
-    Gui Add, Text, x+5 yp+2 vskillset%currentTab%clickpausetext1, 则暂停压键
-    Gui Add, Edit, vskillset%currentTab%clickpauseedit x+5 yp-2 w60 Number
-    Gui Add, Updown, vskillset%currentTab%clickpauseupdown Range500-5000, % others[currentTab].quickpausedelay
-    Gui Add, Text, x+5 yp+2 vskillset%currentTab%clickpausetext2, 毫秒
-}
-Gui Tab
-GuiControl , Choose, ActiveTab, % currentProfile
-
-Gui Add, GroupBox, x%helperSettingGroupx% ym+30 w327 h440 section, 辅助功能
-oldsandhelperhk:=generals.oldsandhelperhk
-oldsandhelpermethod:=generals.oldsandhelpermethod
-smartpause:=generals.enablesmartpause
-enablegamblehelper:=generals.enablegamblehelper
-enablesalvagehelper:=generals.enablesalvagehelper
-salvagehelpermethod:=generals.salvagehelpermethod
-playsound:=generals.enablesoundplay
-usecustomstanding:=generals.customstanding
-usecustommoving:=generals.custommoving
-helperspeed:=generals.helperspeed
-Gui Font, cRed s10
-Gui Add, Text, xs+20 ys+30, 助手宏启动快捷键：
-Gui Font
-Gui Add, DropDownList, x+0 yp-2 w75 AltSubmit Choose%oldsandhelpermethod% vhelperKeybindingdropdown gSetHelperKeybinding, 无||鼠标中键||滚轮向上||滚轮向下||侧键1||侧键2||键盘按键
-Gui Add, Hotkey, x+5 w70 vhelperKeybindingHK gSetHelperKeybinding, %oldsandhelperhk%
-
-Gui Add, Text, xs+20 yp+40, 助手宏动画速度：
-Gui Add, DropDownList, x+5 yp-2 w90 AltSubmit Choose%helperspeed% vhelperAnimationSpeedDropdown, 非常快||快速||中等||慢速
-Gui Add, Text, x+20 yp+2 w80 hwndhelperSafeZoneTextID vhelperSafeZoneText gdummyFunction
-AddToolTip(helperSafeZoneTextID, "修改配置文件中Generals区块下的safezone值来设置安全格")
-
-Gui Add, CheckBox, xs+20 yp+35 vextragambleckbox gSetGambleHelper Checked%enablegamblehelper%, 血岩赌博助手：
-Gui Add, Text, vextragambletext x+5 yp, 发送右键次数
-Gui Add, Edit, vextragambleedit x+10 yp-2 w60 Number
-Gui Add, Updown, vextragambleupdown Range2-30, % generals.gamblehelpertimes
-
-Gui Add, CheckBox, xs+20 yp+37 hwndextraSalvageHelperCkboxID vextraSalvageHelperCkbox gSetSalvageHelper Checked%enablesalvagehelper%, 铁匠分解助手：
-Gui Add, DropDownList, x+5 yp-3 w150 AltSubmit vextraSalvageHelperDropdown gSetSalvageHelper Choose%salvagehelpermethod%, 快速分解||一键分解||智能分解||智能分解（只留太古）
-AddToolTip(extraSalvageHelperCkboxID, "快速分解：按下快捷键即等同于点击鼠标左键+回车`n一键分解：一键分解背包内所有非安全格的装备`n智能分解：同一键分解，但会跳过远古，太古`n智能分解（只留太古）：只保留太古装备")
-
-Gui Add, CheckBox, xs+20 yp+37 vextramore3 +Disabled, 魔盒重铸助手（Coming Soon）
-Gui Add, CheckBox, xs+20 yp+35 vextramore4 +Disabled, 魔盒升级助手（Coming Soon）
-
-Gui Add, CheckBox, xs+20 yp+60 vextraSoundonProfileSwitch Checked%playsound%, 使用快捷键切换配置成功时播放声音
-Gui Add, CheckBox, xs+20 yp+35 hwndextraSmartPauseID vextraSmartPause Checked%smartpause%, 智能暂停
-AddToolTip(extraSmartPauseID, "开启后，游戏中按tab键可以暂停宏`n回车键，M键，T键会停止宏")
-Gui Add, CheckBox, xs+20 yp+35 vextraCustomStanding gSetCustomStanding Checked%usecustomstanding%, 使用自定义强制站立按键：
-Gui Add, Hotkey, x+5 yp-2 w70 vextraCustomStandingHK gSetCustomStanding, % generals.customstandinghk
-
-Gui Add, CheckBox, xs+20 yp+35 vextraCustomMoving gSetCustomMoving Checked%usecustommoving%, 使用自定义强制移动按键：
-Gui Add, Hotkey, x+5 yp-2 w70 Limit14 vextraCustomMovingHK gSetCustomMoving, % generals.custommovinghk
-Gui Add, CheckBox, xs+20 yp+35 vextramore2 +Disabled, Coming Soon
-
-startRunHK:=generals.starthotkey
-startmethod:=generals.startmethod
-Gui Font, cRed s10
-Gui Add, Text, x530 ym+3, 战斗宏启动快捷键：
-Gui Font
-Gui Add, DropDownList, x+5 yp-3 w90 AltSubmit Choose%startmethod% vStartRunDropdown gSetStartRun, 鼠标右键||鼠标中键||滚轮向上||滚轮向下||侧键1||侧键2||键盘按键
-Gui Add, Hotkey, x+5 yp w70 vStartRunHKinput gSetStartRun, %startRunHK%
-
-ybottomtext:=MainWindowH-20
-Gui Add, Text, x10 y%ybottomtext%, 当前激活配置:
-Gui Font, cRed s11
-Gui Add, Text, x+5 yp w350 vStatuesSkillsetText, % tabsarray[currentProfile]
-Gui Add, Text, x465 yp hwndCurrentmodeTextID gdummyFunction, % A_SendMode
-Gui Font
-Gui Add, Text, x380 yp hwndSendmodeTextID gdummyFunction, 按键发送模式:
-AddToolTip(SendmodeTextID, "修改配置文件General区块下的sendmode值来设置按键发送模式")
-AddToolTip(CurrentmodeTextID, "Event：默认模式，最佳兼容性`nInput：推荐模式，最佳速度但在旧操作系统上可能无效")
-Gui Add, Link, x520 yp, 提交bug，检查更新: <a href="https://github.com/WeijieH/D3keyHelper">https://github.com/WeijieH/D3keyHelper</a>
+; ==============================================================================================================
+GuiCreate()
 
 Menu, Tray, NoStandard
 Menu, Tray, Add, 设置
@@ -201,16 +66,163 @@ Gosub, SetMovingHelper
 Gosub, SetHelperKeybinding
 Gosub, SetQuickPause
 SetGambleHelper()
+SetLootHelper()
 SetSalvageHelper()
 SetCustomStanding()
 SetCustomMoving()
 SetSkillQueue()
-SetTimer, safeGuard, 300
 Gui Show, w%MainWindowW% h%MainWindowH%, %TITLE%
 Return
 
 
 ; =================================== User Functions =====================================
+/*
+创建图形界面
+参数：
+    无
+返回：
+    无
+*/
+GuiCreate(){
+    global
+    tabw:=MainWindowW-347
+    tabh:=MainWindowH-30
+    helperSettingGroupx:=515
+
+    Gui -MaximizeBox -MinimizeBox +Owner +DPIScale +LastFound
+    Gui, Margin, 5, 5
+    Gui Font, s11
+    Gui Add, Tab3, xm ym w%tabw% h%tabh% vActiveTab gSetTabFocus AltSubmit, %tabs%
+    Gui Font
+    Loop, parse, tabs, `|
+    {
+        currentTab := A_Index
+        Gui Tab, %currentTab%
+        Gui Add, Hotkey, x0 y0 w0 w0
+        Gui Add, GroupBox, xm+10 ym+30 w480 h260 section, 按键宏设置
+        skillLabels:=["技能一：", "技能二：", "技能三：", "技能四：", "左键技能：", "右键技能："]
+        Gui Add, Text, xs+85 ys+20 w60 center section, 快捷键
+        Gui Add, Text, x+10 w80 center, 策略
+        Gui Add, Text, x+30 w100 center, 执行间隔（毫秒）
+        Gui Add, Text, x+10 w100 center, 随机延迟（毫秒）
+        Loop, 6
+        {
+            Gui Add, Text, xs-65 w60 yp+36 center, % skillLabels[A_Index]
+            ac:=actions[currentTab][A_Index]
+            switch A_Index
+            {
+                case 1,2,3,4:
+                    Gui Add, Hotkey, x+5 yp-2 w60 vskillset%currentTab%s%A_Index%hotkey, % hotkeys[currentTab][A_Index]
+                case 5:
+                    Gui Add, Edit, x+5 yp-2 w60 vskillset%currentTab%s%A_Index%hotkey +Disabled, LButton
+                case 6:
+                    Gui Add, Edit, x+5 yp-2 w60 vskillset%currentTab%s%A_Index%hotkey +Disabled, RButton
+            }
+            Gui Add, DropDownList, x+10 w85 AltSubmit Choose%ac% gSetSkillsetDropdown vskillset%currentTab%s%A_Index%dropdown, 禁用||按住不放||连点||保持Buff
+            Gui Add, Edit, vskillset%currentTab%s%A_Index%edit x+20 w100 Number
+            Gui Add, Updown, vskillset%currentTab%s%A_Index%updown Range20-30000, % intervals[currentTab][A_Index]
+            Gui Add, Edit, vskillset%currentTab%s%A_Index%delayedit hwndskillset%currentTab%s%A_Index%delayeditID x+25 w70 Number
+            Gui Add, Updown, vskillset%currentTab%s%A_Index%delayupdown Range0-3000, % ivdelays[currentTab][A_Index]
+            AddToolTip(skillset%currentTab%s%A_Index%delayeditID, "这里填入随机延迟的最大值，设为0可以关闭随即延迟")
+        }
+
+        Gui Add, GroupBox, xm+10 yp+45 w480 h160 section, 额外设置
+        Gui Add, Text, xs+20 ys+30, 快速切换至本配置：
+        pfmd:=others[currentTab].profilemethod
+        Gui Add, DropDownList, x+5 yp-2 w90 AltSubmit Choose%pfmd% vskillset%currentTab%profilekeybindingdropdown gSetProfileKeybinding, 无||鼠标中键||滚轮向上||滚轮向下||侧键1||侧键2||键盘按键
+        Gui Add, Hotkey, x+15 w100 vskillset%currentTab%profilekeybindinghkbox gSetProfileKeybinding, % others[currentTab].profilehotkey
+        
+        Gui Add, Text, xs+20 yp+35, 走位辅助：
+        pfmv:=others[currentTab].movingmethod
+        pflm:=others[currentTab].lazymode
+        Gui Add, DropDownList, x+5 yp-2 w130 AltSubmit Choose%pfmv% vskillset%currentTab%movingdropdown gSetMovingHelper, 无||强制站立||强制走位（按住不放）||强制走位（连点）
+        Gui Add, Text, vskillset%currentTab%movingtext x+10 yp+2, 间隔（毫秒）：
+        Gui Add, Edit, vskillset%currentTab%movingedit x+5 yp-2 w60 Number
+        Gui Add, Updown, vskillset%currentTab%movingupdown Range20-3000, % others[currentTab].movinginterval
+        
+        pfusq:=others[currentTab].useskillqueue
+        Gui Add, Text, xs+20 yp+35, 宏启动方式：
+        Gui Add, DropDownList, x+5 yp-2 w90 AltSubmit Choose%pflm% vskillset%currentTab%profilestartmodedropdown, 懒人模式||仅按下时
+        Gui Add, Checkbox, x+10 yp+2 Checked%pfusq% hwnduseskillqueueckbox%currentTab%ID vskillset%currentTab%useskillqueueckbox gSetSkillQueue, 使用单线程按键队列（毫秒）：
+        AddToolTip(useskillqueueckbox%currentTab%ID, "开启后按键不会被立刻按下而是存储至一个按键队列中`n连点会使技能加入队列头部，保持buff会使技能加入队列尾部")
+        Gui Add, Edit, vskillset%currentTab%useskillqueueedit hwnduseskillqueueedit%currentTab%ID x+0 yp-2 w50 Number
+        Gui Add, Updown, vskillset%currentTab%useskillqueueupdown Range30-1000, % others[currentTab].useskillqueueinterval
+        AddToolTip(useskillqueueedit%currentTab%ID, "按键队列中的连点按键会以此间隔一一发送至游戏窗口")
+
+        pfqp:=others[currentTab].enablequickpause
+        pfqpm1:=others[currentTab].quickpausemethod1
+        pfqpm2:=others[currentTab].quickpausemethod2
+        Gui Add, Checkbox, xs+20 yp+35 Checked%pfqp% vskillset%currentTab%clickpauseckbox gSetQuickPause, 快速暂停：
+        Gui Add, DropDownList, x+0 yp-2 w50 AltSubmit Choose%pfqpm1% vskillset%currentTab%clickpausedropdown1 gSetQuickPause, 双击||单击
+        Gui Add, DropDownList, x+5 yp w100 AltSubmit Choose%pfqpm2% vskillset%currentTab%clickpausedropdown2 gSetQuickPause, 鼠标左键||鼠标右键||鼠标中键||侧键1||侧键2
+        Gui Add, Text, x+5 yp+2 vskillset%currentTab%clickpausetext1, 则暂停压键
+        Gui Add, Edit, vskillset%currentTab%clickpauseedit x+5 yp-2 w60 Number
+        Gui Add, Updown, vskillset%currentTab%clickpauseupdown Range500-5000, % others[currentTab].quickpausedelay
+        Gui Add, Text, x+5 yp+2 vskillset%currentTab%clickpausetext2, 毫秒
+    }
+    Gui Tab
+    GuiControl , Choose, ActiveTab, % currentProfile
+
+    Gui Add, GroupBox, x%helperSettingGroupx% ym+30 w327 h440 section, 辅助功能
+    oldsandhelperhk:=generals.oldsandhelperhk
+    Gui Font, cRed s10
+    Gui Add, Text, xs+20 ys+30, 助手宏启动快捷键：
+    Gui Font
+    Gui Add, DropDownList, % "x+0 yp-2 w75 vhelperKeybindingdropdown gSetHelperKeybinding AltSubmit Choose" generals.oldsandhelpermethod, 无||鼠标中键||滚轮向上||滚轮向下||侧键1||侧键2||键盘按键
+    Gui Add, Hotkey, x+5 w70 vhelperKeybindingHK gSetHelperKeybinding, %oldsandhelperhk%
+
+    Gui Add, Text, xs+20 yp+40, 助手宏动画速度：
+    Gui Add, DropDownList, % "x+5 yp-2 w90 vhelperAnimationSpeedDropdown AltSubmit Choose" generals.helperspeed, 非常快||快速||中等||慢速
+    Gui Add, Text, x+20 yp+2 w80 hwndhelperSafeZoneTextID vhelperSafeZoneText gdummyFunction
+    AddToolTip(helperSafeZoneTextID, "修改配置文件中Generals区块下的safezone值来设置安全格")
+
+    Gui Add, CheckBox, % "xs+20 yp+35 hwndextraGambleHelperCKboxID vextraGambleHelperCKbox gSetGambleHelper Checked" generals.enablegamblehelper, 血岩赌博助手：
+    AddToolTip(extraGambleHelperCKboxID, "赌博时按下助手快捷键可以自动点击右键")
+    Gui Add, Text, vextraGambleHelperText x+5 yp, 发送右键次数
+    Gui Add, Edit, vextraGambleHelperEdit x+10 yp-3 w60 Number
+    Gui Add, Updown, vextraGambleHelperUpdown Range2-60, % generals.gamblehelpertimes
+
+    Gui Add, CheckBox, % "xs+20 yp+37 hwndextraSalvageHelperCkboxID vextraSalvageHelperCkbox gSetSalvageHelper Checked" generals.enablesalvagehelper, 铁匠分解助手：
+    Gui Add, DropDownList, % "x+5 yp-4 w150 AltSubmit hwndextraSalvageHelperDropdownID vextraSalvageHelperDropdown gSetSalvageHelper Choose" generals.salvagehelpermethod, 快速分解||一键分解||智能分解||智能分解（只留太古）
+    AddToolTip(extraSalvageHelperCkboxID, "分解装备时按下助手快捷键可以自动执行所选择的策略")
+    AddToolTip(extraSalvageHelperDropdownID, "快速分解：按下快捷键即等同于点击鼠标左键+回车`n一键分解：一键分解背包内所有非安全格的装备`n智能分解：同一键分解，但会跳过远古，太古`n智能分解（只留太古）：只保留太古装备")
+
+    Gui Add, CheckBox, xs+20 yp+37 vextramore3 +Disabled, 魔盒重铸助手（Coming Soon）
+    Gui Add, CheckBox, xs+20 yp+35 vextramore4 +Disabled, 魔盒升级助手（Coming Soon）
+    Gui Add, CheckBox, % "xs+20 yp+35 hwndextraLootHelperCkboxID vextraLootHelperCkbox gSetLootHelper Checked" generals.enableloothelper, 快速拾取助手：
+    AddToolTip(extraLootHelperCkboxID, "拾取装备时按下助手快捷键可以自动点击左键")
+    Gui Add, Text, vextraLootHelperText x+5 yp, 发送左键次数
+    Gui Add, Edit, vextraLootHelperEdit x+10 yp-3 w60 Number
+    Gui Add, Updown, vextraLootHelperUpdown Range2-99, % generals.loothelpertimes
+
+    Gui Add, CheckBox, % "xs+20 yp+60 vextraSoundonProfileSwitch Checked" generals.enablesoundplay, 使用快捷键切换配置成功时播放声音
+    Gui Add, CheckBox, % "xs+20 yp+35 hwndextraSmartPauseID vextraSmartPause Checked" generals.enablesmartpause, 智能暂停
+    AddToolTip(extraSmartPauseID, "开启后，游戏中按tab键可以暂停宏`n回车键，M键，T键会停止宏")
+    Gui Add, CheckBox, % "xs+20 yp+35 vextraCustomStanding gSetCustomStanding Checked" generals.customstanding, 使用自定义强制站立按键：
+    Gui Add, Hotkey, x+5 yp-2 w70 vextraCustomStandingHK gSetCustomStanding, % generals.customstandinghk
+
+    Gui Add, CheckBox, % "xs+20 yp+35 vextraCustomMoving gSetCustomMoving Checked" generals.custommoving, 使用自定义强制移动按键：
+    Gui Add, Hotkey, x+5 yp-2 w70 Limit14 vextraCustomMovingHK gSetCustomMoving, % generals.custommovinghk
+
+    startRunHK:=generals.starthotkey
+    Gui Font, cRed s10
+    Gui Add, Text, x530 ym+3, 战斗宏启动快捷键：
+    Gui Font
+    Gui Add, DropDownList, % "x+5 yp-3 w90 vStartRunDropdown gSetStartRun AltSubmit Choose" generals.startmethod, 鼠标右键||鼠标中键||滚轮向上||滚轮向下||侧键1||侧键2||键盘按键
+    Gui Add, Hotkey, x+5 yp w70 vStartRunHKinput gSetStartRun, %startRunHK%
+
+    Gui Add, Text, % "x10 y" MainWindowH-20, 当前激活配置:
+    Gui Font, cRed s11
+    Gui Add, Text, x+5 yp w350 vStatuesSkillsetText, % tabsarray[currentProfile]
+    Gui Add, Text, x465 yp hwndCurrentmodeTextID gdummyFunction, % A_SendMode
+    Gui Font
+    Gui Add, Text, x380 yp hwndSendmodeTextID gdummyFunction, 按键发送模式:
+    AddToolTip(SendmodeTextID, "修改配置文件General区块下的sendmode值来设置按键发送模式")
+    AddToolTip(CurrentmodeTextID, "Event：默认模式，最佳兼容性`nInput：推荐模式，最佳速度但在旧操作系统上可能无效")
+    Gui Add, Link, x520 yp, 提交bug，检查更新: <a href="https://github.com/WeijieH/D3keyHelper">https://github.com/WeijieH/D3keyHelper</a>
+    Return
+}
+
 /*
 读取配置文件，无配置文件则返回默认设置
 参数：
@@ -256,13 +268,16 @@ ReadCfgFile(cfgFileName, ByRef tabs, ByRef hotkeys, ByRef actions, ByRef interva
         IniRead, gamegamma, %cfgFileName%, General, gamegamma, 1.000000
         IniRead, sendmode, %cfgFileName%, General, sendmode, "Event"
         IniRead, buffpercent, %cfgFileName%, General, buffpercent, 0.050000
+        IniRead, enableloothelper, %cfgFileName%, General, enableloothelper, 0
+        IniRead, loothelpertimes, %cfgFileName%, General, loothelpertimes, 30
         generals:={"oldsandhelpermethod":oldsandhelpermethod, "oldsandhelperhk":oldsandhelperhk
         , "enablesalvagehelper":enablesalvagehelper, "salvagehelpermethod":salvagehelpermethod
         , "enablegamblehelper":enablegamblehelper, "gamblehelpertimes":gamblehelpertimes
         , "startmethod":startmethod, "starthotkey":starthotkey
         , "enablesmartpause":enablesmartpause, "enablesoundplay":enablesoundplay
         , "custommoving":custommoving, "custommovinghk":custommovinghk, "customstanding":customstanding, "customstandinghk":customstandinghk
-        , "safezone":safezone, "helperspeed":helperspeed, "gamegamma":gamegamma, "sendmode":sendmode, "buffpercent":buffpercent}
+        , "safezone":safezone, "helperspeed":helperspeed, "gamegamma":gamegamma, "sendmode":sendmode, "buffpercent":buffpercent
+        , "enableloothelper":enableloothelper, "loothelpertimes":loothelpertimes}
 
         IniRead, tabs, %cfgFileName%
         tabs:=StrReplace(StrReplace(tabs, "`n", "`|"), "General|", "")
@@ -336,7 +351,7 @@ ReadCfgFile(cfgFileName, ByRef tabs, ByRef hotkeys, ByRef actions, ByRef interva
         , "oldsandhelpermethod":7, "enablesalvagehelper":0, "enablesoundplay":1
         , "custommoving":0, "custommovinghk":"e", "customstanding":0, "customstandinghk":"LShift"
         , "safezone":"61,62,63", "helperspeed":3, "gamegamma":1.000000, "sendmode":"Event"
-        , "buffpercent":0.050000}
+        , "buffpercent":0.050000, "enableloothelper":0, "loothelpertimes":30}
     }
     Return currentProfile
 }
@@ -355,10 +370,12 @@ ReadCfgFile(cfgFileName, ByRef tabs, ByRef hotkeys, ByRef actions, ByRef interva
 SaveCfgFile(cfgFileName, tabs, currentProfile, safezone, VERSION){
     createOrTruncateFile(cfgFileName)
 
-    GuiControlGet, extragambleckbox
+    GuiControlGet, extraGambleHelperCKbox
+    GuiControlGet, extraGambleHelperUpdown
     GuiControlGet, helperKeybindingdropdown
-    GuiControlGet, helperKeybindingHK
-    GuiControlGet, extragambleedit
+    GuiControlGet, helperKeybindingHK  
+    GuiControlGet, extraLootHelperCkbox
+    GuiControlGet, extraLootHelperUpdown
     GuiControlGet, extraSmartPause
     GuiControlGet, extraSalvageHelperCkbox
     GuiControlGet, extraSalvageHelperDropdown
@@ -371,11 +388,13 @@ SaveCfgFile(cfgFileName, tabs, currentProfile, safezone, VERSION){
 
     IniWrite, %VERSION%, %cfgFileName%, General, version
     IniWrite, %currentProfile%, %cfgFileName%, General, activatedprofile
-    IniWrite, %extragambleckbox%, %cfgFileName%, General, enablegamblehelper
-    IniWrite, %extragambleedit%, %cfgFileName%, General, gamblehelpertimes
+    IniWrite, %extraGambleHelperCKbox%, %cfgFileName%, General, enablegamblehelper
+    IniWrite, %extraGambleHelperUpdown%, %cfgFileName%, General, gamblehelpertimes
     IniWrite, %extraSmartPause%, %cfgFileName%, General, enablesmartpause
     IniWrite, %extraSalvageHelperCkbox%, %cfgFileName%, General, enablesalvagehelper
     IniWrite, %extraSalvageHelperDropdown%, %cfgFileName%, General, salvagehelpermethod
+    IniWrite, %extraLootHelperCkbox%, %cfgFileName%, General, enableloothelper
+    IniWrite, %extraLootHelperUpdown%, %cfgFileName%, General, loothelpertimes
     IniWrite, %extraSoundonProfileSwitch%, %cfgFileName%, General, enablesoundplay
     IniWrite, %helperKeybindingHK%, %cfgFileName%, General, oldsandhelperhk
     IniWrite, %helperKeybindingdropdown%, %cfgFileName%, General, oldsandhelpermethod
@@ -391,7 +410,6 @@ SaveCfgFile(cfgFileName, tabs, currentProfile, safezone, VERSION){
     IniWrite, %A_SendMode%, %cfgFileName%, General, sendmode
     IniWrite, %buffpercent%, %cfgFileName%, General, buffpercent
     
-
     GuiControlGet, StartRunDropdown
     GuiControlGet, StartRunHKInput
     IniWrite, %StartRunDropdown%, %cfgFileName%, General, startmethod
@@ -452,8 +470,8 @@ SaveCfgFile(cfgFileName, tabs, currentProfile, safezone, VERSION){
     [x坐标，y坐标]
 */
 getSkillButtonBuffPos(D3W, D3H, buttonID, percent){
-    x:=[1288, 1377, 1465, 1554, 1647, 1734]
-    w:=63
+    static x:=[1288, 1377, 1465, 1554, 1647, 1734]
+    static w:=63
     y:=1328*D3H/1440
     Return [Round(D3W/2-(3440/2-x[buttonID]-percent*w)*D3H/1440), Round(y)]
 }
@@ -609,13 +627,17 @@ createOrTruncateFile(FileName){
 */
 oldsandHelper(){
     local
-    global helperRunning, helperBreak, helperDelay, mouseDelay
+    global helperRunning, helperBreak, helperDelay, mouseDelay, vRunning
     if helperRunning{
         ; 防止过快连按
         ; 宏在执行中再按可以打断
         helperBreak:=True
         helperRunning:=False
         Sleep, 200
+        Return
+    }
+    ; 如果战斗宏开启，则返回
+    if vRunning{
         Return
     }
     helperRunning:=True
@@ -625,7 +647,8 @@ oldsandHelper(){
     DllCall("GetClientRect", "ptr", WinExist("A"), "ptr", &rect)
     D3W:=NumGet(rect, 8, "int")
     D3H:=NumGet(rect, 12, "int")
-    GuiControlGet, extragambleckbox
+    GuiControlGet, extraGambleHelperCKbox
+    GuiControlGet, extraLootHelperCkbox
     GuiControlGet, extraSalvageHelperCkbox
     GuiControlGet, extraSalvageHelperDropdown
     GuiControlGet, helperAnimationSpeedDropdown
@@ -650,7 +673,7 @@ oldsandHelper(){
     ; 当鼠标在左侧
     if (xpos<680*D3H/1440)
     {
-        if (extragambleckbox and isGambleOpen(D3W, D3H))
+        if (extraGambleHelperCKbox and isGambleOpen(D3W, D3H))
         {
             SetTimer, gambleHelper, -1
             Return
@@ -756,9 +779,13 @@ oldsandHelper(){
                 Return
             Default:
                 ; 铁匠页面未打卡 
-                helperRunning:=False
-                Return
         }
+    }
+    ; 一键拾取
+    if (extraLootHelperCkbox)
+    {
+        fn:=Func("lootHelper").Bind(D3W, D3H, helperDelay)
+        SetTimer, %fn%, -1
     }
     Return
 }
@@ -773,14 +800,48 @@ oldsandHelper(){
 gambleHelper(){
     local
     global helperDelay, helperBreak, helperRunning
-    GuiControlGet, extragambleedit
-    Loop, %extragambleedit%
+    GuiControlGet, extraGambleHelperEdit
+    Loop, %extraGambleHelperEdit%
     {
         if helperBreak{
             Break
         }
         Send {RButton}
-        sleep helperDelay*0.5
+        sleep Min(helperDelay*0.5, 100)
+    }
+    helperRunning:=False
+    Return
+}
+
+/*
+负责一键拾取（连按左键）
+参数：
+    D3W：int，窗口区域的宽度
+    D3H：int，窗口区域的高度
+    helperDelay：按键延迟
+返回：
+    无
+*/
+lootHelper(D3W, D3H, helperDelay){
+    local
+    global helperBreak, helperRunning
+    MouseGetPos, xpos, ypos
+    ; 如果鼠标在人物周围，连点左键
+    if (Abs(xpos - D3W/2)<180*1440/D3H and Abs(ypos - D3H/2)<100*1440/D3H)
+    {
+        GuiControlGet, extraLootHelperEdit
+        Loop, %extraLootHelperEdit%
+        {
+            if helperBreak{
+                Break
+            }
+            Click
+            sleep helperDelay*0.5
+        }
+    }
+    Else    ; 否则就点一次左键
+    {
+        Click
     }
     helperRunning:=False
     Return
@@ -816,98 +877,106 @@ quickSalvageHelper(D3W, D3H, helperDelay){
 */
 oneButtonSalvageHelper(D3W, D3H, xpos, ypos){
     local
-    global helperBreak, helperRunning, helperDelay, safezone, helperNonEmpty, mouseDelay
-    GuiControlGet, extraSalvageHelperDropdown
-    helperNonEmpty:=[]
-    helperSkip:={}
-    i:=0    ; 格子编号
-    q:=0    ; 当前格子装备品质，1：普通传奇，2：远古传奇，3：太古传奇
-    SetDefaultMouseSpeed, mouseDelay
+    global helperBreak, helperRunning, helperDelay, helperBagZone, mouseDelay
+    helperBagZone:=make1DArray(60, -1)
     ; 开启一单独线程查找空格子
-    fn1:=Func("listNonEmptyInventorySpaceIDs").Bind(D3W, D3H)
+    fn1:=Func("scanInventorySpace").Bind(D3W, D3H)
     SetTimer, %fn1%, -1
-    Loop
+
+    q:=0    ; 当前格子装备品质，1：普通传奇，2：远古传奇，3：太古传奇
+    i:=1    ; 当前格子ID
+    SetDefaultMouseSpeed, mouseDelay
+    GuiControlGet, extraSalvageHelperDropdown
+    while (i<=60)
     {
-        ; 如果找到了空格子
-        if helperNonEmpty.Count()>0 {
-            i:=helperNonEmpty.RemoveAt(1)
+        if (helperBreak) {
+            Break
         }
-        ; 如果找完了
-        if (helperBreak or i<0) {
-            helperRunning:=False
-            Click, Right
-            MouseMove, xpos, ypos
-            Return
-        }
-        Else if (i>0 and !helperSkip.HasKey(i)) {
-            ; 得到空格子坐标
-            m:=getInventorySpaceXY(D3W, D3H, i)
-            MouseMove, m[1], m[2]
-            ; 智能分解判断
-            if (extraSalvageHelperDropdown > 2)
-            {
-                Sleep, Min(helperDelay*2, 300)  ; 等待边框显示完毕
-                ; 获取三个位于边框上的点颜色
-                PixelGetColor, cpixel, Round(m[3]-1-10*D3H/1440), m[2], RGB
-                c1:=splitRGB(cpixel)
-                PixelGetColor, cpixel, Round(m[3]-10*D3H/1440), m[2], RGB
-                c2:=splitRGB(cpixel)
-                PixelGetColor, cpixel, Round(m[3]+1-10*D3H/1440), m[2], RGB
-                c3:=splitRGB(cpixel)
-                c:=[Max(c1[1],c2[1],c3[1]),Max(c1[2],c2[2],c3[2]),Max(c1[3],c2[3],c3[3])]
-                if (c[1]>100 or c[3]<20) {
-                    ; 装备是太古或者远古
-                    q:=(c[2]<35) ? 4:3
-                } else {
-                    ; 装备是普通传奇
-                    q:=2
-                }
-            }
-            if (q>=extraSalvageHelperDropdown) {
-                Continue
-            }
-            Click
-            Sleep, helperDelay  ; 等待对话框显示完毕
-            if isDialogBoXOnScreen(D3W, D3H)
-            {
-                Send {Enter}
-                if (i<=50)
+        ; 当前格子情况
+        switch helperBagZone[i]
+        {
+            case -1:
+            ; 当前格子还未探开
+                Sleep, 20
+            case 10:
+            ; 当前格子有装备
+                m:=getInventorySpaceXY(D3W, D3H, i)
+                MouseMove, m[1], m[2]
+                ; 智能分解判断
+                if (extraSalvageHelperDropdown > 2)
                 {
-                    ; 如果不是最后一行，判断下方格子是否变为空格
-                    Sleep, Min(Round(helperDelay*3), 300) ; 等待装备消失动画显示完毕
-                    newID:=i+10
-                    if (isInventorySpaceEmpty(D3W, D3H, newID, [[0.65625,0.714285714], [0.375,0.365079365]])){
-                        helperSkip[newID]:=1
+                    Sleep, Min(helperDelay*2, 300)  ; 等待边框显示完毕
+                    ; 获取三个位于边框上的点颜色
+                    PixelGetColor, cpixel, Round(m[3]-1-10*D3H/1440), m[2], RGB
+                    c1:=splitRGB(cpixel)
+                    PixelGetColor, cpixel, Round(m[3]-10*D3H/1440), m[2], RGB
+                    c2:=splitRGB(cpixel)
+                    PixelGetColor, cpixel, Round(m[3]+1-10*D3H/1440), m[2], RGB
+                    c3:=splitRGB(cpixel)
+                    c:=[Max(c1[1],c2[1],c3[1]),Max(c1[2],c2[2],c3[2]),Max(c1[3],c2[3],c3[3])]
+                    if (c[1]>100 or c[3]<20) {
+                        ; 装备是太古或者远古
+                        q:=(c[2]<35) ? 4:3
+                    } else {
+                        ; 装备是普通传奇
+                        q:=2
                     }
                 }
-            }
-            Continue
+                if (q>=extraSalvageHelperDropdown) {
+                    ; 如果品质达标，跳过当前格子
+                    i++
+                    Continue
+                }
+                Click
+                Sleep, helperDelay  ; 等待对话框显示完毕
+                if isDialogBoXOnScreen(D3W, D3H)
+                {
+                    Send {Enter}
+                    if (i<=50 and helperBagZone[i+10]=10)
+                    {
+                        ; 如果不是最后一行，且下方格子有装备，判断下方格子是否变为空格
+                        Sleep, Min(Round(helperDelay*3), 300) ; 等待装备消失动画显示完毕
+                        if (isInventorySpaceEmpty(D3W, D3H, i+10, [[0.65625,0.714285714], [0.375,0.365079365]])){
+                            helperBagZone[i+10]:=1
+                        }
+                    }
+                }
+                i++
+            Default:
+            ; 当前格子是安全格或空格子
+                i++
         }
-        Sleep, Round(helperDelay*0.5)
     }
+    helperRunning:=False
+    ; 右键取消分解状态
+    Click, Right
+    ; 鼠标回到原位置
+    MouseMove, xpos, ypos
+    Return
 }
 
 /*
-枚举所有空格子
+扫描所有背包格子。未扫描-1，安全格0，没东西1，有东西10
 参数：
     D3W：int，窗口区域的宽度
     D3H：int，窗口区域的高度
 返回：
     无
 */
-listNonEmptyInventorySpaceIDs(D3W, D3H){
+scanInventorySpace(D3W, D3H){
     local
-    global safezone, helperNonEmpty
-    e:=[[0.65625,0.714285714], [0.375,0.365079365]]
+    global safezone, helperBagZone
     Loop, 60
     {
-        ; 跳过安全区域，将找到的空格子压入列表中
-        if (!safezone.HasKey(A_Index) and !isInventorySpaceEmpty(D3W, D3H, A_Index, e)){
-            helperNonEmpty.Push(A_Index)
+        if safezone.HasKey(A_Index)
+        {
+            helperBagZone[A_Index]:=0
+        }
+        Else
+        {
+            helperBagZone[A_Index]:=(isInventorySpaceEmpty(D3W, D3H, A_Index, [[0.65625,0.714285714], [0.375,0.365079365]])) ? 1:10
         }
     }
-    ; 如果找完了则压入-1
-    helperNonEmpty.Push(-1)
 }
 
 /*
@@ -1015,17 +1084,38 @@ SetCustomMoving(){
     无
 */
 SetGambleHelper(){
-    Gui, Submit, NoHide
-    GuiControlGet, extragambleckbox
-    If extragambleckbox
+    GuiControlGet, extraGambleHelperCKbox
+    If extraGambleHelperCKbox
     {
-        GuiControl, Enable, extragambletext
-        GuiControl, Enable, extragambleedit
+        GuiControl, Enable, extraGambleHelperText
+        GuiControl, Enable, extraGambleHelperEdit
     }
     Else
     {
-        GuiControl, Disable, extragambletext
-        GuiControl, Disable, extragambleedit
+        GuiControl, Disable, extraGambleHelperText
+        GuiControl, Disable, extraGambleHelperEdit
+    }
+    Return
+}
+
+/*
+设置拾取助手相关的控件动画
+参数：
+    无
+返回：
+    无
+*/
+SetLootHelper(){
+    GuiControlGet, extraLootHelperCkbox
+    If extraLootHelperCkbox
+    {
+        GuiControl, Enable, extraLootHelperText
+        GuiControl, Enable, extraLootHelperEdit
+    }
+    Else
+    {
+        GuiControl, Disable, extraLootHelperText
+        GuiControl, Disable, extraLootHelperEdit
     }
     Return
 }
@@ -1390,6 +1480,41 @@ keyJoin(sep, dict){
 }
 
 /*
+检查数组中是否有指定数值
+参数：
+    haystack：要检查的数组
+    needle：要检查的数值
+返回：
+    0：找不到
+    index：找到
+*/
+HasVal(haystack, needle) {
+    for index, value in haystack
+        if (value = needle)
+            return index
+    if !(IsObject(haystack))
+        throw Exception("Bad haystack!", -1, haystack)
+    return 0
+}
+
+/*
+快速创建一个一维数组
+参数：
+    len：数组大小
+    fill：填入数值，默认为0
+返回：
+    一维数组
+*/
+make1DArray(len, fill=0){
+    outArray:=[]
+    Loop, %len%
+    {
+        outArray.Push(fill)
+    }
+    Return outArray
+}
+
+/*
 一个空方程，用于绑定Text控件的gLabel从而使tooltip可以工作
 参数：
     无
@@ -1465,6 +1590,36 @@ AddToolTip(con, text, duration=30000, Modify=0){
         DllCall("SendMessage", Ptr, TThwnd, UInt, TTM_SETDELAYTIME, Ptr, TTF_AUTOPOP, Ptr, duration)
     }
     DllCall("SendMessage", Ptr, TThwnd, UInt, TTM_UPDATETIPTEXT, Ptr, 0, Ptr, &TInfo, Ptr)
+}
+
+/*
+windows钩子，当前窗口发生变化时激活
+修改自：https://www.autohotkey.com/boards/viewtopic.php?t=32532
+参数：
+    windows callback
+返回：
+    无
+*/
+Watchdog(wParam, lParam := ""){
+    static init   := DllCall("RegisterShellHookWindow", "Ptr", A_ScriptHwnd)
+        , MsgNum  := DllCall("RegisterWindowMessage", "Str", "SHELLHOOK")
+        , neglect := OnMessage(MsgNum, "Watchdog")
+        , CleanUp := {base: {__Delete: "Watchdog"}}
+    global vRunning
+
+    If !IsObject(CleanUp) {
+        OnMessage(MsgNum, "")
+        DllCall("DeregisterShellHookWindow", "Ptr", A_ScriptHwnd)
+    }
+
+    If (vRunning and (wParam = 32772 or wParam = 4))     ; HSHELL_WINDOWCREATED 1, HSHELL_WINDOWACTIVATED 4, HSHELL_RUDEAPPACTIVATED 32772
+    {
+        WinGetClass, AClass, ahk_id %lParam%
+        if (AClass != "D3 Main Window Class")
+        {
+            Gosub, StopMarco
+        }
+    }
 }
 ; =====================================Subroutines===================================
 spamSkillKey1:
@@ -1579,7 +1734,7 @@ SetProfileKeybinding:
             case 7:
                 GuiControl, Enable, skillset%currentPage%profilekeybindinghkbox
                 ckey:=skillset%currentPage%profilekeybindinghkbox
-                if (ckey)
+                if (ckey!="")
                 {
                     Hotkey, ~*%ckey%, SwitchProfile, on
                     profileKeybinding[ckey]:=currentPage
@@ -1591,7 +1746,7 @@ Return
 ; 处理配置快速切换逻辑
 SwitchProfile:
     ;移除快捷键的modifier 
-    currentHK:=StrReplace(StrReplace(A_ThisHotkey, "*"), "~")
+    currentHK:=RegExReplace(A_ThisHotkey, "[~*]")
     if (currentProfile!=profileKeybinding[currentHK])
     {
         currentProfile:=profileKeybinding[currentHK]
@@ -1656,18 +1811,17 @@ Return
 SetMovingHelper:
     Gui, Submit, NoHide
     Loop, %tabslen%{
-        npage:=A_Index
         if (skillset%npage%movingdropdown = 4)
         {
-            GuiControl, Enable, skillset%npage%movingtext
-            GuiControl, Enable, skillset%npage%movingedit
-            GuiControl, Enable, skillset%npage%movingupdown
+            GuiControl, Enable, skillset%A_Index%movingtext
+            GuiControl, Enable, skillset%A_Index%movingedit
+            GuiControl, Enable, skillset%A_Index%movingupdown
         }
         Else
         { 
-            GuiControl, Disable, skillset%npage%movingtext
-            GuiControl, Disable, skillset%npage%movingedit
-            GuiControl, Disable, skillset%npage%movingupdown
+            GuiControl, Disable, skillset%A_Index%movingtext
+            GuiControl, Disable, skillset%A_Index%movingedit
+            GuiControl, Disable, skillset%A_Index%movingupdown
         }
     }
 Return
@@ -1755,6 +1909,10 @@ RunMarco:
         Default:
             SetTimer, spamSkillKey%A_Index%, off
         }
+        if (A_Index <=4)
+        {
+            GuiControl, Disable, skillset%currentProfile%s%A_Index%hotkey
+        }
     }
     ; 处理位移按键
     GuiControlGet, skillset%currentProfile%movingdropdown
@@ -1790,6 +1948,17 @@ StopMarco:
     Loop, 6
     {
         SetTimer, spamSkillKey%A_Index%, off
+        if (A_Index <=4)
+        {
+            si:=A_Index
+            Loop, %tabslen%
+            {
+                Loop, 4
+                {
+                    GuiControl, Enable, skillset%A_Index%s%si%hotkey
+                }
+            }
+        }
     }
     SetTimer, forceMoving, off
     for key, value in keysOnHold{
@@ -1826,38 +1995,6 @@ forceMoving:
         Send {%forceMovingKey%}
     }
 Return
-
-; 安全宏
-safeGuard:
-    ; 暗黑三不是焦点时停止宏
-    If !WinActive("ahk_class D3 Main Window Class")
-    {
-        Gosub, StopMarco
-    }
-    ; 如果宏在运行，关闭一些控件防止误输入
-    if vRunning
-    {
-        Loop, %tabslen%
-        {
-            currentTab:=A_Index
-            Loop, 4
-            {
-                GuiControl, Disable, skillset%currentTab%s%A_Index%hotkey
-            }
-        }
-    }
-    Else
-    {
-        Loop, %tabslen%
-        {
-            currentTab:=A_Index
-            Loop, 4
-            {
-                GuiControl, Enable, skillset%currentTab%s%A_Index%hotkey
-            }
-        }
-    }
-Return
 ; ========================================= Hotkeys =======================================
 ~*Enter::
 ~*T::
@@ -1891,6 +2028,18 @@ Return
     }
 Return
 
+; 重映射小键盘按键，防止按住shift时无效的问题
+NumpadIns::Numpad0
+NumpadEnd::Numpad1
+NumpadDown::Numpad2
+NumpadPgDn::Numpad3
+NumpadLeft::Numpad4
+NumpadClear::Numpad5
+NumpadRight::Numpad6
+NumpadHome::Numpad7
+NumpadUp::Numpad8
+NumpadPgUp::Numpad9
+NumpadDel::NumpadDot
 ; ===================================== System Functions ==================================
 GuiEscape:
 GuiClose:
