@@ -25,17 +25,8 @@ Process, Priority, , High
 VERSION:=210505
 TITLE:=Format("暗黑3技能连点器 v1.2.{:d}   by Oldsand", VERSION)
 MainWindowW:=850
-MainWindowH:=500
-; ============================================全局变量===========================================================
-vRunning:=False
-vPausing:=False
-helperDelay:=100
-mouseDelay:=2
-helperRunning:=False
-helperBreak:=False
-profileKeybinding:={}
-keysOnHold:={}
-DblClickTime:=DllCall("GetDoubleClickTime", "UInt")
+MainWindowH:=530
+TitleBarHight:=25
 ; ========================================来自配置文件的全局变量===================================================
 currentProfile:=ReadCfgFile("d3oldsand.ini", tabs, hotkeys, actions, intervals, ivdelays, others, generals)
 SendMode, % generals.sendmode
@@ -59,23 +50,179 @@ Menu, Tray, Click, 1
 Menu, Tray, Tip, %TITLE%
 Menu, Tray, Icon, , , 1
 
-Gosub, SetSkillsetDropdown
-Gosub, SetStartRun
-Gosub, SetProfileKeybinding
-Gosub, SetMovingHelper
-Gosub, SetHelperKeybinding
-Gosub, SetQuickPause
-SetGambleHelper()
-SetLootHelper()
-SetSalvageHelper()
-SetCustomStanding()
-SetCustomMoving()
-SetSkillQueue()
+StartUp()
 Gui Show, w%MainWindowW% h%MainWindowH%, %TITLE%
+
+OnExit("OnUnload")
 Return
 
-
 ; =================================== User Functions =====================================
+StartUp(){
+    Global
+    Gosub, SetSkillsetDropdown
+    Gosub, SetStartRun
+    Gosub, SetProfileKeybinding
+    Gosub, SetMovingHelper
+    Gosub, SetHelperKeybinding
+    Gosub, SetQuickPause
+    SetGambleHelper()
+    SetLootHelper()
+    SetSalvageHelper()
+    SetCustomStanding()
+    SetCustomMoving()
+    SetSkillQueue()
+
+    ExePath:=A_IsCompiled ? A_ScriptFullPath : A_AhkPath
+    DllCall("RegisterShellHookWindow", "Ptr", A_ScriptHwnd)
+    OnMessage(DllCall("RegisterWindowMessage", "Str", "SHELLHOOK"), "Watchdog")
+    hHookMouse:=DllCall("SetWindowsHookEx", "int", 14, "Uint", RegisterCallback("MouseMove", "Fast"), "Uint", DllCall("GetModuleHandle", "Str", ExePath ,"Ptr"), "Uint", 0)
+}
+
+
+MouseMove(nCode, wParam, lParam)
+{
+    Global
+    Critical
+    If (vFront and !nCode)
+    {
+        MouseGetPos, currentMouseX, currentMouseY, , currentControlUnderMouse, 2
+        switch wParam
+        {
+            case 0x200:
+                ; 鼠标移动事件
+                If (currentControlUnderMouse=UIHideButtonID)
+                {
+                    if (HideButtonState=0)
+                    {
+                        GuiControl,, % UIHideButtonID, % "HBITMAP:*" hBMPButtonClose_Hover
+                        HideButtonState:=1
+                    }
+                }
+                Else
+                {
+                    if (HideButtonState=1)
+                    {
+                        GuiControl,, % UIHideButtonID, % "HBITMAP:*" hBMPButtonClose_Normal
+                        HideButtonState:=0
+                    }
+                    ; 如果鼠标位于标题栏
+                    if (currentMouseY < TitleBarHight+2 and currentMouseY > 1 and currentMouseX < MainWindowW){
+                        PostMessage, 0xA1, 2,,, A ; 发送拖拽事件
+                    }
+                }
+            case 0x201:
+                ; 左键按下
+                if (currentControlUnderMouse=UIHideButtonID and HideButtonState=1)
+                {
+                    GuiControl,, % UIHideButtonID, % "HBITMAP:*" hBMPButtonClose_Pressed
+                    HideButtonState:=2
+                }
+            case 0x202:
+                ; 左键弹起
+                If (currentControlUnderMouse = UIHideButtonID)
+                {
+                    GuiClose()
+                } else if (HideButtonState=2)
+                {
+                    GuiControl,, % UIHideButtonID, % "HBITMAP:*" hBMPButtonClose_Normal
+                    HideButtonState:=0
+                }
+
+        }
+    }
+    Return DllCall("CallNextHookEx", "Uint", 0, "int", nCode, "Uint", wParam, "Uint", lParam)
+}
+
+CreatePixel(HWNDs, HexColor) {
+    static BMBITS, _BMVarSize:=VarSetCapacity(BMBITS, 5, 0)
+    hBitmap := DllCall("CreateBitmap", "Int", 1, "Int", 1, "UInt", 1, "UInt", 24, "Ptr", 0, "Ptr")
+    hBM := DllCall("CopyImage", "Ptr", hBitmap, "UInt", 0, "Int", 0, "Int", 0, "UInt", 8, "Ptr")
+    
+    Numput(HexColor, &BMBITS, 0, "UInt")
+    DllCall("SetBitmapBits", "Ptr", hBM, "UInt", 4, "Ptr", &BMBITS)
+    if IsObject(HWNDs)
+    {
+        for i, HWND in HWNDs
+        {
+            DllCall("SendMessage", "Ptr", HWND, "UInt", 0x0172, "Ptr", 0, "Ptr", hBM, "Ptr")
+        }
+    }
+    Else
+    {
+        DllCall("SendMessage", "Ptr", HWNDs, "UInt", 0x0172, "Ptr", 0, "Ptr", hBM, "Ptr")
+    }
+    DllCall("DeleteObject", "Ptr", hBitmap)
+}
+
+OnLoad(){
+    Global
+    Static Init := OnLoad() ; 在所有语句之前运行
+
+    ; ============================================全局变量===========================================================
+    vRunning:=False
+    vPausing:=False
+    vFront:=True
+    helperDelay:=100
+    mouseDelay:=2
+    helperRunning:=False
+    helperBreak:=False
+    profileKeybinding:={}
+    keysOnHold:={}
+    DblClickTime:=DllCall("GetDoubleClickTime", "UInt")
+    HideButtonState:=0
+    _ButtonNormal := "iVBORw0KGgoAAAANSUhEUgAAAB4AAAAZCAYAAAAmNZ4aAAAAM0lEQVRIiWMYBaNgFIyCUUAsYCSkrnLe2v/khGZ7UjBes5lGo2gUjIJRMApGAVbAwMAAAMjYBAQ0LnL/AAAAAElFTkSuQmCC"
+    _ButtonHover := "iVBORw0KGgoAAAANSUhEUgAAAB4AAAAZCAYAAAAmNZ4aAAAARklEQVRIiWN8Iaj8n2EAANNAWMowavGoxaMWj1pMCWAhpFfi/V2yjH8hqIxXfvD6mJDLyQWjqXrU4lGLRy0etZg4wMDAAACGJAZtrV+pPwAAAABJRU5ErkJggg=="
+    _ButtonPressed := "iVBORw0KGgoAAAANSUhEUgAAAB4AAAAZCAYAAAAmNZ4aAAAARklEQVRIiWO85B32n2EAANNAWMowavGoxaMWj1pMCWAhpNftwjGyjN9lYIVXfvD6mJDLyQWjqXrU4lGLRy0etZg4wMDAAACzuwbMPgoPPgAAAABJRU5ErkJggg=="
+    ; GDI+ Startup
+    hGdip := DllCall("LoadLibrary", "Str", "Gdiplus.dll") ; Load module
+    VarSetCapacity(GdiplusStartupInput, (A_PtrSize = 8 ? 24 : 16), 0) ; GdiplusStartupInput structure
+    NumPut(1, GdiplusStartupInput, 0, "UInt") ; GdiplusVersion
+    DllCall("Gdiplus.dll\GdiplusStartup", "PtrP", pToken, "Ptr", &GdiplusStartupInput, "Ptr", 0) ; Initialize GDI+
+
+    hBMPButtonClose_Normal := GdipCreateHBITMAPFromBase64(_ButtonNormal)
+    hBMPButtonClose_Hover := GdipCreateHBITMAPFromBase64(_ButtonHover)
+    hBMPButtonClose_Pressed := GdipCreateHBITMAPFromBase64(_ButtonPressed)
+}
+
+OnUnload(ExitReason, ExitCode){
+    Global ; Assume-Global mode
+
+    ; Clean up resources used by GDI+
+    DllCall("GdiplusShutdown", "Ptr", pToken)
+    DllCall("DeregisterShellHookWindow", "Ptr", A_ScriptHwnd)
+    DllCall("UnhookWindowsHookEx", "Uint", hHookMouse)
+}
+
+
+GdipCreateBitmapFromBase64(B64){
+    VarSetCapacity(B64Len, 0)
+    i:=DllCall("Crypt32.dll\CryptStringToBinary", "Ptr", &B64, "UInt", StrLen(B64), "UInt", 0x01, "Ptr", 0, "UIntP", B64Len, "Ptr", 0, "Ptr", 0)
+    VarSetCapacity(B64Dec, B64Len, 0) ; pbBinary size
+    j:=DllCall("Crypt32.dll\CryptStringToBinary", "Ptr", &B64, "UInt", StrLen(B64), "UInt", 0x01, "Ptr", &B64Dec, "UIntP", B64Len, "Ptr", 0, "Ptr", 0)
+    pStream := DllCall("Shlwapi.dll\SHCreateMemStream", "Ptr", &B64Dec, "UInt", B64Len, "UPtr")
+    VarSetCapacity(pBitmap, 0)
+    p:=DllCall("Gdiplus.dll\GdipCreateBitmapFromStreamICM", "Ptr", pStream, "PtrP", pBitmap)
+    ObjRelease(pStream)
+    return pBitmap
+}
+
+GdipCreateHBITMAPFromBitmap(pBitmap) {
+    VarSetCapacity(hBitmap, 0)
+    DllCall("Gdiplus.dll\GdipCreateHBITMAPFromBitmap", "UInt", pBitmap, "UInt*", hBitmap, "Int", 0XFFFFFFFF)
+    return hBitmap
+}
+
+GdipCreateHICONFromBitmap(pBitmap) {
+    VarSetCapacity(hIcon, 0)
+    DllCall("Gdiplus.dll\GdipCreateHICONFromBitmap", "Ptr", pBitmap, "PtrP", hIcon, "UInt", 0)
+    return hIcon
+}
+
+GdipCreateHBITMAPFromBase64(B64) {
+    pBitmap := GdipCreateBitmapFromBase64(B64)
+    return GdipCreateHBITMAPFromBitmap(pBitmap)
+}
+
 /*
 创建图形界面
 参数：
@@ -84,14 +231,22 @@ Return
     无
 */
 GuiCreate(){
-    global
+    Global
     tabw:=MainWindowW-347
-    tabh:=MainWindowH-30
+    tabh:=MainWindowH-35-TitleBarHight
     helperSettingGroupx:=515
 
-    Gui -MaximizeBox -MinimizeBox +Owner +DPIScale +LastFound
-    Gui, Margin, 5, 5
-    Gui Font, s11
+    Gui Font, s11, Segoe UI
+    Gui -MaximizeBox -MinimizeBox +Owner +DPIScale +LastFound -Caption -Border
+    Gui, Margin, 5, % TitleBarHight+10
+    Gui, Add, Text, % "x1 y1 w" MainWindowW-2 " h" TitleBarHight " +0x4E HWNDhTitlebar"
+    Gui, Add, Text, % "x1 y+0 w" MainWindowW-2 " h1 +0x4E HWNDhTitlebarLine"
+    Gui, Add, Text, % "x0 y0 w" MainWindowW " h1 +0x4E HWNDhBorderTop"
+    Gui, Add, Text, % "x0 y" MainWindowH-1 " w" MainWindowW " h1 +0x4E HWNDhBorderBottom"
+    Gui, Add, Text, % "x0 y1 w1 h" MainWindowH-2 " +0x4E HWNDhBorderLeft"
+    Gui, Add, Text, % "x" MainWindowW-1 " y1 w1 h" MainWindowH-2 " +0x4E HWNDhBorderRight"
+    Gui Add, Text, x0 y1 w%MainWindowW% h%TitleBarHight% vTitleBarText center BackgroundTrans 0x200
+    Gui, Add, Picture, % "x" MainWindowW-31 " y1 w-1 h" TitleBarHight " hwndUIHideButtonID +BackgroundTrans gdummyFunction", % "HBITMAP:*" hBMPButtonClose_Normal
     Gui Add, Tab3, xm ym w%tabw% h%tabh% vActiveTab gSetTabFocus AltSubmit, %tabs%
     Gui Font
     Loop, parse, tabs, `|
@@ -108,7 +263,7 @@ GuiCreate(){
         Loop, 6
         {
             Gui Add, Text, xs-65 w60 yp+36 center, % skillLabels[A_Index]
-            ac:=actions[currentTab][A_Index]
+            local ac:=actions[currentTab][A_Index]
             switch A_Index
             {
                 case 1,2,3,4:
@@ -128,19 +283,19 @@ GuiCreate(){
 
         Gui Add, GroupBox, xm+10 yp+45 w480 h160 section, 额外设置
         Gui Add, Text, xs+20 ys+30, 快速切换至本配置：
-        pfmd:=others[currentTab].profilemethod
+        local pfmd:=others[currentTab].profilemethod
         Gui Add, DropDownList, x+5 yp-2 w90 AltSubmit Choose%pfmd% vskillset%currentTab%profilekeybindingdropdown gSetProfileKeybinding, 无||鼠标中键||滚轮向上||滚轮向下||侧键1||侧键2||键盘按键
         Gui Add, Hotkey, x+15 w100 vskillset%currentTab%profilekeybindinghkbox gSetProfileKeybinding, % others[currentTab].profilehotkey
         
         Gui Add, Text, xs+20 yp+35, 走位辅助：
-        pfmv:=others[currentTab].movingmethod
-        pflm:=others[currentTab].lazymode
+        local pfmv:=others[currentTab].movingmethod
+        local pflm:=others[currentTab].lazymode
         Gui Add, DropDownList, x+5 yp-2 w130 AltSubmit Choose%pfmv% vskillset%currentTab%movingdropdown gSetMovingHelper, 无||强制站立||强制走位（按住不放）||强制走位（连点）
         Gui Add, Text, vskillset%currentTab%movingtext x+10 yp+2, 间隔（毫秒）：
         Gui Add, Edit, vskillset%currentTab%movingedit x+5 yp-2 w60 Number
         Gui Add, Updown, vskillset%currentTab%movingupdown Range20-3000, % others[currentTab].movinginterval
         
-        pfusq:=others[currentTab].useskillqueue
+        local pfusq:=others[currentTab].useskillqueue
         Gui Add, Text, xs+20 yp+35, 宏启动方式：
         Gui Add, DropDownList, x+5 yp-2 w90 AltSubmit Choose%pflm% vskillset%currentTab%profilestartmodedropdown, 懒人模式||仅按下时
         Gui Add, Checkbox, x+10 yp+2 Checked%pfusq% hwnduseskillqueueckbox%currentTab%ID vskillset%currentTab%useskillqueueckbox gSetSkillQueue, 使用单线程按键队列（毫秒）：
@@ -149,9 +304,9 @@ GuiCreate(){
         Gui Add, Updown, vskillset%currentTab%useskillqueueupdown Range30-1000, % others[currentTab].useskillqueueinterval
         AddToolTip(useskillqueueedit%currentTab%ID, "按键队列中的连点按键会以此间隔一一发送至游戏窗口")
 
-        pfqp:=others[currentTab].enablequickpause
-        pfqpm1:=others[currentTab].quickpausemethod1
-        pfqpm2:=others[currentTab].quickpausemethod2
+        local pfqp:=others[currentTab].enablequickpause
+        local pfqpm1:=others[currentTab].quickpausemethod1
+        local pfqpm2:=others[currentTab].quickpausemethod2
         Gui Add, Checkbox, xs+20 yp+35 Checked%pfqp% vskillset%currentTab%clickpauseckbox gSetQuickPause, 快速暂停：
         Gui Add, DropDownList, x+0 yp-2 w50 AltSubmit Choose%pfqpm1% vskillset%currentTab%clickpausedropdown1 gSetQuickPause, 双击||单击
         Gui Add, DropDownList, x+5 yp w100 AltSubmit Choose%pfqpm2% vskillset%currentTab%clickpausedropdown2 gSetQuickPause, 鼠标左键||鼠标右键||鼠标中键||侧键1||侧键2
@@ -239,7 +394,7 @@ GuiCreate(){
 */
 ReadCfgFile(cfgFileName, ByRef tabs, ByRef hotkeys, ByRef actions, ByRef intervals, ByRef ivdelays, ByRef others, ByRef generals){
     local
-    global VERSION
+    Global VERSION
     if FileExist(cfgFileName)
     {
         generals:={}
@@ -405,7 +560,7 @@ SaveCfgFile(cfgFileName, tabs, currentProfile, safezone, VERSION){
     IniWrite, %helperAnimationSpeedDropdown%, %cfgFileName%, General, helperspeed
     safezone:=keyJoin(",", safezone)
     IniWrite, %safezone%, %cfgFileName%, General, safezone
-    global gameGamma, buffpercent
+    Global gameGamma, buffpercent
     IniWrite, %gameGamma%, %cfgFileName%, General, gamegamma
     IniWrite, %A_SendMode%, %cfgFileName%, General, sendmode
     IniWrite, %buffpercent%, %cfgFileName%, General, buffpercent
@@ -486,7 +641,7 @@ getSkillButtonBuffPos(D3W, D3H, buttonID, percent){
 */
 splitRGB(vthiscolor){
     local
-    global gameGamma
+    Global gameGamma
     vblue:=(vthiscolor & 0xFF)
     vgreen:=((vthiscolor & 0xFF00) >> 8)
     vred:=((vthiscolor & 0xFF0000) >> 16)
@@ -513,7 +668,7 @@ splitRGB(vthiscolor){
 */
 skillKey(currentProfile, nskill, D3W, D3H, forceStandingKey, useSkillQueue){
     local
-    global vPausing, skillQueue, buffpercent
+    Global vPausing, skillQueue, buffpercent
     GuiControlGet, skillset%currentProfile%s%nskill%hotkey
     GuiControlGet, skillset%currentProfile%s%nskill%dropdown
     GuiControlGet, skillset%currentProfile%s%nskill%delayupdown
@@ -627,7 +782,7 @@ createOrTruncateFile(FileName){
 */
 oldsandHelper(){
     local
-    global helperRunning, helperBreak, helperDelay, mouseDelay, vRunning
+    Global helperRunning, helperBreak, helperDelay, mouseDelay, vRunning
     if helperRunning{
         ; 防止过快连按
         ; 宏在执行中再按可以打断
@@ -799,7 +954,7 @@ oldsandHelper(){
 */
 gambleHelper(){
     local
-    global helperDelay, helperBreak, helperRunning
+    Global helperDelay, helperBreak, helperRunning
     GuiControlGet, extraGambleHelperEdit
     Loop, %extraGambleHelperEdit%
     {
@@ -824,7 +979,7 @@ gambleHelper(){
 */
 lootHelper(D3W, D3H, helperDelay){
     local
-    global helperBreak, helperRunning
+    Global helperBreak, helperRunning
     MouseGetPos, xpos, ypos
     ; 如果鼠标在人物周围，连点左键
     if (Abs(xpos - D3W/2)<180*1440/D3H and Abs(ypos - D3H/2)<100*1440/D3H)
@@ -877,7 +1032,7 @@ quickSalvageHelper(D3W, D3H, helperDelay){
 */
 oneButtonSalvageHelper(D3W, D3H, xpos, ypos){
     local
-    global helperBreak, helperRunning, helperDelay, helperBagZone, mouseDelay
+    Global helperBreak, helperRunning, helperDelay, helperBagZone, mouseDelay
     helperBagZone:=make1DArray(60, -1)
     ; 开启一单独线程查找空格子
     fn1:=Func("scanInventorySpace").Bind(D3W, D3H)
@@ -965,7 +1120,7 @@ oneButtonSalvageHelper(D3W, D3H, xpos, ypos){
 */
 scanInventorySpace(D3W, D3H){
     local
-    global safezone, helperBagZone
+    Global safezone, helperBagZone
     Loop, 60
     {
         if safezone.HasKey(A_Index)
@@ -1014,7 +1169,7 @@ clickPauseMarco(keysOnHold, pausetime, vRunning){
 */
 clickResumeMarco(){
     local
-    global keysOnHold, vRunning
+    Global keysOnHold, vRunning
     ; 重新压下所有压键
     for key, value in keysOnHold
     {
@@ -1129,7 +1284,7 @@ SetLootHelper(){
 */
 SetSalvageHelper(){
     local
-    global safezone
+    Global safezone
     Gui, Submit, NoHide
     GuiControlGet, extraSalvageHelperCkbox
     GuiControlGet, extraSalvageHelperHK
@@ -1182,7 +1337,7 @@ SetSalvageHelper(){
 */
 SetSkillQueue(){
     local
-    global tabslen
+    Global tabslen
     Loop, %tabslen%
     {
         GuiControlGet, skillset%A_Index%useskillqueueckbox
@@ -1209,7 +1364,7 @@ SetSkillQueue(){
 */
 spamSkillQueue(inv){
     local
-    global skillQueue, forceStandingKey, keysOnHold
+    Global skillQueue, forceStandingKey, keysOnHold
     while (skillQueue.Count() > 0)
     {
         ; 取出排在第一的按键
@@ -1593,7 +1748,7 @@ AddToolTip(con, text, duration=30000, Modify=0){
 }
 
 /*
-windows钩子，当前窗口发生变化时激活
+windows钩子callback函数，监控当前窗口，处理标题栏颜色
 修改自：https://www.autohotkey.com/boards/viewtopic.php?t=32532
 参数：
     windows callback
@@ -1601,24 +1756,33 @@ windows钩子，当前窗口发生变化时激活
     无
 */
 Watchdog(wParam, lParam := ""){
-    static init   := DllCall("RegisterShellHookWindow", "Ptr", A_ScriptHwnd)
-        , MsgNum  := DllCall("RegisterWindowMessage", "Str", "SHELLHOOK")
-        , neglect := OnMessage(MsgNum, "Watchdog")
-        , CleanUp := {base: {__Delete: "Watchdog"}}
-    global vRunning
-
-    If !IsObject(CleanUp) {
-        OnMessage(MsgNum, "")
-        DllCall("DeregisterShellHookWindow", "Ptr", A_ScriptHwnd)
-    }
-
-    If (vRunning and (wParam = 32772 or wParam = 4))     ; HSHELL_WINDOWCREATED 1, HSHELL_WINDOWACTIVATED 4, HSHELL_RUDEAPPACTIVATED 32772
+    Global
+    If (wParam = 32772 or wParam = 4)     ; HSHELL_WINDOWCREATED 1, HSHELL_WINDOWACTIVATED 4, HSHELL_RUDEAPPACTIVATED 32772
     {
-        WinGetClass, AClass, ahk_id %lParam%
-        if (AClass != "D3 Main Window Class")
+        if (lParam=0)
         {
-            Gosub, StopMarco
+            ; 当前窗口激活
+            CreatePixel(hTitlebar, "0x2b5361")
+            CreatePixel([hTitlebarLine, hBorderTop, hBorderBottom, hBorderLeft, hBorderRight], "0x0d2c35")
+            GuiControl, +cFFFFFF, TitleBarText
+            GuiControl,, TitleBarText, % TITLE
+            vFront:=True
         }
+        Else 
+        {   
+            ; 当前窗口没有激活
+            vFront:=False
+            CreatePixel([hTitlebar, hTitlebarLine], "0x799eac")
+            CreatePixel([hBorderTop, hBorderBottom, hBorderLeft, hBorderRight], "0xAAAAAA")
+            GuiControl, +cFFFFFF, TitleBarText
+            GuiControl,, TitleBarText, % TITLE
+            WinGetClass, AClass, ahk_id %lParam%
+            ; 检查当前窗口是否是暗黑三
+            if (!vRunning and AClass != "D3 Main Window Class")
+            {
+                Gosub, StopMarco
+            }
+        }        
     }
 }
 ; =====================================Subroutines===================================
@@ -2041,11 +2205,12 @@ NumpadUp::Numpad8
 NumpadPgUp::Numpad9
 NumpadDel::NumpadDot
 ; ===================================== System Functions ==================================
-GuiEscape:
-GuiClose:
+GuiClose(){
+    Global
     Gui, Submit
     SaveCfgFile("d3oldsand.ini", tabs, currentProfile, safezone, VERSION)
-Return
+    Return
+}
 
 设置:
     Gui, Show,, %TIELE%
