@@ -18,6 +18,7 @@ if (A_AhkVersion < AHK_MIN_VERSION)
 #UseHook
 SetWorkingDir %A_ScriptDir%
 SetBatchLines -1
+Thread, interrupt, 0
 CoordMode, Pixel, Client
 CoordMode, Mouse, Client
 Process, Priority, , High
@@ -63,7 +64,6 @@ OnLoad(){
     ; ============================================全局变量===========================================================
     vRunning:=False
     vPausing:=False
-    vFront:=True
     helperDelay:=100
     mouseDelay:=2
     helperRunning:=False
@@ -125,14 +125,14 @@ GuiCreate(){
     Gui, Add, Text, % "x0 y" MainWindowH-1 " w" MainWindowW " h1 +0x4E hwndBorderBottomID"
     Gui, Add, Text, % "x0 y1 w1 h" MainWindowH-2 " +0x4E hwndBorderLeftID"
     Gui, Add, Text, % "x" MainWindowW-1 " y1 w1 h" MainWindowH-2 " +0x4E hwndBorderRightID"
-    Gui Add, Text, x0 y1 w%MainWindowW% h%TitleBarHight% vTitleBarText center BackgroundTrans 0x200
+    Gui, Add, Text, % "x0 y1 w" MainWindowW " h" TitleBarHight " vTitleBarText center +BackgroundTrans +0x200"
     Gui, Add, Picture, % "x" MainWindowW-31 " y1 w-1 h" TitleBarHight " hwndUIHideButtonID +BackgroundTrans gdummyFunction", % "HBITMAP:*" hBMPButtonClose_Normal
     AddToolTip(UIHideButtonID, "最小化窗口至右下角并保存当前设置到配置文件")
     Gui Add, Tab3, xm ym w%tabw% h%tabh% vActiveTab gSetTabFocus AltSubmit, %tabs%
     Gui Font
     Loop, parse, tabs, `|
     {
-        currentTab := A_Index
+        currentTab:=A_Index
         Gui Tab, %currentTab%
         Gui Add, Hotkey, x0 y0 w0 w0
         Gui Add, GroupBox, xm+10 ym+30 w480 h260 section, 按键宏设置
@@ -281,7 +281,6 @@ StartUp(){
     SetCustomMoving()
     SetSkillQueue()
 
-    ; ExePath:=A_IsCompiled ? A_ScriptFullPath : A_AhkPath
     DllCall("RegisterShellHookWindow", "Ptr", A_ScriptHwnd)
     hHookMouse:=0
     OnMessage(DllCall("RegisterWindowMessage", "Str", "SHELLHOOK"), "Watchdog")
@@ -1052,7 +1051,7 @@ oneButtonSalvageHelper(D3W, D3H, xpos, ypos){
 */
 scanInventorySpace(D3W, D3H){
     local
-    Critical
+    static _e:=[[0.65625,0.71429], [0.375,0.36508]]
     Global safezone, helperBagZone
     Loop, 60
     {
@@ -1062,9 +1061,10 @@ scanInventorySpace(D3W, D3H){
         }
         Else
         {
-            helperBagZone[A_Index]:=(isInventorySpaceEmpty(D3W, D3H, A_Index, [[0.65625,0.714285714], [0.375,0.365079365]])) ? 1:10
+            helperBagZone[A_Index]:=(isInventorySpaceEmpty(D3W, D3H, A_Index, _e)) ? 1:10
         }
     }
+    Return
 }
 
 /*
@@ -1373,10 +1373,10 @@ isDialogBoXOnScreen(D3W, D3H){
     Bool
 */
 isRedXonScreen(D3W, D3H, position){
-    _centerWhiteL:=[680, 24]
-    _centerWhiteR:=[3417, 24]
-    _XsizeInside:=29
-    _XsizeOutside:=35
+    static _centerWhiteL:=[680, 24]
+    static _centerWhiteR:=[3417, 24]
+    static _XsizeInside:=29
+    static _XsizeOutside:=35
     switch position
     {
         case "left":
@@ -1415,11 +1415,11 @@ isRedXonScreen(D3W, D3H, position){
     [格子中心x，格子中心y，格子左上角x，格子左上角y]
 */
 getInventorySpaceXY(D3W, D3H, ID){
-    _firstSpaceUL:=[2753, 747]
-    _spaceSizeInnerW:=64
-    _spaceSizeInnerH:=63
-    _spaceSizeW:=67
-    _spaceSizeH:=66
+    static _firstSpaceUL:=[2753, 747]
+    static _spaceSizeInnerW:=64
+    static _spaceSizeInnerH:=63
+    static _spaceSizeW:=67
+    static _spaceSizeH:=66
     targetColumn:=Mod(ID-1,10)
     targetRow:=Floor((ID-1)/10)
     Return [Round(D3W-((3440-_firstSpaceUL[1]-_spaceSizeW*targetColumn-_spaceSizeInnerW/2)*D3H/1440)), Round((_firstSpaceUL[2]+targetRow*_spaceSizeH+_spaceSizeInnerH/2)*D3H/1440)
@@ -1640,6 +1640,7 @@ CreatePixel(HWNDs, HexColor) {
         DllCall("SendMessage", "Ptr", HWNDs, "UInt", 0x0172, "Ptr", 0, "Ptr", hBM, "Ptr")
     }
     DllCall("DeleteObject", "Ptr", hBitmap)
+    Return
 }
 
 /*
@@ -1764,6 +1765,7 @@ AddToolTip(con, text, duration=30000, Modify=0){
         DllCall("SendMessage", Ptr, TThwnd, UInt, TTM_SETDELAYTIME, Ptr, TTF_AUTOPOP, Ptr, duration)
     }
     DllCall("SendMessage", Ptr, TThwnd, UInt, TTM_UPDATETIPTEXT, Ptr, 0, Ptr, &TInfo, Ptr)
+    Return
 }
 
 /*
@@ -1776,7 +1778,6 @@ windows钩子callback函数，监控当前窗口，处理标题栏颜色
 */
 Watchdog(wParam, lParam := ""){
     Global
-    Critical
     If (wParam = 32772 or wParam = 4)     ; HSHELL_WINDOWCREATED 1, HSHELL_WINDOWACTIVATED 4, HSHELL_RUDEAPPACTIVATED 32772
     {
         if (lParam=0)
@@ -1786,7 +1787,6 @@ Watchdog(wParam, lParam := ""){
             CreatePixel([TitlebarLineID, BorderTopID, BorderBottomID, BorderLeftID, BorderRightID], "0x0d2c35")
             GuiControl, +cFFFFFF, TitleBarText
             GuiControl,, TitleBarText, % TITLE
-            vFront:=True
             if (hHookMouse){
                 DllCall("UnhookWindowsHookEx", "Uint", hHookMouse)
             }
@@ -1795,9 +1795,10 @@ Watchdog(wParam, lParam := ""){
         Else 
         {   
             ; 当前窗口没有激活
-            DllCall("UnhookWindowsHookEx", "Uint", hHookMouse)
-            hHookMouse:=0
-            vFront:=False
+            if (hHookMouse){
+                DllCall("UnhookWindowsHookEx", "Uint", hHookMouse)
+                hHookMouse:=0
+            }
             CreatePixel([TitlebarID, TitlebarLineID], "0x799eac")
             CreatePixel([BorderTopID, BorderBottomID, BorderLeftID, BorderRightID], "0xAAAAAA")
             GuiControl, +cFFFFFF, TitleBarText
@@ -1810,6 +1811,7 @@ Watchdog(wParam, lParam := ""){
             }
         }        
     }
+    Return
 }
 
 /*
@@ -1822,8 +1824,7 @@ Watchdog(wParam, lParam := ""){
 MouseMove(nCode, wParam, lParam)
 {
     Global
-    Critical
-    If (vFront and nCode=0)
+    If (nCode=0)
     {
         MouseGetPos, , , , currentControlUnderMouse, 2
         switch wParam
@@ -2300,7 +2301,6 @@ GuiClose(){
         DllCall("UnhookWindowsHookEx", "Uint", hHookMouse)
         hHookMouse:=0
     }
-    vFront:=False
     Return
 }
 
@@ -2309,5 +2309,6 @@ GuiClose(){
 Return
 
 退出:
+    Gui, Submit
     SaveCfgFile("d3oldsand.ini", tabs, currentProfile, safezone, VERSION)
 ExitApp
