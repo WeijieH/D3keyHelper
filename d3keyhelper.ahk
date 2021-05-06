@@ -98,7 +98,9 @@ OnUnload(ExitReason, ExitCode){
     ; Clean up resources used by GDI+
     DllCall("GdiplusShutdown", "Ptr", pToken)
     DllCall("DeregisterShellHookWindow", "Ptr", A_ScriptHwnd)
-    DllCall("UnhookWindowsHookEx", "Uint", hHookMouse)
+    if (hHookMouse){
+        DllCall("UnhookWindowsHookEx", "Uint", hHookMouse)
+    }
 }
 
 /*
@@ -117,14 +119,15 @@ GuiCreate(){
     Gui Font, s11, Segoe UI
     Gui -MaximizeBox -MinimizeBox +Owner +DPIScale +LastFound -Caption -Border
     Gui, Margin, 5, % TitleBarHight+10
-    Gui, Add, Text, % "x1 y1 w" MainWindowW-2 " h" TitleBarHight " +0x4E HWNDhTitlebar"
-    Gui, Add, Text, % "x1 y+0 w" MainWindowW-2 " h1 +0x4E HWNDhTitlebarLine"
-    Gui, Add, Text, % "x0 y0 w" MainWindowW " h1 +0x4E HWNDhBorderTop"
-    Gui, Add, Text, % "x0 y" MainWindowH-1 " w" MainWindowW " h1 +0x4E HWNDhBorderBottom"
-    Gui, Add, Text, % "x0 y1 w1 h" MainWindowH-2 " +0x4E HWNDhBorderLeft"
-    Gui, Add, Text, % "x" MainWindowW-1 " y1 w1 h" MainWindowH-2 " +0x4E HWNDhBorderRight"
+    Gui, Add, Text, % "x1 y1 w" MainWindowW-2 " h" TitleBarHight " +0x4E hwndTitlebarID"
+    Gui, Add, Text, % "x1 y+0 w" MainWindowW-2 " h1 +0x4E hwndTitlebarLineID"
+    Gui, Add, Text, % "x0 y0 w" MainWindowW " h1 +0x4E hwndBorderTopID"
+    Gui, Add, Text, % "x0 y" MainWindowH-1 " w" MainWindowW " h1 +0x4E hwndBorderBottomID"
+    Gui, Add, Text, % "x0 y1 w1 h" MainWindowH-2 " +0x4E hwndBorderLeftID"
+    Gui, Add, Text, % "x" MainWindowW-1 " y1 w1 h" MainWindowH-2 " +0x4E hwndBorderRightID"
     Gui Add, Text, x0 y1 w%MainWindowW% h%TitleBarHight% vTitleBarText center BackgroundTrans 0x200
     Gui, Add, Picture, % "x" MainWindowW-31 " y1 w-1 h" TitleBarHight " hwndUIHideButtonID +BackgroundTrans gdummyFunction", % "HBITMAP:*" hBMPButtonClose_Normal
+    AddToolTip(UIHideButtonID, "最小化窗口至右下角并保存当前设置到配置文件")
     Gui Add, Tab3, xm ym w%tabw% h%tabh% vActiveTab gSetTabFocus AltSubmit, %tabs%
     Gui Font
     Loop, parse, tabs, `|
@@ -278,10 +281,10 @@ StartUp(){
     SetCustomMoving()
     SetSkillQueue()
 
-    ExePath:=A_IsCompiled ? A_ScriptFullPath : A_AhkPath
+    ; ExePath:=A_IsCompiled ? A_ScriptFullPath : A_AhkPath
     DllCall("RegisterShellHookWindow", "Ptr", A_ScriptHwnd)
+    hHookMouse:=0
     OnMessage(DllCall("RegisterWindowMessage", "Str", "SHELLHOOK"), "Watchdog")
-    hHookMouse:=DllCall("SetWindowsHookEx", "int", 14, "Uint", RegisterCallback("MouseMove", "Fast"), "Uint", DllCall("GetModuleHandle", "Str", ExePath ,"Ptr"), "Uint", 0)
 }
 
 /*
@@ -292,6 +295,7 @@ StartUp(){
     无
 */
 SetTrayMenu(){
+    Global
     Menu, Tray, NoStandard
     Menu, Tray, Add, 设置
     Menu, Tray, Add, 退出
@@ -811,7 +815,7 @@ oldsandHelper(){
                     Sleep, helperDelay
                     Send {Enter}
                 }
-                if (r[4][3]>70)
+                if (r[4][3]>65)
                 {
                     ; 一键分解蓝
                     if helperBreak
@@ -963,6 +967,7 @@ oneButtonSalvageHelper(D3W, D3H, xpos, ypos){
 
     q:=0    ; 当前格子装备品质，1：普通传奇，2：远古传奇，3：太古传奇
     i:=1    ; 当前格子ID
+    w:=0
     SetDefaultMouseSpeed, mouseDelay
     GuiControlGet, extraSalvageHelperDropdown
     while (i<=60)
@@ -976,6 +981,10 @@ oneButtonSalvageHelper(D3W, D3H, xpos, ypos){
             case -1:
             ; 当前格子还未探开
                 Sleep, 20
+                w++
+                if (w>100){
+                    Break   ; 防卡死
+                }
             case 10:
             ; 当前格子有装备
                 m:=getInventorySpaceXY(D3W, D3H, i)
@@ -1043,6 +1052,7 @@ oneButtonSalvageHelper(D3W, D3H, xpos, ypos){
 */
 scanInventorySpace(D3W, D3H){
     local
+    Critical
     Global safezone, helperBagZone
     Loop, 60
     {
@@ -1527,12 +1537,12 @@ isGambleOpen(D3W, D3H){
     Bool
 */
 isInventorySpaceEmpty(D3W, D3H, ID, ckpoints){
-    _spaceSizeInnerW:=64
-    _spaceSizeInnerH:=63
+    static _spaceSizeInnerW:=64
+    static _spaceSizeInnerH:=63
     m:=getInventorySpaceXY(D3W, D3H, ID)
     for i, p in ckpoints
     {
-        xy:=[Round(m[3]+_spaceSizeInnerW*ckpoints[A_Index][1]*D3H/1440), Round(m[4]+_spaceSizeInnerH*ckpoints[A_Index][2]*D3H/1440)]
+        xy:=[Round(m[3]+_spaceSizeInnerW*ckpoints[i][1]*D3H/1440), Round(m[4]+_spaceSizeInnerH*ckpoints[i][2]*D3H/1440)]
         PixelGetColor, cpixel, xy[1], xy[2], rgb
         c:=splitRGB(cpixel)
         if !(c[1]<22 and c[2]<20 and c[3]<15 and c[1]>c[3] and c[2]>c[3])
@@ -1766,23 +1776,30 @@ windows钩子callback函数，监控当前窗口，处理标题栏颜色
 */
 Watchdog(wParam, lParam := ""){
     Global
+    Critical
     If (wParam = 32772 or wParam = 4)     ; HSHELL_WINDOWCREATED 1, HSHELL_WINDOWACTIVATED 4, HSHELL_RUDEAPPACTIVATED 32772
     {
         if (lParam=0)
         {
             ; 当前窗口激活
-            CreatePixel(hTitlebar, "0x2b5361")
-            CreatePixel([hTitlebarLine, hBorderTop, hBorderBottom, hBorderLeft, hBorderRight], "0x0d2c35")
+            CreatePixel(TitlebarID, "0x2b5361")
+            CreatePixel([TitlebarLineID, BorderTopID, BorderBottomID, BorderLeftID, BorderRightID], "0x0d2c35")
             GuiControl, +cFFFFFF, TitleBarText
             GuiControl,, TitleBarText, % TITLE
             vFront:=True
+            if (hHookMouse){
+                DllCall("UnhookWindowsHookEx", "Uint", hHookMouse)
+            }
+            hHookMouse:=DllCall("SetWindowsHookEx", "int", 14, "Ptr", RegisterCallback("MouseMove", "Fast"), "Ptr", DllCall("GetModuleHandle", "Ptr", 0 ,"Ptr"), "Uint", 0, "Ptr")
         }
         Else 
         {   
             ; 当前窗口没有激活
+            DllCall("UnhookWindowsHookEx", "Uint", hHookMouse)
+            hHookMouse:=0
             vFront:=False
-            CreatePixel([hTitlebar, hTitlebarLine], "0x799eac")
-            CreatePixel([hBorderTop, hBorderBottom, hBorderLeft, hBorderRight], "0xAAAAAA")
+            CreatePixel([TitlebarID, TitlebarLineID], "0x799eac")
+            CreatePixel([BorderTopID, BorderBottomID, BorderLeftID, BorderRightID], "0xAAAAAA")
             GuiControl, +cFFFFFF, TitleBarText
             GuiControl,, TitleBarText, % TITLE
             WinGetClass, AClass, ahk_id %lParam%
@@ -1806,9 +1823,9 @@ MouseMove(nCode, wParam, lParam)
 {
     Global
     Critical
-    If (vFront and !nCode)
+    If (vFront and nCode=0)
     {
-        MouseGetPos, currentMouseX, currentMouseY, , currentControlUnderMouse, 2
+        MouseGetPos, , , , currentControlUnderMouse, 2
         switch wParam
         {
             case 0x200:
@@ -1829,7 +1846,7 @@ MouseMove(nCode, wParam, lParam)
                         HideButtonState:=0
                     }
                     ; 如果鼠标位于标题栏
-                    if (currentMouseY < TitleBarHight+2 and currentMouseY > 1 and currentMouseX < MainWindowW){
+                    if (currentControlUnderMouse=TitleBarID){
                         PostMessage, 0xA1, 2,,, A ; 发送拖拽事件
                     }
                 }
@@ -1852,7 +1869,7 @@ MouseMove(nCode, wParam, lParam)
                 }
         }
     }
-    Return DllCall("CallNextHookEx", "Uint", 0, "int", nCode, "Uint", wParam, "Uint", lParam)
+    Return DllCall("CallNextHookEx", "Ptr", 0, "int", nCode, "Uint", wParam, "Ptr", lParam)
 }
 ; =====================================Subroutines===================================
 spamSkillKey1:
@@ -2278,6 +2295,12 @@ GuiClose(){
     Global
     Gui, Submit
     SaveCfgFile("d3oldsand.ini", tabs, currentProfile, safezone, VERSION)
+    if (hHookMouse)
+    {
+        DllCall("UnhookWindowsHookEx", "Uint", hHookMouse)
+        hHookMouse:=0
+    }
+    vFront:=False
     Return
 }
 
