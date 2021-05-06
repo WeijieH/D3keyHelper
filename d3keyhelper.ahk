@@ -41,15 +41,7 @@ gameGamma:=(generals.gamegamma>=0.5 and generals.gamegamma<=1.5)? generals.gameg
 buffpercent:=(generals.buffpercent>=0 and generals.buffpercent<=1)? generals.buffpercent:0.05
 ; ==============================================================================================================
 GuiCreate()
-
-Menu, Tray, NoStandard
-Menu, Tray, Add, 设置
-Menu, Tray, Add, 退出
-Menu, Tray, Default, 设置
-Menu, Tray, Click, 1
-Menu, Tray, Tip, %TITLE%
-Menu, Tray, Icon, , , 1
-
+SetTrayMenu()
 StartUp()
 Gui Show, w%MainWindowW% h%MainWindowH%, %TITLE%
 
@@ -57,103 +49,13 @@ OnExit("OnUnload")
 Return
 
 ; =================================== User Functions =====================================
-StartUp(){
-    Global
-    Gosub, SetSkillsetDropdown
-    Gosub, SetStartRun
-    Gosub, SetProfileKeybinding
-    Gosub, SetMovingHelper
-    Gosub, SetHelperKeybinding
-    Gosub, SetQuickPause
-    SetGambleHelper()
-    SetLootHelper()
-    SetSalvageHelper()
-    SetCustomStanding()
-    SetCustomMoving()
-    SetSkillQueue()
-
-    ExePath:=A_IsCompiled ? A_ScriptFullPath : A_AhkPath
-    DllCall("RegisterShellHookWindow", "Ptr", A_ScriptHwnd)
-    OnMessage(DllCall("RegisterWindowMessage", "Str", "SHELLHOOK"), "Watchdog")
-    hHookMouse:=DllCall("SetWindowsHookEx", "int", 14, "Uint", RegisterCallback("MouseMove", "Fast"), "Uint", DllCall("GetModuleHandle", "Str", ExePath ,"Ptr"), "Uint", 0)
-}
-
-
-MouseMove(nCode, wParam, lParam)
-{
-    Global
-    Critical
-    If (vFront and !nCode)
-    {
-        MouseGetPos, currentMouseX, currentMouseY, , currentControlUnderMouse, 2
-        switch wParam
-        {
-            case 0x200:
-                ; 鼠标移动事件
-                If (currentControlUnderMouse=UIHideButtonID)
-                {
-                    if (HideButtonState=0)
-                    {
-                        GuiControl,, % UIHideButtonID, % "HBITMAP:*" hBMPButtonClose_Hover
-                        HideButtonState:=1
-                    }
-                }
-                Else
-                {
-                    if (HideButtonState=1)
-                    {
-                        GuiControl,, % UIHideButtonID, % "HBITMAP:*" hBMPButtonClose_Normal
-                        HideButtonState:=0
-                    }
-                    ; 如果鼠标位于标题栏
-                    if (currentMouseY < TitleBarHight+2 and currentMouseY > 1 and currentMouseX < MainWindowW){
-                        PostMessage, 0xA1, 2,,, A ; 发送拖拽事件
-                    }
-                }
-            case 0x201:
-                ; 左键按下
-                if (currentControlUnderMouse=UIHideButtonID and HideButtonState=1)
-                {
-                    GuiControl,, % UIHideButtonID, % "HBITMAP:*" hBMPButtonClose_Pressed
-                    HideButtonState:=2
-                }
-            case 0x202:
-                ; 左键弹起
-                If (currentControlUnderMouse = UIHideButtonID)
-                {
-                    GuiClose()
-                } else if (HideButtonState=2)
-                {
-                    GuiControl,, % UIHideButtonID, % "HBITMAP:*" hBMPButtonClose_Normal
-                    HideButtonState:=0
-                }
-
-        }
-    }
-    Return DllCall("CallNextHookEx", "Uint", 0, "int", nCode, "Uint", wParam, "Uint", lParam)
-}
-
-CreatePixel(HWNDs, HexColor) {
-    static BMBITS, _BMVarSize:=VarSetCapacity(BMBITS, 5, 0)
-    hBitmap := DllCall("CreateBitmap", "Int", 1, "Int", 1, "UInt", 1, "UInt", 24, "Ptr", 0, "Ptr")
-    hBM := DllCall("CopyImage", "Ptr", hBitmap, "UInt", 0, "Int", 0, "Int", 0, "UInt", 8, "Ptr")
-    
-    Numput(HexColor, &BMBITS, 0, "UInt")
-    DllCall("SetBitmapBits", "Ptr", hBM, "UInt", 4, "Ptr", &BMBITS)
-    if IsObject(HWNDs)
-    {
-        for i, HWND in HWNDs
-        {
-            DllCall("SendMessage", "Ptr", HWND, "UInt", 0x0172, "Ptr", 0, "Ptr", hBM, "Ptr")
-        }
-    }
-    Else
-    {
-        DllCall("SendMessage", "Ptr", HWNDs, "UInt", 0x0172, "Ptr", 0, "Ptr", hBM, "Ptr")
-    }
-    DllCall("DeleteObject", "Ptr", hBitmap)
-}
-
+/*
+在程序载入时执行的一些初始化
+参数：
+    无
+返回：
+    无
+*/
 OnLoad(){
     Global
     Static Init := OnLoad() ; 在所有语句之前运行
@@ -184,43 +86,19 @@ OnLoad(){
     hBMPButtonClose_Pressed := GdipCreateHBITMAPFromBase64(_ButtonPressed)
 }
 
+/*
+在程序退出时执行的清理工作
+参数：
+    无
+返回：
+    无
+*/
 OnUnload(ExitReason, ExitCode){
     Global ; Assume-Global mode
-
     ; Clean up resources used by GDI+
     DllCall("GdiplusShutdown", "Ptr", pToken)
     DllCall("DeregisterShellHookWindow", "Ptr", A_ScriptHwnd)
     DllCall("UnhookWindowsHookEx", "Uint", hHookMouse)
-}
-
-
-GdipCreateBitmapFromBase64(B64){
-    VarSetCapacity(B64Len, 0)
-    i:=DllCall("Crypt32.dll\CryptStringToBinary", "Ptr", &B64, "UInt", StrLen(B64), "UInt", 0x01, "Ptr", 0, "UIntP", B64Len, "Ptr", 0, "Ptr", 0)
-    VarSetCapacity(B64Dec, B64Len, 0) ; pbBinary size
-    j:=DllCall("Crypt32.dll\CryptStringToBinary", "Ptr", &B64, "UInt", StrLen(B64), "UInt", 0x01, "Ptr", &B64Dec, "UIntP", B64Len, "Ptr", 0, "Ptr", 0)
-    pStream := DllCall("Shlwapi.dll\SHCreateMemStream", "Ptr", &B64Dec, "UInt", B64Len, "UPtr")
-    VarSetCapacity(pBitmap, 0)
-    p:=DllCall("Gdiplus.dll\GdipCreateBitmapFromStreamICM", "Ptr", pStream, "PtrP", pBitmap)
-    ObjRelease(pStream)
-    return pBitmap
-}
-
-GdipCreateHBITMAPFromBitmap(pBitmap) {
-    VarSetCapacity(hBitmap, 0)
-    DllCall("Gdiplus.dll\GdipCreateHBITMAPFromBitmap", "UInt", pBitmap, "UInt*", hBitmap, "Int", 0XFFFFFFFF)
-    return hBitmap
-}
-
-GdipCreateHICONFromBitmap(pBitmap) {
-    VarSetCapacity(hIcon, 0)
-    DllCall("Gdiplus.dll\GdipCreateHICONFromBitmap", "Ptr", pBitmap, "PtrP", hIcon, "UInt", 0)
-    return hIcon
-}
-
-GdipCreateHBITMAPFromBase64(B64) {
-    pBitmap := GdipCreateBitmapFromBase64(B64)
-    return GdipCreateHBITMAPFromBitmap(pBitmap)
 }
 
 /*
@@ -376,6 +254,51 @@ GuiCreate(){
     AddToolTip(CurrentmodeTextID, "Event：默认模式，最佳兼容性`nInput：推荐模式，最佳速度但在旧操作系统上可能无效")
     Gui Add, Link, x520 yp, 提交bug，检查更新: <a href="https://github.com/WeijieH/D3keyHelper">https://github.com/WeijieH/D3keyHelper</a>
     Return
+}
+
+/*
+在Gui创建完成后行的一些初始化
+参数：
+    无
+返回：
+    无
+*/
+StartUp(){
+    Global
+    Gosub, SetSkillsetDropdown
+    Gosub, SetStartRun
+    Gosub, SetProfileKeybinding
+    Gosub, SetMovingHelper
+    Gosub, SetHelperKeybinding
+    Gosub, SetQuickPause
+    SetGambleHelper()
+    SetLootHelper()
+    SetSalvageHelper()
+    SetCustomStanding()
+    SetCustomMoving()
+    SetSkillQueue()
+
+    ExePath:=A_IsCompiled ? A_ScriptFullPath : A_AhkPath
+    DllCall("RegisterShellHookWindow", "Ptr", A_ScriptHwnd)
+    OnMessage(DllCall("RegisterWindowMessage", "Str", "SHELLHOOK"), "Watchdog")
+    hHookMouse:=DllCall("SetWindowsHookEx", "int", 14, "Uint", RegisterCallback("MouseMove", "Fast"), "Uint", DllCall("GetModuleHandle", "Str", ExePath ,"Ptr"), "Uint", 0)
+}
+
+/*
+设置右下角图标菜单
+参数：
+    无
+返回：
+    无
+*/
+SetTrayMenu(){
+    Menu, Tray, NoStandard
+    Menu, Tray, Add, 设置
+    Menu, Tray, Add, 退出
+    Menu, Tray, Default, 设置
+    Menu, Tray, Click, 1
+    Menu, Tray, Tip, %TITLE%
+    Menu, Tray, Icon, , , 1
 }
 
 /*
@@ -1681,6 +1604,92 @@ dummyFunction(){
 }
 
 /*
+为picture控件填充颜色
+参数：
+    HWNDs：控件的句柄
+    HexColor：要填充的颜色
+返回：
+    无
+*/
+CreatePixel(HWNDs, HexColor) {
+    static BMBITS, _BMVarSize:=VarSetCapacity(BMBITS, 5, 0)
+    hBitmap := DllCall("CreateBitmap", "Int", 1, "Int", 1, "UInt", 1, "UInt", 24, "Ptr", 0, "Ptr")
+    hBM := DllCall("CopyImage", "Ptr", hBitmap, "UInt", 0, "Int", 0, "Int", 0, "UInt", 8, "Ptr")
+    
+    Numput(HexColor, &BMBITS, 0, "UInt")
+    DllCall("SetBitmapBits", "Ptr", hBM, "UInt", 4, "Ptr", &BMBITS)
+    if IsObject(HWNDs)
+    {
+        for i, HWND in HWNDs
+        {
+            DllCall("SendMessage", "Ptr", HWND, "UInt", 0x0172, "Ptr", 0, "Ptr", hBM, "Ptr")
+        }
+    }
+    Else
+    {
+        DllCall("SendMessage", "Ptr", HWNDs, "UInt", 0x0172, "Ptr", 0, "Ptr", hBM, "Ptr")
+    }
+    DllCall("DeleteObject", "Ptr", hBitmap)
+}
+
+/*
+从B64字符串创建位图指针
+参数：
+    B64：图片字符串
+返回：
+    pBitmap：位图指针
+*/
+GdipCreateBitmapFromBase64(B64){
+    VarSetCapacity(B64Len, 0)
+    i:=DllCall("Crypt32.dll\CryptStringToBinary", "Ptr", &B64, "UInt", StrLen(B64), "UInt", 0x01, "Ptr", 0, "UIntP", B64Len, "Ptr", 0, "Ptr", 0)
+    VarSetCapacity(B64Dec, B64Len, 0) ; pbBinary size
+    j:=DllCall("Crypt32.dll\CryptStringToBinary", "Ptr", &B64, "UInt", StrLen(B64), "UInt", 0x01, "Ptr", &B64Dec, "UIntP", B64Len, "Ptr", 0, "Ptr", 0)
+    pStream := DllCall("Shlwapi.dll\SHCreateMemStream", "Ptr", &B64Dec, "UInt", B64Len, "UPtr")
+    VarSetCapacity(pBitmap, 0)
+    p:=DllCall("Gdiplus.dll\GdipCreateBitmapFromStreamICM", "Ptr", pStream, "PtrP", pBitmap)
+    ObjRelease(pStream)
+    return pBitmap
+}
+
+/*
+创建位图句柄
+参数：
+    pBitmap：位图指针
+返回：
+    hBitmap：位图句柄
+*/
+GdipCreateHBITMAPFromBitmap(pBitmap) {
+    VarSetCapacity(hBitmap, 0)
+    DllCall("Gdiplus.dll\GdipCreateHBITMAPFromBitmap", "UInt", pBitmap, "UInt*", hBitmap, "Int", 0XFFFFFFFF)
+    return hBitmap
+}
+
+/*
+创建Icon位图句柄
+参数：
+    pBitmap：位图指针
+返回：
+    hIcon：图标句柄
+*/
+GdipCreateHICONFromBitmap(pBitmap) {
+    VarSetCapacity(hIcon, 0)
+    DllCall("Gdiplus.dll\GdipCreateHICONFromBitmap", "Ptr", pBitmap, "PtrP", hIcon, "UInt", 0)
+    return hIcon
+}
+
+/*
+从B64字符串创建位图句柄
+参数：
+    B64：图片字符串
+返回：
+    位图句柄
+*/
+GdipCreateHBITMAPFromBase64(B64) {
+    pBitmap := GdipCreateBitmapFromBase64(B64)
+    return GdipCreateHBITMAPFromBitmap(pBitmap)
+}
+
+/*
 为控件添加tooltip
 修改自：https://gist.github.com/andreberg/55d003569f0564cd8695
 参数：
@@ -1784,6 +1793,66 @@ Watchdog(wParam, lParam := ""){
             }
         }        
     }
+}
+
+/*
+鼠标钩子callback
+参数：
+    https://docs.microsoft.com/en-us/previous-versions/windows/desktop/legacy/ms644986(v=vs.85)
+返回：
+    https://docs.microsoft.com/en-us/previous-versions/windows/desktop/legacy/ms644986(v=vs.85)
+*/
+MouseMove(nCode, wParam, lParam)
+{
+    Global
+    Critical
+    If (vFront and !nCode)
+    {
+        MouseGetPos, currentMouseX, currentMouseY, , currentControlUnderMouse, 2
+        switch wParam
+        {
+            case 0x200:
+                ; 鼠标移动事件
+                If (currentControlUnderMouse=UIHideButtonID)
+                {
+                    if (HideButtonState=0)
+                    {
+                        GuiControl,, % UIHideButtonID, % "HBITMAP:*" hBMPButtonClose_Hover
+                        HideButtonState:=1
+                    }
+                }
+                Else
+                {
+                    if (HideButtonState=1)
+                    {
+                        GuiControl,, % UIHideButtonID, % "HBITMAP:*" hBMPButtonClose_Normal
+                        HideButtonState:=0
+                    }
+                    ; 如果鼠标位于标题栏
+                    if (currentMouseY < TitleBarHight+2 and currentMouseY > 1 and currentMouseX < MainWindowW){
+                        PostMessage, 0xA1, 2,,, A ; 发送拖拽事件
+                    }
+                }
+            case 0x201:
+                ; 左键按下
+                if (currentControlUnderMouse=UIHideButtonID and HideButtonState=1)
+                {
+                    GuiControl,, % UIHideButtonID, % "HBITMAP:*" hBMPButtonClose_Pressed
+                    HideButtonState:=2
+                }
+            case 0x202:
+                ; 左键弹起
+                If (currentControlUnderMouse = UIHideButtonID)
+                {
+                    GuiClose()
+                } else if (HideButtonState=2)
+                {
+                    GuiControl,, % UIHideButtonID, % "HBITMAP:*" hBMPButtonClose_Normal
+                    HideButtonState:=0
+                }
+        }
+    }
+    Return DllCall("CallNextHookEx", "Uint", 0, "int", nCode, "Uint", wParam, "Uint", lParam)
 }
 ; =====================================Subroutines===================================
 spamSkillKey1:
