@@ -23,7 +23,7 @@ CoordMode, Pixel, Client
 CoordMode, Mouse, Client
 Process, Priority, , High
 
-VERSION:=210505
+VERSION:=210507
 TITLE:=Format("暗黑3技能连点器 v1.2.{:d}   by Oldsand", VERSION)
 MainWindowW:=850
 MainWindowH:=530
@@ -1804,7 +1804,7 @@ windows钩子callback函数，监控当前窗口，处理标题栏颜色
 返回：
     无
 */
-Watchdog(wParam, lParam := ""){
+Watchdog(wParam, lParam){
     Global
     If (wParam = 32772 or wParam = 4)     ; HSHELL_WINDOWCREATED 1, HSHELL_WINDOWACTIVATED 4, HSHELL_RUDEAPPACTIVATED 32772
     {
@@ -1821,8 +1821,8 @@ Watchdog(wParam, lParam := ""){
             }
             hHookMouse:=DllCall("SetWindowsHookEx", "int", 14, "Ptr", RegisterCallback("MouseMove", "Fast"), "Ptr", DllCall("GetModuleHandle", "Ptr", 0 ,"Ptr"), "Uint", 0, "Ptr")
         }
-        Else 
-        {   
+        Else
+        {
             ; 当前窗口没有激活
             if (hHookMouse){
                 DllCall("UnhookWindowsHookEx", "Uint", hHookMouse)
@@ -1832,7 +1832,7 @@ Watchdog(wParam, lParam := ""){
             {
                 CreatePixel([TitlebarID, TitlebarLineID], "0x799eac")
                 CreatePixel([BorderTopID, BorderBottomID, BorderLeftID, BorderRightID], "0xAAAAAA")
-                GuiControl, +cFFFFFF, TitleBarText
+                GuiControl, +cEEEEEE, TitleBarText
                 GuiControl,, TitleBarText, % TITLE
             }
             WinGetClass, AClass, ahk_id %lParam%
@@ -1841,7 +1841,7 @@ Watchdog(wParam, lParam := ""){
             {
                 Gosub, StopMarco
             }
-        }        
+        }
     }
     Return
 }
@@ -2342,11 +2342,6 @@ GuiClose(){
     Global
     Gui, Submit
     SaveCfgFile("d3oldsand.ini", tabs, currentProfile, safezone, VERSION)
-    if (hHookMouse)
-    {
-        DllCall("UnhookWindowsHookEx", "Uint", hHookMouse)
-        hHookMouse:=0
-    }
     vHidden:=True
     Return
 }
