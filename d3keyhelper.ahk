@@ -64,6 +64,7 @@ OnLoad(){
     ; ============================================全局变量===========================================================
     vRunning:=False
     vPausing:=False
+    vHidden:=False
     helperDelay:=100
     mouseDelay:=2
     helperRunning:=False
@@ -178,7 +179,8 @@ GuiCreate(){
         
         local pfusq:=others[currentTab].useskillqueue
         Gui Add, Text, xs+20 yp+35, 宏启动方式：
-        Gui Add, DropDownList, x+5 yp-2 w90 AltSubmit Choose%pflm% vskillset%currentTab%profilestartmodedropdown, 懒人模式||仅按下时
+        Gui Add, DropDownList, x+5 yp-2 w90 AltSubmit Choose%pflm% hwndprofileStartModeDropdown%currentTab%ID vskillset%currentTab%profilestartmodedropdown gSetStartMode, 懒人模式||仅按下时||仅按一次
+        AddToolTip(profileStartModeDropdown%currentTab%ID, "懒人模式：按下战斗宏快捷键时开启宏，再按一下关闭宏`n仅按下时：仅在战斗宏快捷键被压下时启动宏`n仅按一次：按下战斗宏快捷键即按下所有“按住不放”的技能键一次")
         Gui Add, Checkbox, x+10 yp+2 Checked%pfusq% hwnduseskillqueueckbox%currentTab%ID vskillset%currentTab%useskillqueueckbox gSetSkillQueue, 使用单线程按键队列（毫秒）：
         AddToolTip(useskillqueueckbox%currentTab%ID, "开启后按键不会被立刻按下而是存储至一个按键队列中`n连点会使技能加入队列头部，保持buff会使技能加入队列尾部")
         Gui Add, Edit, vskillset%currentTab%useskillqueueedit hwnduseskillqueueedit%currentTab%ID x+0 yp-2 w50 Number
@@ -1114,6 +1116,32 @@ clickResumeMarco(){
     Return
 }
 
+SetStartMode(){
+    local
+    Global currentProfile
+    GuiControlGet, skillset%currentProfile%profilestartmodedropdown
+    switch skillset%currentProfile%profilestartmodedropdown
+    {
+        case 2:
+            GuiControl, , skillset%currentProfile%clickpauseckbox, 0
+            GuiControl, Disable, skillset%currentProfile%clickpauseckbox
+        case 3:
+            GuiControl, , skillset%currentProfile%useskillqueueckbox, 0
+            GuiControl, Choose, skillset%currentProfile%movingdropdown, 1
+            GuiControl, , skillset%currentProfile%clickpauseckbox, 0
+            GuiControl, Disable, skillset%currentProfile%useskillqueueckbox
+            GuiControl, Disable, skillset%currentProfile%movingdropdown
+            GuiControl, Disable, skillset%currentProfile%clickpauseckbox
+        Default:
+            GuiControl, Enable, skillset%currentProfile%useskillqueueckbox
+            GuiControl, Enable, skillset%currentProfile%movingdropdown
+            GuiControl, Enable, skillset%currentProfile%clickpauseckbox
+    }
+    Gosub, SetQuickPause
+    Gosub, SetMovingHelper
+    Return
+}
+
 /*
 设置自定义强制站立按键相关的控件动画
 参数：
@@ -1783,6 +1811,7 @@ Watchdog(wParam, lParam := ""){
         if (lParam=0)
         {
             ; 当前窗口激活
+            vHidden:=False
             CreatePixel(TitlebarID, "0x2b5361")
             CreatePixel([TitlebarLineID, BorderTopID, BorderBottomID, BorderLeftID, BorderRightID], "0x0d2c35")
             GuiControl, +cFFFFFF, TitleBarText
@@ -1799,10 +1828,13 @@ Watchdog(wParam, lParam := ""){
                 DllCall("UnhookWindowsHookEx", "Uint", hHookMouse)
                 hHookMouse:=0
             }
-            CreatePixel([TitlebarID, TitlebarLineID], "0x799eac")
-            CreatePixel([BorderTopID, BorderBottomID, BorderLeftID, BorderRightID], "0xAAAAAA")
-            GuiControl, +cFFFFFF, TitleBarText
-            GuiControl,, TitleBarText, % TITLE
+            if (!vHidden)
+            {
+                CreatePixel([TitlebarID, TitlebarLineID], "0x799eac")
+                CreatePixel([BorderTopID, BorderBottomID, BorderLeftID, BorderRightID], "0xAAAAAA")
+                GuiControl, +cFFFFFF, TitleBarText
+                GuiControl,, TitleBarText, % TITLE
+            }
             WinGetClass, AClass, ahk_id %lParam%
             ; 检查当前窗口是否是暗黑三
             if (!vRunning and AClass != "D3 Main Window Class")
@@ -2061,8 +2093,9 @@ Return
 ; 设置强制移动相关控件动画
 SetMovingHelper:
     Gui, Submit, NoHide
-    Loop, %tabslen%{
-        if (skillset%npage%movingdropdown = 4)
+    Loop, %tabslen%
+    {
+        if (skillset%currentProfile%movingdropdown = 4)
         {
             GuiControl, Enable, skillset%A_Index%movingtext
             GuiControl, Enable, skillset%A_Index%movingedit
@@ -2108,10 +2141,6 @@ Return
 
 ; 处理战斗宏的执行逻辑
 MainMacro:
-    VarSetCapacity(rect, 16)
-    DllCall("GetClientRect", "ptr", WinExist("A"), "ptr", &rect)
-    D3W:=NumGet(rect, 8, "int")
-    D3H:=NumGet(rect, 12, "int")
     GuiControlGet, skillset%currentProfile%profilestartmodedropdown
     switch skillset%currentProfile%profilestartmodedropdown
     {
@@ -2130,6 +2159,19 @@ MainMacro:
             Gosub, RunMarco
             KeyWait, %startRunHK%
             Gosub, StopMarco
+        case 3:
+        ; 仅按一次
+            Loop, 6
+            {
+                GuiControlGet, skillset%currentProfile%s%A_Index%dropdown
+                GuiControlGet, skillset%currentProfile%s%A_Index%hotkey
+                Switch skillset%currentProfile%s%A_Index%dropdown
+                {
+                    Case 2:
+                        k:=skillset%currentProfile%s%A_Index%hotkey
+                        Send {%k%}
+                }
+            }
     }
 Return
 
@@ -2143,6 +2185,10 @@ RunMarco:
     GuiControlGet, extraCustomMovingHK
     forceMovingKey:=extraCustomMoving? extraCustomMovingHK:"e"
     skillQueue:=[]
+    VarSetCapacity(rect, 16)
+    DllCall("GetClientRect", "ptr", WinExist("A"), "ptr", &rect)
+    D3W:=NumGet(rect, 8, "int")
+    D3H:=NumGet(rect, 12, "int")
     ; 处理技能按键
     Loop, 6
     {
@@ -2301,6 +2347,7 @@ GuiClose(){
         DllCall("UnhookWindowsHookEx", "Uint", hHookMouse)
         hHookMouse:=0
     }
+    vHidden:=True
     Return
 }
 
