@@ -76,15 +76,16 @@ OnLoad(){
     _ButtonNormal := "iVBORw0KGgoAAAANSUhEUgAAAB4AAAAZCAYAAAAmNZ4aAAAAM0lEQVRIiWMYBaNgFIyCUUAsYCSkrnLe2v/khGZ7UjBes5lGo2gUjIJRMApGAVbAwMAAAMjYBAQ0LnL/AAAAAElFTkSuQmCC"
     _ButtonHover := "iVBORw0KGgoAAAANSUhEUgAAAB4AAAAZCAYAAAAmNZ4aAAAARklEQVRIiWN8Iaj8n2EAANNAWMowavGoxaMWj1pMCWAhpFfi/V2yjH8hqIxXfvD6mJDLyQWjqXrU4lGLRy0etZg4wMDAAACGJAZtrV+pPwAAAABJRU5ErkJggg=="
     _ButtonPressed := "iVBORw0KGgoAAAANSUhEUgAAAB4AAAAZCAYAAAAmNZ4aAAAARklEQVRIiWO85B32n2EAANNAWMowavGoxaMWj1pMCWAhpNftwjGyjN9lYIVXfvD6mJDLyQWjqXrU4lGLRy0etZg4wMDAAACzuwbMPgoPPgAAAABJRU5ErkJggg=="
-    ; GDI+ Startup
-    hGdip := DllCall("LoadLibrary", "Str", "Gdiplus.dll") ; Load module
+    DllCall("LoadLibrary", "Str", "Crypt32.dll")
+    DllCall("LoadLibrary", "Str", "Shlwapi.dll")
+    DllCall("LoadLibrary", "Str", "Gdiplus.dll")
     VarSetCapacity(GdiplusStartupInput, (A_PtrSize = 8 ? 24 : 16), 0) ; GdiplusStartupInput structure
     NumPut(1, GdiplusStartupInput, 0, "UInt") ; GdiplusVersion
     DllCall("Gdiplus.dll\GdiplusStartup", "PtrP", pToken, "Ptr", &GdiplusStartupInput, "Ptr", 0) ; Initialize GDI+
 
-    hBMPButtonClose_Normal := GdipCreateHBITMAPFromBase64(_ButtonNormal)
-    hBMPButtonClose_Hover := GdipCreateHBITMAPFromBase64(_ButtonHover)
-    hBMPButtonClose_Pressed := GdipCreateHBITMAPFromBase64(_ButtonPressed)
+    hBMPButtonClose_Normal := GdipCreateFromBase64(_ButtonNormal)
+    hBMPButtonClose_Hover := GdipCreateFromBase64(_ButtonHover)
+    hBMPButtonClose_Pressed := GdipCreateFromBase64(_ButtonPressed)
 }
 
 /*
@@ -127,7 +128,7 @@ GuiCreate(){
     Gui, Add, Text, % "x0 y1 w1 h" MainWindowH-2 " +0x4E hwndBorderLeftID"
     Gui, Add, Text, % "x" MainWindowW-1 " y1 w1 h" MainWindowH-2 " +0x4E hwndBorderRightID"
     Gui, Add, Text, % "x0 y1 w" MainWindowW " h" TitleBarHight " vTitleBarText center +BackgroundTrans +0x200"
-    Gui, Add, Picture, % "x" MainWindowW-31 " y1 w-1 h" TitleBarHight " hwndUIHideButtonID +BackgroundTrans gdummyFunction", % "HBITMAP:*" hBMPButtonClose_Normal
+    Gui, Add, Picture, % "x" MainWindowW-31 " y1 w-1 h" TitleBarHight " hwndUIHideButtonID gdummyFunction +BackgroundTrans", % "HBITMAP:*" hBMPButtonClose_Normal
     AddToolTip(UIHideButtonID, "最小化窗口至右下角并保存当前设置到配置文件")
     Gui Add, Tab3, xm ym w%tabw% h%tabh% vActiveTab gSetTabFocus AltSubmit, %tabs%
     Gui Font
@@ -1353,11 +1354,11 @@ spamSkillQueue(inv){
             Default:
                 ; 如果是连点，按键前后停止一段时间
                 if (_k[2] = 3){
-                    sleep Round(inv*0.5)
+                    sleep inv//2
                 }
                 Send {Blind}{%k%}
                 if (_k[2] = 3){
-                    sleep Round(inv*0.5)
+                    sleep inv//2
                     Break
                 }
         }
@@ -1649,83 +1650,53 @@ dummyFunction(){
 返回：
     无
 */
-CreatePixel(HWNDs, HexColor) {
-    static BMBITS, _BMVarSize:=VarSetCapacity(BMBITS, 5, 0)
+FillPixel(HWNDs, HexColor) {
+    static BMBITS, _BMVarSize:=VarSetCapacity(BMBITS, 4, 0)
     hBitmap := DllCall("CreateBitmap", "Int", 1, "Int", 1, "UInt", 1, "UInt", 24, "Ptr", 0, "Ptr")
-    hBM := DllCall("CopyImage", "Ptr", hBitmap, "UInt", 0, "Int", 0, "Int", 0, "UInt", 8, "Ptr")
+    hBM := DllCall("CopyImage", "Ptr", hBitmap, "UInt", 0, "Int", 0, "Int", 0, "UInt", 0x2000|0x8|0x4, "Ptr")
     
     Numput(HexColor, &BMBITS, 0, "UInt")
-    DllCall("SetBitmapBits", "Ptr", hBM, "UInt", 4, "Ptr", &BMBITS)
+    DllCall("SetBitmapBits", "Ptr", hBM, "UInt", _BMVarSize-1, "Ptr", &BMBITS)
     if IsObject(HWNDs)
     {
         for i, HWND in HWNDs
         {
-            DllCall("SendMessage", "Ptr", HWND, "UInt", 0x0172, "Ptr", 0, "Ptr", hBM, "Ptr")
+            SendMessage, 0x172,, hBM,, ahk_id %HWND%
         }
     }
     Else
     {
-        DllCall("SendMessage", "Ptr", HWNDs, "UInt", 0x0172, "Ptr", 0, "Ptr", hBM, "Ptr")
+        SendMessage, 0x172,, hBM,, ahk_id %HWNDs%
     }
     DllCall("DeleteObject", "Ptr", hBitmap)
     Return
 }
 
 /*
-从B64字符串创建位图指针
+从B64字符串创建位图或图标
 参数：
     B64：图片字符串
+    IsIcon：施放创建图标而不是位图，默认为否
 返回：
-    pBitmap：位图指针
+    位图或者图标的句柄
 */
-GdipCreateBitmapFromBase64(B64){
+GdipCreateFromBase64(B64, IsIcon := 0){
     VarSetCapacity(B64Len, 0)
-    i:=DllCall("Crypt32.dll\CryptStringToBinary", "Ptr", &B64, "UInt", StrLen(B64), "UInt", 0x01, "Ptr", 0, "UIntP", B64Len, "Ptr", 0, "Ptr", 0)
+    DllCall("Crypt32.dll\CryptStringToBinary", "Ptr", &B64, "UInt", 0, "UInt", 0x01, "Ptr", 0, "UIntP", B64Len, "Ptr", 0, "Ptr", 0)
     VarSetCapacity(B64Dec, B64Len, 0) ; pbBinary size
-    j:=DllCall("Crypt32.dll\CryptStringToBinary", "Ptr", &B64, "UInt", StrLen(B64), "UInt", 0x01, "Ptr", &B64Dec, "UIntP", B64Len, "Ptr", 0, "Ptr", 0)
+    DllCall("Crypt32.dll\CryptStringToBinary", "Ptr", &B64, "UInt", 0, "UInt", 0x01, "Ptr", &B64Dec, "UIntP", B64Len, "Ptr", 0, "Ptr", 0)
     pStream := DllCall("Shlwapi.dll\SHCreateMemStream", "Ptr", &B64Dec, "UInt", B64Len, "UPtr")
     VarSetCapacity(pBitmap, 0)
-    p:=DllCall("Gdiplus.dll\GdipCreateBitmapFromStreamICM", "Ptr", pStream, "PtrP", pBitmap)
-    ObjRelease(pStream)
-    return pBitmap
-}
-
-/*
-创建位图句柄
-参数：
-    pBitmap：位图指针
-返回：
-    hBitmap：位图句柄
-*/
-GdipCreateHBITMAPFromBitmap(pBitmap) {
+    DllCall("Gdiplus.dll\GdipCreateBitmapFromStreamICM", "Ptr", pStream, "PtrP", pBitmap)
     VarSetCapacity(hBitmap, 0)
-    DllCall("Gdiplus.dll\GdipCreateHBITMAPFromBitmap", "UInt", pBitmap, "UInt*", hBitmap, "Int", 0XFFFFFFFF)
-    return hBitmap
-}
+    DllCall("Gdiplus.dll\GdipCreateHBITMAPFromBitmap", "UInt", pBitmap, "UInt*", hBitmap, "Int", 0x00FFFFFF)
 
-/*
-创建Icon位图句柄
-参数：
-    pBitmap：位图指针
-返回：
-    hIcon：图标句柄
-*/
-GdipCreateHICONFromBitmap(pBitmap) {
-    VarSetCapacity(hIcon, 0)
-    DllCall("Gdiplus.dll\GdipCreateHICONFromBitmap", "Ptr", pBitmap, "PtrP", hIcon, "UInt", 0)
-    return hIcon
-}
+    If (IsIcon) {
+        DllCall("Gdiplus.dll\GdipCreateHICONFromBitmap", "Ptr", pBitmap, "PtrP", hIcon, "UInt", 0)
+    }
 
-/*
-从B64字符串创建位图句柄
-参数：
-    B64：图片字符串
-返回：
-    位图句柄
-*/
-GdipCreateHBITMAPFromBase64(B64) {
-    pBitmap := GdipCreateBitmapFromBase64(B64)
-    return GdipCreateHBITMAPFromBitmap(pBitmap)
+    ObjRelease(pStream)
+    return (IsIcon ? hIcon : hBitmap)
 }
 
 /*
@@ -1741,11 +1712,7 @@ GdipCreateHBITMAPFromBase64(B64) {
 */
 AddToolTip(con, text, duration=30000, Modify=0){
     Static TThwnd, GuiHwnd
-    TInfo =
-    UInt := "UInt"
-    Ptr := (A_PtrSize ? "Ptr" : UInt)
     PtrSize := (A_PtrSize ? A_PtrSize : 4)
-    Str := "Str"
     WM_USER := 0x400
     TTM_ADDTOOL := (A_IsUnicode ? WM_USER+50 : WM_USER+4)
     TTM_UPDATETIPTEXT := (A_IsUnicode ? WM_USER+57 : WM_USER+12)
@@ -1764,18 +1731,18 @@ AddToolTip(con, text, duration=30000, Modify=0){
         Gui, +LastFound
         GuiHwnd := WinExist()
         TThwnd := DllCall("CreateWindowEx"
-                    ,UInt,0
-                    ,Str,"tooltips_class32"
-                    ,UInt,0
-                    ,UInt,2147483648
-                    ,UInt,-2147483648
-                    ,UInt,-2147483648
-                    ,UInt,-2147483648
-                    ,UInt,-2147483648
-                    ,UInt,GuiHwnd
-                    ,UInt,0
-                    ,UInt,0
-                    ,UInt,0)
+                    ,"UInt",0
+                    ,"Str","tooltips_class32"
+                    ,"UInt",0
+                    ,"UInt",2147483648
+                    ,"UInt",-2147483648
+                    ,"UInt",-2147483648
+                    ,"UInt",-2147483648
+                    ,"UInt",-2147483648
+                    ,"UInt",GuiHwnd
+                    ,"UInt",0
+                    ,"UInt",0
+                    ,"UInt",0)
     }
     cbSize := 6*4+6*PtrSize
     uFlags := TTF_IDISHWND|TTF_SUBCLASS|TTF_PARSELINKS
@@ -1788,11 +1755,11 @@ AddToolTip(con, text, duration=30000, Modify=0){
     NumPut(0,TInfo, 6*4+6*PtrSize)
     DetectHiddenWindows, On
     If (!Modify) {
-        DllCall("SendMessage", Ptr, TThwnd, UInt, TTM_ADDTOOL, Ptr, 0, Ptr, &TInfo, Ptr) 
-        DllCall("SendMessage", Ptr, TThwnd, UInt, TTM_SETMAXTIPWIDTH, Ptr, 0, Ptr, A_ScreenWidth) 
-        DllCall("SendMessage", Ptr, TThwnd, UInt, TTM_SETDELAYTIME, Ptr, TTF_AUTOPOP, Ptr, duration)
+        SendMessage, %TTM_ADDTOOL%,, &TInfo,, ahk_id %TThwnd%
+        SendMessage, %TTM_SETMAXTIPWIDTH%,, A_ScreenWidth,, ahk_id %TThwnd%
+        SendMessage, %TTM_SETDELAYTIME%, TTF_AUTOPOP, duration,, ahk_id %TThwnd%
     }
-    DllCall("SendMessage", Ptr, TThwnd, UInt, TTM_UPDATETIPTEXT, Ptr, 0, Ptr, &TInfo, Ptr)
+    SendMessage, %TTM_UPDATETIPTEXT%,, &TInfo,, ahk_id %TThwnd%
     Return
 }
 
@@ -1812,8 +1779,8 @@ Watchdog(wParam, lParam){
         {
             ; 当前窗口激活
             vHidden:=False
-            CreatePixel(TitlebarID, "0x2b5361")
-            CreatePixel([TitlebarLineID, BorderTopID, BorderBottomID, BorderLeftID, BorderRightID], "0x0d2c35")
+            FillPixel(TitlebarID, "0x2b5361")
+            FillPixel([TitlebarLineID, BorderTopID, BorderBottomID, BorderLeftID, BorderRightID], "0x0d2c35")
             GuiControl, +cFFFFFF, TitleBarText
             GuiControl,, TitleBarText, % TITLE
             if (hHookMouse){
@@ -1830,8 +1797,8 @@ Watchdog(wParam, lParam){
             }
             if (!vHidden)
             {
-                CreatePixel([TitlebarID, TitlebarLineID], "0x799eac")
-                CreatePixel([BorderTopID, BorderBottomID, BorderLeftID, BorderRightID], "0xAAAAAA")
+                FillPixel([TitlebarID, TitlebarLineID], "0x799eac")
+                FillPixel([BorderTopID, BorderBottomID, BorderLeftID, BorderRightID], "0xAAAAAA")
                 GuiControl, +cEEEEEE, TitleBarText
                 GuiControl,, TitleBarText, % TITLE
             }
