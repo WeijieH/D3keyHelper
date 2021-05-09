@@ -32,7 +32,7 @@ TitleBarHight:=25
 currentProfile:=ReadCfgFile("d3oldsand.ini", tabs, hotkeys, actions, intervals, ivdelays, others, generals)
 SendMode, % generals.sendmode
 tabsarray:=StrSplit(tabs, "`|")
-tabslen:= ObjCount(tabsarray)
+tabslen:=ObjCount(tabsarray)
 safezone:={}
 Loop, Parse, % generals.safezone, CSV
 {
@@ -132,7 +132,7 @@ GuiCreate(){
     Gui, Add, Picture, % "x" MainWindowW-1 " y1 w1 h" MainWindowH-2 " +0x4E hwndBorderRightID"
     Gui, Add, Text, % "x0 y1 w" MainWindowW " h" TitleBarHight " vTitleBarText center +BackgroundTrans +0x200"
     Gui, Add, Picture, % "x" MainWindowW-31 " y1 w-1 h" TitleBarHight " hwndUIHideButtonID gdummyFunction +BackgroundTrans", % "HBITMAP:*" hBMPButtonClose_Normal
-    AddToolTip(UIHideButtonID, "最小化窗口至右下角并保存当前设置到配置文件")
+    AddToolTip(UIHideButtonID, "左键：最小化窗口至右下角并保存当前设置到配置文件`n右键：保存设置并退出程序")
     Gui Add, Tab3, xm ym w%tabw% h%tabh% vActiveTab gSetTabFocus AltSubmit, %tabs%
     Gui Font, s9, Segoe UI
     Loop, parse, tabs, `|
@@ -144,8 +144,8 @@ GuiCreate(){
         Gui Add, GroupBox, xm+10 ym+40 w520 h260 section, 按键宏设置
         skillLabels:=["技能一：", "技能二：", "技能三：", "技能四：", "左键技能：", "右键技能："]
         Gui Add, Text, xs+90 ys+20 w60 center section, 快捷键
-        Gui Add, Text, x+15 w80 center, 策略
-        Gui Add, Text, x+30 w110 center, 执行间隔（毫秒）
+        Gui Add, Text, x+10 w100 center, 策略
+        Gui Add, Text, x+20 w110 center, 执行间隔（毫秒）
         Gui Add, Text, x+10 w110 center, 随机延迟（毫秒）
         Loop, 6
         {
@@ -160,8 +160,8 @@ GuiCreate(){
                 case 6:
                     Gui Add, Edit, x+5 yp-2 w60 vskillset%currentTab%s%A_Index%hotkey +Disabled, RButton
             }
-            Gui Add, DropDownList, x+15 w85 AltSubmit Choose%ac% gSetSkillsetDropdown vskillset%currentTab%s%A_Index%dropdown, 禁用||按住不放||连点||保持Buff
-            Gui Add, Edit, vskillset%currentTab%s%A_Index%edit x+30 w90 Number
+            Gui Add, DropDownList, x+10 w100 AltSubmit Choose%ac% gSetSkillsetDropdown vskillset%currentTab%s%A_Index%dropdown, 禁用||按住不放||连点||保持Buff
+            Gui Add, Edit, vskillset%currentTab%s%A_Index%edit x+25 w90 Number
             Gui Add, Updown, vskillset%currentTab%s%A_Index%updown Range20-30000, % intervals[currentTab][A_Index]
             Gui Add, Edit, vskillset%currentTab%s%A_Index%delayedit hwndskillset%currentTab%s%A_Index%delayeditID x+40 w70 Number
             Gui Add, Updown, vskillset%currentTab%s%A_Index%delayupdown Range0-3000, % ivdelays[currentTab][A_Index]
@@ -260,7 +260,7 @@ GuiCreate(){
     Gui Font, s9
     Gui Add, Text, xp-95 ys hwndSendmodeTextID gdummyFunction, 按键发送模式：
     AddToolTip(SendmodeTextID, "修改配置文件General区块下的sendmode值来设置按键发送模式")
-    AddToolTip(CurrentmodeTextID, "Event：默认模式，最佳兼容性`nInput：推荐模式，最佳速度但在旧操作系统上可能无效")
+    AddToolTip(CurrentmodeTextID, "Event：默认模式，最佳兼容性`nInput：推荐模式，最佳速度但可能会被一些杀毒防护软件屏蔽干扰")
     Gui Add, Link, x570 ys, 本项目开源在：<a href="https://github.com/WeijieH/D3keyHelper">https://github.com/WeijieH/D3keyHelper</a>
     Return
 }
@@ -302,8 +302,8 @@ StartUp(){
 SetTrayMenu(){
     Global
     Menu, Tray, NoStandard
-    Menu, Tray, Add, 设置
-    Menu, Tray, Add, 退出
+    Menu, Tray, Add, 设置, GuiShowMainWindow
+    Menu, Tray, Add, 退出, GuiExit
     Menu, Tray, Default, 设置
     Menu, Tray, Click, 1
     Menu, Tray, Tip, %TITLE%
@@ -1780,7 +1780,7 @@ Watchdog(wParam, lParam){
             vFront:=True
             FillPixel(TitlebarID, 0x2B5361)
             FillPixel([TitlebarLineID, BorderTopID, BorderBottomID, BorderLeftID, BorderRightID], 0x000000)
-            Gui, Font, s11 +cFFFFFF Bold
+            Gui, Font, s11 +cFFFFFF Normal
             GuiControl, Font, TitleBarText
             GuiControl,, TitleBarText, % TITLE
             if (hHookMouse){
@@ -1851,18 +1851,25 @@ MouseMove(nCode, wParam, lParam)
                         PostMessage, 0xA1, 2,,, A ; 发送拖拽事件
                     }
                 }
-            case 0x201:
-                ; 左键按下
+            case 0x201,0x204:
+                ; 左键，右键按下
                 if (currentControlUnderMouse=UIHideButtonID and HideButtonState=1)
                 {
                     GuiControl,, % UIHideButtonID, % "HBITMAP:*" hBMPButtonClose_Pressed
                     HideButtonState:=2
                 }
-            case 0x202:
-                ; 左键弹起
+            case 0x202,0x205:
+                ; 左键，右键弹起
                 If (currentControlUnderMouse = UIHideButtonID)
                 {
-                    GuiClose()
+                    if (wParam=0x202)
+                    {
+                        GuiClose()
+                    }
+                    Else
+                    {
+                        SetTimer, GuiExit, -1
+                    }
                 } else if (HideButtonState=2)
                 {
                     GuiControl,, % UIHideButtonID, % "HBITMAP:*" hBMPButtonClose_Normal
@@ -2314,11 +2321,16 @@ GuiClose(){
     Return
 }
 
-设置:
+GuiShowMainWindow(){
+    Global
     Gui, Show,, %TIELE%
-Return
+    Return
+}
 
-退出:
+
+GuiExit(){
+    Global
     Gui, Submit
     SaveCfgFile("d3oldsand.ini", tabs, currentProfile, safezone, VERSION)
-ExitApp
+    ExitApp
+}
