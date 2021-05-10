@@ -114,9 +114,9 @@ OnUnload(ExitReason, ExitCode){
 */
 GuiCreate(){
     Global
-    tabw:=MainWindowW-357
-    tabh:=MainWindowH-35-TitleBarHight
-    helperSettingGroupx:=555
+    local tabw:=MainWindowW-357
+    local tabh:=MainWindowH-35-TitleBarHight
+    local helperSettingGroupx:=555
 
     Gui Font, s11, Segoe UI
     Gui -MaximizeBox -MinimizeBox +Owner +DPIScale +LastFound -Caption -Border
@@ -176,7 +176,7 @@ GuiCreate(){
         Gui Add, Text, xs+20 yp+40, 走位辅助：
         local pfmv:=others[currentTab].movingmethod
         local pflm:=others[currentTab].lazymode
-        Gui Add, DropDownList, x+5 yp-3 w130 AltSubmit Choose%pfmv% vskillset%currentTab%movingdropdown gSetMovingHelper, 无||强制站立||强制走位（按住不放）||强制走位（连点）
+        Gui Add, DropDownList, x+5 yp-3 w150 AltSubmit Choose%pfmv% vskillset%currentTab%movingdropdown gSetMovingHelper, 无||强制站立||强制走位（按住不放）||强制走位（连点）
         Gui Add, Text, vskillset%currentTab%movingtext x+10 yp+3, 间隔（毫秒）：
         Gui Add, Edit, vskillset%currentTab%movingedit x+5 yp-3 w60 Number
         Gui Add, Updown, vskillset%currentTab%movingupdown Range20-3000, % others[currentTab].movinginterval
@@ -256,7 +256,7 @@ GuiCreate(){
     Gui Add, Text, % "x10 y" MainWindowH-20 " section", 当前激活配置：
     Gui Font, s11
     Gui Add, Text, x+5 ys-4 w350 +cRed vStatuesSkillsetText, % tabsarray[currentProfile]
-    Gui Add, Text, x505 ys-4 +cRed hwndCurrentmodeTextID gdummyFunction, % A_SendMode
+    Gui Add, Text, x505 yp +cRed hwndCurrentmodeTextID gdummyFunction, % A_SendMode
     Gui Font, s9
     Gui Add, Text, xp-95 ys hwndSendmodeTextID gdummyFunction, 按键发送模式：
     AddToolTip(SendmodeTextID, "修改配置文件General区块下的sendmode值来设置按键发送模式")
@@ -1120,6 +1120,13 @@ clickResumeMarco(){
     Return
 }
 
+/*
+设置宏启动模式的相关控件动画
+参数：
+    无
+返回：
+    无
+*/
 SetStartMode(){
     local
     Global currentProfile
@@ -1309,12 +1316,10 @@ SetSkillQueue(){
         if skillset%A_Index%useskillqueueckbox
         {
             GuiControl, Enable, skillset%A_Index%useskillqueueedit
-            GuiControl, Enable, skillset%A_Index%useskillqueueupdown
         }
         Else
         {
             GuiControl, Disable, skillset%A_Index%useskillqueueedit
-            GuiControl, Disable, skillset%A_Index%useskillqueueupdown
         }
     }
     Return
@@ -1675,7 +1680,7 @@ FillPixel(HWNDs, HexColor) {
 从B64字符串创建位图或图标
 参数：
     B64：图片字符串
-    IsIcon：施放创建图标而不是位图，默认为否
+    IsIcon：是否创建图标而不是位图，默认为否
 返回：
     位图或者图标的句柄
 */
@@ -1914,7 +1919,6 @@ SetQuickPause:
         GuiControl, Enable, skillset%currentProfile%clickpausedropdown2
         GuiControl, Enable, skillset%currentProfile%clickpausetext1
         GuiControl, Enable, skillset%currentProfile%clickpauseedit
-        GuiControl, Enable, skillset%currentProfile%clickpauseupdown
         GuiControl, Enable, skillset%currentProfile%clickpausetext2
         Try {
             Hotkey, ~*%quickPauseHK%, quickPause, off
@@ -1928,7 +1932,6 @@ SetQuickPause:
         GuiControl, Disable, skillset%currentProfile%clickpausedropdown2
         GuiControl, Disable, skillset%currentProfile%clickpausetext1
         GuiControl, Disable, skillset%currentProfile%clickpauseedit
-        GuiControl, Disable, skillset%currentProfile%clickpauseupdown
         GuiControl, Disable, skillset%currentProfile%clickpausetext2
         Hotkey, ~*%currentQuickPauseHK%, quickPause, off
         quickPauseHK:=""
@@ -2041,10 +2044,8 @@ SetStartRun:
             {
                 GuiControl, choose, skillset%A_Index%s6dropdown, 1
                 GuiControl, Disable, skillset%A_Index%s6dropdown
-                GuiControl, Disable, skillset%A_Index%s6updown
                 GuiControl, Disable, skillset%A_Index%s6edit
                 GuiControl, Disable, skillset%A_Index%s6delayedit
-                GuiControl, Disable, skillset%A_Index%s6delayupdown
             }
         }
         Else
@@ -2074,13 +2075,11 @@ SetMovingHelper:
         {
             GuiControl, Enable, skillset%A_Index%movingtext
             GuiControl, Enable, skillset%A_Index%movingedit
-            GuiControl, Enable, skillset%A_Index%movingupdown
         }
         Else
         { 
             GuiControl, Disable, skillset%A_Index%movingtext
             GuiControl, Disable, skillset%A_Index%movingedit
-            GuiControl, Disable, skillset%A_Index%movingupdown
         }
     }
 Return
@@ -2088,7 +2087,8 @@ Return
 ; 设置按键宏策略控件动画
 SetSkillsetDropdown:
     Gui, Submit, NoHide
-    Loop, %tabslen%{
+    Loop, %tabslen%
+    {
         npage:=A_Index
         Loop, 6
         {
@@ -2096,19 +2096,13 @@ SetSkillsetDropdown:
             {
                 case 1,2:
                     GuiControl, Disable, skillset%npage%s%A_Index%edit
-                    GuiControl, Disable, skillset%npage%s%A_Index%updown
                     GuiControl, Disable, skillset%npage%s%A_Index%delayedit
-                    GuiControl, Disable, skillset%npage%s%A_Index%delayupdown
                 case 3:
                     GuiControl, Enable, skillset%npage%s%A_Index%edit
-                    GuiControl, Enable, skillset%npage%s%A_Index%updown
                     GuiControl, Enable, skillset%npage%s%A_Index%delayedit
-                    GuiControl, Enable, skillset%npage%s%A_Index%delayupdown
                 case 4:
                     GuiControl, Enable, skillset%npage%s%A_Index%edit
-                    GuiControl, Enable, skillset%npage%s%A_Index%updown
                     GuiControl, Disable, skillset%npage%s%A_Index%delayedit
-                    GuiControl, Disable, skillset%npage%s%A_Index%delayupdown
             }
         }
     }
