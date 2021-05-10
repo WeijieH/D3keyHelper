@@ -25,14 +25,14 @@ Process, Priority, , High
 
 VERSION:=210507
 TITLE:=Format("暗黑3技能连点器 v1.2.{:d}   by Oldsand", VERSION)
-MainWindowW:=850
-MainWindowH:=530
+MainWindowW:=900
+MainWindowH:=550
 TitleBarHight:=25
 ; ========================================来自配置文件的全局变量===================================================
 currentProfile:=ReadCfgFile("d3oldsand.ini", tabs, hotkeys, actions, intervals, ivdelays, others, generals)
 SendMode, % generals.sendmode
 tabsarray:=StrSplit(tabs, "`|")
-tabslen:= ObjCount(tabsarray)
+tabslen:=ObjCount(tabsarray)
 safezone:={}
 Loop, Parse, % generals.safezone, CSV
 {
@@ -64,7 +64,7 @@ OnLoad(){
     ; ============================================全局变量===========================================================
     vRunning:=False
     vPausing:=False
-    vHidden:=False
+    vFront:=True
     helperDelay:=100
     mouseDelay:=2
     helperRunning:=False
@@ -76,15 +76,16 @@ OnLoad(){
     _ButtonNormal := "iVBORw0KGgoAAAANSUhEUgAAAB4AAAAZCAYAAAAmNZ4aAAAAM0lEQVRIiWMYBaNgFIyCUUAsYCSkrnLe2v/khGZ7UjBes5lGo2gUjIJRMApGAVbAwMAAAMjYBAQ0LnL/AAAAAElFTkSuQmCC"
     _ButtonHover := "iVBORw0KGgoAAAANSUhEUgAAAB4AAAAZCAYAAAAmNZ4aAAAARklEQVRIiWN8Iaj8n2EAANNAWMowavGoxaMWj1pMCWAhpFfi/V2yjH8hqIxXfvD6mJDLyQWjqXrU4lGLRy0etZg4wMDAAACGJAZtrV+pPwAAAABJRU5ErkJggg=="
     _ButtonPressed := "iVBORw0KGgoAAAANSUhEUgAAAB4AAAAZCAYAAAAmNZ4aAAAARklEQVRIiWO85B32n2EAANNAWMowavGoxaMWj1pMCWAhpNftwjGyjN9lYIVXfvD6mJDLyQWjqXrU4lGLRy0etZg4wMDAAACzuwbMPgoPPgAAAABJRU5ErkJggg=="
-    ; GDI+ Startup
-    hGdip := DllCall("LoadLibrary", "Str", "Gdiplus.dll") ; Load module
+    DllCall("LoadLibrary", "Str", "Crypt32.dll")
+    DllCall("LoadLibrary", "Str", "Shlwapi.dll")
+    DllCall("LoadLibrary", "Str", "Gdiplus.dll")
     VarSetCapacity(GdiplusStartupInput, (A_PtrSize = 8 ? 24 : 16), 0) ; GdiplusStartupInput structure
     NumPut(1, GdiplusStartupInput, 0, "UInt") ; GdiplusVersion
     DllCall("Gdiplus.dll\GdiplusStartup", "PtrP", pToken, "Ptr", &GdiplusStartupInput, "Ptr", 0) ; Initialize GDI+
 
-    hBMPButtonClose_Normal := GdipCreateHBITMAPFromBase64(_ButtonNormal)
-    hBMPButtonClose_Hover := GdipCreateHBITMAPFromBase64(_ButtonHover)
-    hBMPButtonClose_Pressed := GdipCreateHBITMAPFromBase64(_ButtonPressed)
+    hBMPButtonClose_Normal := GdipCreateFromBase64(_ButtonNormal)
+    hBMPButtonClose_Hover := GdipCreateFromBase64(_ButtonHover)
+    hBMPButtonClose_Pressed := GdipCreateFromBase64(_ButtonPressed)
 }
 
 /*
@@ -113,38 +114,42 @@ OnUnload(ExitReason, ExitCode){
 */
 GuiCreate(){
     Global
-    tabw:=MainWindowW-347
-    tabh:=MainWindowH-35-TitleBarHight
-    helperSettingGroupx:=515
+    local tabw:=MainWindowW-357
+    local tabh:=MainWindowH-35-TitleBarHight
+    local helperSettingGroupx:=555
 
     Gui Font, s11, Segoe UI
     Gui -MaximizeBox -MinimizeBox +Owner +DPIScale +LastFound -Caption -Border
     Gui, Margin, 5, % TitleBarHight+10
-    Gui, Add, Text, % "x1 y1 w" MainWindowW-2 " h" TitleBarHight " +0x4E hwndTitlebarID"
-    Gui, Add, Text, % "x1 y+0 w" MainWindowW-2 " h1 +0x4E hwndTitlebarLineID"
-    Gui, Add, Text, % "x0 y0 w" MainWindowW " h1 +0x4E hwndBorderTopID"
-    Gui, Add, Text, % "x0 y" MainWindowH-1 " w" MainWindowW " h1 +0x4E hwndBorderBottomID"
-    Gui, Add, Text, % "x0 y1 w1 h" MainWindowH-2 " +0x4E hwndBorderLeftID"
-    Gui, Add, Text, % "x" MainWindowW-1 " y1 w1 h" MainWindowH-2 " +0x4E hwndBorderRightID"
+    ; SS_BITMAP:=0x40
+    ; SS_REALSIZECONTROL:=0x0E
+    ; 0x4E=SS_BITMAP|SS_REALSIZECONTROL
+    Gui, Add, Picture, % "x1 y1 w" MainWindowW-2 " h" TitleBarHight " +0x4E hwndTitlebarID"
+    Gui, Add, Picture, % "x1 y+0 w" MainWindowW-2 " h1 +0x4E hwndTitlebarLineID"
+    Gui, Add, Picture, % "x0 y0 w" MainWindowW " h1 +0x4E hwndBorderTopID"
+    Gui, Add, Picture, % "x0 y" MainWindowH-1 " w" MainWindowW " h1 +0x4E hwndBorderBottomID"
+    Gui, Add, Picture, % "x0 y1 w1 h" MainWindowH-2 " +0x4E hwndBorderLeftID"
+    Gui, Add, Picture, % "x" MainWindowW-1 " y1 w1 h" MainWindowH-2 " +0x4E hwndBorderRightID"
     Gui, Add, Text, % "x0 y1 w" MainWindowW " h" TitleBarHight " vTitleBarText center +BackgroundTrans +0x200"
-    Gui, Add, Picture, % "x" MainWindowW-31 " y1 w-1 h" TitleBarHight " hwndUIHideButtonID +BackgroundTrans gdummyFunction", % "HBITMAP:*" hBMPButtonClose_Normal
-    AddToolTip(UIHideButtonID, "最小化窗口至右下角并保存当前设置到配置文件")
+    Gui, Add, Picture, % "x" MainWindowW-31 " y1 w-1 h" TitleBarHight " hwndUIHideButtonID gdummyFunction +BackgroundTrans", % "HBITMAP:*" hBMPButtonClose_Normal
+    AddToolTip(UIHideButtonID, "左键：最小化窗口至右下角并保存当前设置到配置文件`n右键：保存设置并退出程序")
     Gui Add, Tab3, xm ym w%tabw% h%tabh% vActiveTab gSetTabFocus AltSubmit, %tabs%
-    Gui Font
+    Gui Font, s9, Segoe UI
     Loop, parse, tabs, `|
     {
         currentTab:=A_Index
         Gui Tab, %currentTab%
         Gui Add, Hotkey, x0 y0 w0 w0
-        Gui Add, GroupBox, xm+10 ym+30 w480 h260 section, 按键宏设置
+        
+        Gui Add, GroupBox, xm+10 ym+40 w520 h260 section, 按键宏设置
         skillLabels:=["技能一：", "技能二：", "技能三：", "技能四：", "左键技能：", "右键技能："]
-        Gui Add, Text, xs+85 ys+20 w60 center section, 快捷键
-        Gui Add, Text, x+10 w80 center, 策略
-        Gui Add, Text, x+30 w100 center, 执行间隔（毫秒）
-        Gui Add, Text, x+10 w100 center, 随机延迟（毫秒）
+        Gui Add, Text, xs+90 ys+20 w60 center section, 快捷键
+        Gui Add, Text, x+10 w100 center, 策略
+        Gui Add, Text, x+20 w110 center, 执行间隔（毫秒）
+        Gui Add, Text, x+10 w110 center, 随机延迟（毫秒）
         Loop, 6
         {
-            Gui Add, Text, xs-65 w60 yp+36 center, % skillLabels[A_Index]
+            Gui Add, Text, xs-75 w70 yp+36 center, % skillLabels[A_Index]
             local ac:=actions[currentTab][A_Index]
             switch A_Index
             {
@@ -155,63 +160,62 @@ GuiCreate(){
                 case 6:
                     Gui Add, Edit, x+5 yp-2 w60 vskillset%currentTab%s%A_Index%hotkey +Disabled, RButton
             }
-            Gui Add, DropDownList, x+10 w85 AltSubmit Choose%ac% gSetSkillsetDropdown vskillset%currentTab%s%A_Index%dropdown, 禁用||按住不放||连点||保持Buff
-            Gui Add, Edit, vskillset%currentTab%s%A_Index%edit x+20 w100 Number
+            Gui Add, DropDownList, x+10 w100 AltSubmit Choose%ac% gSetSkillsetDropdown vskillset%currentTab%s%A_Index%dropdown, 禁用||按住不放||连点||保持Buff
+            Gui Add, Edit, vskillset%currentTab%s%A_Index%edit x+25 w90 Number
             Gui Add, Updown, vskillset%currentTab%s%A_Index%updown Range20-30000, % intervals[currentTab][A_Index]
-            Gui Add, Edit, vskillset%currentTab%s%A_Index%delayedit hwndskillset%currentTab%s%A_Index%delayeditID x+25 w70 Number
+            Gui Add, Edit, vskillset%currentTab%s%A_Index%delayedit hwndskillset%currentTab%s%A_Index%delayeditID x+40 w70 Number
             Gui Add, Updown, vskillset%currentTab%s%A_Index%delayupdown Range0-3000, % ivdelays[currentTab][A_Index]
             AddToolTip(skillset%currentTab%s%A_Index%delayeditID, "这里填入随机延迟的最大值，设为0可以关闭随即延迟")
         }
-
-        Gui Add, GroupBox, xm+10 yp+45 w480 h160 section, 额外设置
+        Gui Add, GroupBox, xm+10 yp+45 w520 h170 section, 额外设置
         Gui Add, Text, xs+20 ys+30, 快速切换至本配置：
         local pfmd:=others[currentTab].profilemethod
-        Gui Add, DropDownList, x+5 yp-2 w90 AltSubmit Choose%pfmd% vskillset%currentTab%profilekeybindingdropdown gSetProfileKeybinding, 无||鼠标中键||滚轮向上||滚轮向下||侧键1||侧键2||键盘按键
+        Gui Add, DropDownList, x+5 yp-3 w90 AltSubmit Choose%pfmd% vskillset%currentTab%profilekeybindingdropdown gSetProfileKeybinding, 无||鼠标中键||滚轮向上||滚轮向下||侧键1||侧键2||键盘按键
         Gui Add, Hotkey, x+15 w100 vskillset%currentTab%profilekeybindinghkbox gSetProfileKeybinding, % others[currentTab].profilehotkey
         
-        Gui Add, Text, xs+20 yp+35, 走位辅助：
+        Gui Add, Text, xs+20 yp+40, 走位辅助：
         local pfmv:=others[currentTab].movingmethod
         local pflm:=others[currentTab].lazymode
-        Gui Add, DropDownList, x+5 yp-2 w130 AltSubmit Choose%pfmv% vskillset%currentTab%movingdropdown gSetMovingHelper, 无||强制站立||强制走位（按住不放）||强制走位（连点）
-        Gui Add, Text, vskillset%currentTab%movingtext x+10 yp+2, 间隔（毫秒）：
-        Gui Add, Edit, vskillset%currentTab%movingedit x+5 yp-2 w60 Number
+        Gui Add, DropDownList, x+5 yp-3 w150 AltSubmit Choose%pfmv% vskillset%currentTab%movingdropdown gSetMovingHelper, 无||强制站立||强制走位（按住不放）||强制走位（连点）
+        Gui Add, Text, vskillset%currentTab%movingtext x+10 yp+3, 间隔（毫秒）：
+        Gui Add, Edit, vskillset%currentTab%movingedit x+5 yp-3 w60 Number
         Gui Add, Updown, vskillset%currentTab%movingupdown Range20-3000, % others[currentTab].movinginterval
         
         local pfusq:=others[currentTab].useskillqueue
-        Gui Add, Text, xs+20 yp+35, 宏启动方式：
-        Gui Add, DropDownList, x+5 yp-2 w90 AltSubmit Choose%pflm% hwndprofileStartModeDropdown%currentTab%ID vskillset%currentTab%profilestartmodedropdown gSetStartMode, 懒人模式||仅按下时||仅按一次
+        Gui Add, Text, xs+20 yp+40, 宏启动方式：
+        Gui Add, DropDownList, x+5 yp-3 w90 AltSubmit Choose%pflm% hwndprofileStartModeDropdown%currentTab%ID vskillset%currentTab%profilestartmodedropdown gSetStartMode, 懒人模式||仅按下时||仅按一次
         AddToolTip(profileStartModeDropdown%currentTab%ID, "懒人模式：按下战斗宏快捷键时开启宏，再按一下关闭宏`n仅按下时：仅在战斗宏快捷键被压下时启动宏`n仅按一次：按下战斗宏快捷键即按下所有“按住不放”的技能键一次")
-        Gui Add, Checkbox, x+10 yp+2 Checked%pfusq% hwnduseskillqueueckbox%currentTab%ID vskillset%currentTab%useskillqueueckbox gSetSkillQueue, 使用单线程按键队列（毫秒）：
+        Gui Add, Checkbox, x+20 yp+3 Checked%pfusq% hwnduseskillqueueckbox%currentTab%ID vskillset%currentTab%useskillqueueckbox gSetSkillQueue, 使用单线程按键队列（毫秒）：
         AddToolTip(useskillqueueckbox%currentTab%ID, "开启后按键不会被立刻按下而是存储至一个按键队列中`n连点会使技能加入队列头部，保持buff会使技能加入队列尾部")
-        Gui Add, Edit, vskillset%currentTab%useskillqueueedit hwnduseskillqueueedit%currentTab%ID x+0 yp-2 w50 Number
+        Gui Add, Edit, vskillset%currentTab%useskillqueueedit hwnduseskillqueueedit%currentTab%ID x+0 yp-3 w50 Number
         Gui Add, Updown, vskillset%currentTab%useskillqueueupdown Range30-1000, % others[currentTab].useskillqueueinterval
         AddToolTip(useskillqueueedit%currentTab%ID, "按键队列中的连点按键会以此间隔一一发送至游戏窗口")
 
         local pfqp:=others[currentTab].enablequickpause
         local pfqpm1:=others[currentTab].quickpausemethod1
         local pfqpm2:=others[currentTab].quickpausemethod2
-        Gui Add, Checkbox, xs+20 yp+35 Checked%pfqp% vskillset%currentTab%clickpauseckbox gSetQuickPause, 快速暂停：
-        Gui Add, DropDownList, x+0 yp-2 w50 AltSubmit Choose%pfqpm1% vskillset%currentTab%clickpausedropdown1 gSetQuickPause, 双击||单击
+        Gui Add, Checkbox, xs+20 yp+40 Checked%pfqp% vskillset%currentTab%clickpauseckbox gSetQuickPause, 快速暂停：
+        Gui Add, DropDownList, x+0 yp-3 w50 AltSubmit Choose%pfqpm1% vskillset%currentTab%clickpausedropdown1 gSetQuickPause, 双击||单击
         Gui Add, DropDownList, x+5 yp w100 AltSubmit Choose%pfqpm2% vskillset%currentTab%clickpausedropdown2 gSetQuickPause, 鼠标左键||鼠标右键||鼠标中键||侧键1||侧键2
-        Gui Add, Text, x+5 yp+2 vskillset%currentTab%clickpausetext1, 则暂停压键
-        Gui Add, Edit, vskillset%currentTab%clickpauseedit x+5 yp-2 w60 Number
+        Gui Add, Text, x+5 yp+3 vskillset%currentTab%clickpausetext1, 则暂停压键
+        Gui Add, Edit, vskillset%currentTab%clickpauseedit x+5 yp-3 w60 Number
         Gui Add, Updown, vskillset%currentTab%clickpauseupdown Range500-5000, % others[currentTab].quickpausedelay
-        Gui Add, Text, x+5 yp+2 vskillset%currentTab%clickpausetext2, 毫秒
+        Gui Add, Text, x+5 yp+3 vskillset%currentTab%clickpausetext2, 毫秒
     }
     Gui Tab
-    GuiControl , Choose, ActiveTab, % currentProfile
+    GuiControl, Choose, ActiveTab, % currentProfile
 
-    Gui Add, GroupBox, x%helperSettingGroupx% ym+30 w327 h440 section, 辅助功能
+    Gui Add, GroupBox, x%helperSettingGroupx% ym+40 w338 h450 section, 辅助功能
     oldsandhelperhk:=generals.oldsandhelperhk
-    Gui Font, cRed s10
-    Gui Add, Text, xs+20 ys+30, 助手宏启动快捷键：
-    Gui Font
-    Gui Add, DropDownList, % "x+0 yp-2 w75 vhelperKeybindingdropdown gSetHelperKeybinding AltSubmit Choose" generals.oldsandhelpermethod, 无||鼠标中键||滚轮向上||滚轮向下||侧键1||侧键2||键盘按键
+    Gui Font,s10
+    Gui Add, Text, xs+20 ys+30 +cRed, 助手宏启动快捷键：
+    Gui Font,s9
+    Gui Add, DropDownList, % "x+0 yp-3 w75 vhelperKeybindingdropdown gSetHelperKeybinding AltSubmit Choose" generals.oldsandhelpermethod, 无||鼠标中键||滚轮向上||滚轮向下||侧键1||侧键2||键盘按键
     Gui Add, Hotkey, x+5 w70 vhelperKeybindingHK gSetHelperKeybinding, %oldsandhelperhk%
 
     Gui Add, Text, xs+20 yp+40, 助手宏动画速度：
-    Gui Add, DropDownList, % "x+5 yp-2 w90 vhelperAnimationSpeedDropdown AltSubmit Choose" generals.helperspeed, 非常快||快速||中等||慢速
-    Gui Add, Text, x+20 yp+2 w80 hwndhelperSafeZoneTextID vhelperSafeZoneText gdummyFunction
+    Gui Add, DropDownList, % "x+5 yp-3 w90 vhelperAnimationSpeedDropdown AltSubmit Choose" generals.helperspeed, 非常快||快速||中等||慢速
+    Gui Add, Text, x+20 yp+3 w80 hwndhelperSafeZoneTextID vhelperSafeZoneText gdummyFunction
     AddToolTip(helperSafeZoneTextID, "修改配置文件中Generals区块下的safezone值来设置安全格")
 
     Gui Add, CheckBox, % "xs+20 yp+35 hwndextraGambleHelperCKboxID vextraGambleHelperCKbox gSetGambleHelper Checked" generals.enablegamblehelper, 血岩赌博助手：
@@ -225,39 +229,39 @@ GuiCreate(){
     AddToolTip(extraSalvageHelperCkboxID, "分解装备时按下助手快捷键可以自动执行所选择的策略")
     AddToolTip(extraSalvageHelperDropdownID, "快速分解：按下快捷键即等同于点击鼠标左键+回车`n一键分解：一键分解背包内所有非安全格的装备`n智能分解：同一键分解，但会跳过远古，太古`n智能分解（只留太古）：只保留太古装备")
 
-    Gui Add, CheckBox, xs+20 yp+37 vextramore3 +Disabled, 魔盒重铸助手（Coming Soon）
-    Gui Add, CheckBox, xs+20 yp+35 vextramore4 +Disabled, 魔盒升级助手（Coming Soon）
-    Gui Add, CheckBox, % "xs+20 yp+35 hwndextraLootHelperCkboxID vextraLootHelperCkbox gSetLootHelper Checked" generals.enableloothelper, 快速拾取助手：
+    Gui Add, CheckBox, xs+20 yp+40 vextramore3 +Disabled, 魔盒重铸助手（Coming Soon）
+    Gui Add, CheckBox, xs+20 yp+37 vextramore4 +Disabled, 魔盒升级助手（Coming Soon）
+    Gui Add, CheckBox, % "xs+20 yp+37 hwndextraLootHelperCkboxID vextraLootHelperCkbox gSetLootHelper Checked" generals.enableloothelper, 快速拾取助手：
     AddToolTip(extraLootHelperCkboxID, "拾取装备时按下助手快捷键可以自动点击左键")
     Gui Add, Text, vextraLootHelperText x+5 yp, 发送左键次数
-    Gui Add, Edit, vextraLootHelperEdit x+10 yp-3 w60 Number
+    Gui Add, Edit, vextraLootHelperEdit x+10 yp-4 w60 Number
     Gui Add, Updown, vextraLootHelperUpdown Range2-99, % generals.loothelpertimes
 
-    Gui Add, CheckBox, % "xs+20 yp+60 vextraSoundonProfileSwitch Checked" generals.enablesoundplay, 使用快捷键切换配置成功时播放声音
+    Gui Add, CheckBox, % "xs+20 yp+70 vextraSoundonProfileSwitch Checked" generals.enablesoundplay, 使用快捷键切换配置成功时播放声音
     Gui Add, CheckBox, % "xs+20 yp+35 hwndextraSmartPauseID vextraSmartPause Checked" generals.enablesmartpause, 智能暂停
     AddToolTip(extraSmartPauseID, "开启后，游戏中按tab键可以暂停宏`n回车键，M键，T键会停止宏")
     Gui Add, CheckBox, % "xs+20 yp+35 vextraCustomStanding gSetCustomStanding Checked" generals.customstanding, 使用自定义强制站立按键：
-    Gui Add, Hotkey, x+5 yp-2 w70 vextraCustomStandingHK gSetCustomStanding, % generals.customstandinghk
+    Gui Add, Hotkey, x+5 yp-3 w70 vextraCustomStandingHK gSetCustomStanding, % generals.customstandinghk
 
     Gui Add, CheckBox, % "xs+20 yp+35 vextraCustomMoving gSetCustomMoving Checked" generals.custommoving, 使用自定义强制移动按键：
-    Gui Add, Hotkey, x+5 yp-2 w70 Limit14 vextraCustomMovingHK gSetCustomMoving, % generals.custommovinghk
+    Gui Add, Hotkey, x+5 yp-3 w70 Limit14 vextraCustomMovingHK gSetCustomMoving, % generals.custommovinghk
 
     startRunHK:=generals.starthotkey
-    Gui Font, cRed s10
-    Gui Add, Text, x530 ym+3, 战斗宏启动快捷键：
-    Gui Font
+    Gui Font, s10
+    Gui Add, Text, x570 ym+3 +cRed, 战斗宏启动快捷键：
+    Gui Font, s9
     Gui Add, DropDownList, % "x+5 yp-3 w90 vStartRunDropdown gSetStartRun AltSubmit Choose" generals.startmethod, 鼠标右键||鼠标中键||滚轮向上||滚轮向下||侧键1||侧键2||键盘按键
     Gui Add, Hotkey, x+5 yp w70 vStartRunHKinput gSetStartRun, %startRunHK%
 
-    Gui Add, Text, % "x10 y" MainWindowH-20, 当前激活配置:
-    Gui Font, cRed s11
-    Gui Add, Text, x+5 yp w350 vStatuesSkillsetText, % tabsarray[currentProfile]
-    Gui Add, Text, x465 yp hwndCurrentmodeTextID gdummyFunction, % A_SendMode
-    Gui Font
-    Gui Add, Text, x380 yp hwndSendmodeTextID gdummyFunction, 按键发送模式:
+    Gui Add, Text, % "x10 y" MainWindowH-20 " section", 当前激活配置：
+    Gui Font, s11
+    Gui Add, Text, x+5 ys-4 w350 +cRed vStatuesSkillsetText, % tabsarray[currentProfile]
+    Gui Add, Text, x505 yp +cRed hwndCurrentmodeTextID gdummyFunction, % A_SendMode
+    Gui Font, s9
+    Gui Add, Text, xp-95 ys hwndSendmodeTextID gdummyFunction, 按键发送模式：
     AddToolTip(SendmodeTextID, "修改配置文件General区块下的sendmode值来设置按键发送模式")
-    AddToolTip(CurrentmodeTextID, "Event：默认模式，最佳兼容性`nInput：推荐模式，最佳速度但在旧操作系统上可能无效")
-    Gui Add, Link, x520 yp, 提交bug，检查更新: <a href="https://github.com/WeijieH/D3keyHelper">https://github.com/WeijieH/D3keyHelper</a>
+    AddToolTip(CurrentmodeTextID, "Event：默认模式，最佳兼容性`nInput：推荐模式，最佳速度但可能会被一些杀毒防护软件屏蔽干扰")
+    Gui Add, Link, x570 ys, 本项目开源在：<a href="https://github.com/WeijieH/D3keyHelper">https://github.com/WeijieH/D3keyHelper</a>
     Return
 }
 
@@ -298,8 +302,8 @@ StartUp(){
 SetTrayMenu(){
     Global
     Menu, Tray, NoStandard
-    Menu, Tray, Add, 设置
-    Menu, Tray, Add, 退出
+    Menu, Tray, Add, 设置, GuiShowMainWindow
+    Menu, Tray, Add, 退出, GuiExit
     Menu, Tray, Default, 设置
     Menu, Tray, Click, 1
     Menu, Tray, Tip, %TITLE%
@@ -379,7 +383,7 @@ ReadCfgFile(cfgFileName, ByRef tabs, ByRef hotkeys, ByRef actions, ByRef interva
             tos:={}
             Loop, 6
             {
-                IniRead, hk, %cfgFileName%, %cSection%, skill_%A_Index%
+                IniRead, hk, %cfgFileName%, %cSection%, skill_%A_Index%, %A_Index%
                 IniRead, ac, %cfgFileName%, %cSection%, action_%A_Index%, 1
                 IniRead, iv, %cfgFileName%, %cSection%, interval_%A_Index%, 300
                 IniRead, dy, %cfgFileName%, %cSection%, delay_%A_Index%, 10
@@ -1116,6 +1120,13 @@ clickResumeMarco(){
     Return
 }
 
+/*
+设置宏启动模式的相关控件动画
+参数：
+    无
+返回：
+    无
+*/
 SetStartMode(){
     local
     Global currentProfile
@@ -1305,12 +1316,10 @@ SetSkillQueue(){
         if skillset%A_Index%useskillqueueckbox
         {
             GuiControl, Enable, skillset%A_Index%useskillqueueedit
-            GuiControl, Enable, skillset%A_Index%useskillqueueupdown
         }
         Else
         {
             GuiControl, Disable, skillset%A_Index%useskillqueueedit
-            GuiControl, Disable, skillset%A_Index%useskillqueueupdown
         }
     }
     Return
@@ -1353,11 +1362,11 @@ spamSkillQueue(inv){
             Default:
                 ; 如果是连点，按键前后停止一段时间
                 if (_k[2] = 3){
-                    sleep Round(inv*0.5)
+                    sleep inv//2
                 }
                 Send {Blind}{%k%}
                 if (_k[2] = 3){
-                    sleep Round(inv*0.5)
+                    sleep inv//2
                     Break
                 }
         }
@@ -1649,83 +1658,49 @@ dummyFunction(){
 返回：
     无
 */
-CreatePixel(HWNDs, HexColor) {
-    static BMBITS, _BMVarSize:=VarSetCapacity(BMBITS, 5, 0)
-    hBitmap := DllCall("CreateBitmap", "Int", 1, "Int", 1, "UInt", 1, "UInt", 24, "Ptr", 0, "Ptr")
-    hBM := DllCall("CopyImage", "Ptr", hBitmap, "UInt", 0, "Int", 0, "Int", 0, "UInt", 8, "Ptr")
-    
-    Numput(HexColor, &BMBITS, 0, "UInt")
-    DllCall("SetBitmapBits", "Ptr", hBM, "UInt", 4, "Ptr", &BMBITS)
+FillPixel(HWNDs, HexColor) {
+    hBitmap := DllCall("CreateBitmap", "Int", 1, "Int", 1, "UInt", 1, "UInt", 32, "PtrP", HexColor, "Ptr")
+    hBM := DllCall("CopyImage", "Ptr", hBitmap, "UInt", 0, "Int", 0, "Int", 0, "UInt", 0x2000|0x8|0x4, "Ptr")
     if IsObject(HWNDs)
     {
         for i, HWND in HWNDs
         {
-            DllCall("SendMessage", "Ptr", HWND, "UInt", 0x0172, "Ptr", 0, "Ptr", hBM, "Ptr")
+            SendMessage, 0x172,, hBM,, ahk_id %HWND%
         }
     }
     Else
     {
-        DllCall("SendMessage", "Ptr", HWNDs, "UInt", 0x0172, "Ptr", 0, "Ptr", hBM, "Ptr")
+        SendMessage, 0x172,, hBM,, ahk_id %HWNDs%
     }
     DllCall("DeleteObject", "Ptr", hBitmap)
     Return
 }
 
 /*
-从B64字符串创建位图指针
+从B64字符串创建位图或图标
 参数：
     B64：图片字符串
+    IsIcon：是否创建图标而不是位图，默认为否
 返回：
-    pBitmap：位图指针
+    位图或者图标的句柄
 */
-GdipCreateBitmapFromBase64(B64){
+GdipCreateFromBase64(B64, IsIcon := 0){
     VarSetCapacity(B64Len, 0)
-    i:=DllCall("Crypt32.dll\CryptStringToBinary", "Ptr", &B64, "UInt", StrLen(B64), "UInt", 0x01, "Ptr", 0, "UIntP", B64Len, "Ptr", 0, "Ptr", 0)
+    DllCall("Crypt32.dll\CryptStringToBinary", "Ptr", &B64, "UInt", 0, "UInt", 0x01, "Ptr", 0, "UIntP", B64Len, "Ptr", 0, "Ptr", 0)
     VarSetCapacity(B64Dec, B64Len, 0) ; pbBinary size
-    j:=DllCall("Crypt32.dll\CryptStringToBinary", "Ptr", &B64, "UInt", StrLen(B64), "UInt", 0x01, "Ptr", &B64Dec, "UIntP", B64Len, "Ptr", 0, "Ptr", 0)
+    DllCall("Crypt32.dll\CryptStringToBinary", "Ptr", &B64, "UInt", 0, "UInt", 0x01, "Ptr", &B64Dec, "UIntP", B64Len, "Ptr", 0, "Ptr", 0)
     pStream := DllCall("Shlwapi.dll\SHCreateMemStream", "Ptr", &B64Dec, "UInt", B64Len, "UPtr")
     VarSetCapacity(pBitmap, 0)
-    p:=DllCall("Gdiplus.dll\GdipCreateBitmapFromStreamICM", "Ptr", pStream, "PtrP", pBitmap)
-    ObjRelease(pStream)
-    return pBitmap
-}
-
-/*
-创建位图句柄
-参数：
-    pBitmap：位图指针
-返回：
-    hBitmap：位图句柄
-*/
-GdipCreateHBITMAPFromBitmap(pBitmap) {
+    DllCall("Gdiplus.dll\GdipCreateBitmapFromStreamICM", "Ptr", pStream, "PtrP", pBitmap)
     VarSetCapacity(hBitmap, 0)
-    DllCall("Gdiplus.dll\GdipCreateHBITMAPFromBitmap", "UInt", pBitmap, "UInt*", hBitmap, "Int", 0XFFFFFFFF)
-    return hBitmap
-}
+    DllCall("Gdiplus.dll\GdipCreateHBITMAPFromBitmap", "UInt", pBitmap, "UInt*", hBitmap, "Int", 0x00FFFFFF)
 
-/*
-创建Icon位图句柄
-参数：
-    pBitmap：位图指针
-返回：
-    hIcon：图标句柄
-*/
-GdipCreateHICONFromBitmap(pBitmap) {
-    VarSetCapacity(hIcon, 0)
-    DllCall("Gdiplus.dll\GdipCreateHICONFromBitmap", "Ptr", pBitmap, "PtrP", hIcon, "UInt", 0)
-    return hIcon
-}
+    If (IsIcon) {
+        DllCall("Gdiplus.dll\GdipCreateHICONFromBitmap", "Ptr", pBitmap, "PtrP", hIcon, "UInt", 0)
+    }
 
-/*
-从B64字符串创建位图句柄
-参数：
-    B64：图片字符串
-返回：
-    位图句柄
-*/
-GdipCreateHBITMAPFromBase64(B64) {
-    pBitmap := GdipCreateBitmapFromBase64(B64)
-    return GdipCreateHBITMAPFromBitmap(pBitmap)
+    ObjRelease(pStream)
+    return (IsIcon ? hIcon : hBitmap)
 }
 
 /*
@@ -1741,11 +1716,7 @@ GdipCreateHBITMAPFromBase64(B64) {
 */
 AddToolTip(con, text, duration=30000, Modify=0){
     Static TThwnd, GuiHwnd
-    TInfo =
-    UInt := "UInt"
-    Ptr := (A_PtrSize ? "Ptr" : UInt)
     PtrSize := (A_PtrSize ? A_PtrSize : 4)
-    Str := "Str"
     WM_USER := 0x400
     TTM_ADDTOOL := (A_IsUnicode ? WM_USER+50 : WM_USER+4)
     TTM_UPDATETIPTEXT := (A_IsUnicode ? WM_USER+57 : WM_USER+12)
@@ -1764,18 +1735,18 @@ AddToolTip(con, text, duration=30000, Modify=0){
         Gui, +LastFound
         GuiHwnd := WinExist()
         TThwnd := DllCall("CreateWindowEx"
-                    ,UInt,0
-                    ,Str,"tooltips_class32"
-                    ,UInt,0
-                    ,UInt,2147483648
-                    ,UInt,-2147483648
-                    ,UInt,-2147483648
-                    ,UInt,-2147483648
-                    ,UInt,-2147483648
-                    ,UInt,GuiHwnd
-                    ,UInt,0
-                    ,UInt,0
-                    ,UInt,0)
+                    ,"UInt",0
+                    ,"Str","tooltips_class32"
+                    ,"UInt",0
+                    ,"UInt",2147483648
+                    ,"UInt",-2147483648
+                    ,"UInt",-2147483648
+                    ,"UInt",-2147483648
+                    ,"UInt",-2147483648
+                    ,"UInt",GuiHwnd
+                    ,"UInt",0
+                    ,"UInt",0
+                    ,"UInt",0)
     }
     cbSize := 6*4+6*PtrSize
     uFlags := TTF_IDISHWND|TTF_SUBCLASS|TTF_PARSELINKS
@@ -1788,11 +1759,11 @@ AddToolTip(con, text, duration=30000, Modify=0){
     NumPut(0,TInfo, 6*4+6*PtrSize)
     DetectHiddenWindows, On
     If (!Modify) {
-        DllCall("SendMessage", Ptr, TThwnd, UInt, TTM_ADDTOOL, Ptr, 0, Ptr, &TInfo, Ptr) 
-        DllCall("SendMessage", Ptr, TThwnd, UInt, TTM_SETMAXTIPWIDTH, Ptr, 0, Ptr, A_ScreenWidth) 
-        DllCall("SendMessage", Ptr, TThwnd, UInt, TTM_SETDELAYTIME, Ptr, TTF_AUTOPOP, Ptr, duration)
+        SendMessage, %TTM_ADDTOOL%,, &TInfo,, ahk_id %TThwnd%
+        SendMessage, %TTM_SETMAXTIPWIDTH%,, A_ScreenWidth,, ahk_id %TThwnd%
+        SendMessage, %TTM_SETDELAYTIME%, TTF_AUTOPOP, duration,, ahk_id %TThwnd%
     }
-    DllCall("SendMessage", Ptr, TThwnd, UInt, TTM_UPDATETIPTEXT, Ptr, 0, Ptr, &TInfo, Ptr)
+    SendMessage, %TTM_UPDATETIPTEXT%,, &TInfo,, ahk_id %TThwnd%
     Return
 }
 
@@ -1811,10 +1782,11 @@ Watchdog(wParam, lParam){
         if (lParam=0)
         {
             ; 当前窗口激活
-            vHidden:=False
-            CreatePixel(TitlebarID, "0x2b5361")
-            CreatePixel([TitlebarLineID, BorderTopID, BorderBottomID, BorderLeftID, BorderRightID], "0x0d2c35")
-            GuiControl, +cFFFFFF, TitleBarText
+            vFront:=True
+            FillPixel(TitlebarID, 0x2B5361)
+            FillPixel([TitlebarLineID, BorderTopID, BorderBottomID, BorderLeftID, BorderRightID], 0x000000)
+            Gui, Font, s11 +cFFFFFF Normal
+            GuiControl, Font, TitleBarText
             GuiControl,, TitleBarText, % TITLE
             if (hHookMouse){
                 DllCall("UnhookWindowsHookEx", "Uint", hHookMouse)
@@ -1828,12 +1800,13 @@ Watchdog(wParam, lParam){
                 DllCall("UnhookWindowsHookEx", "Uint", hHookMouse)
                 hHookMouse:=0
             }
-            if (!vHidden)
+            if (vFront)
             {
-                CreatePixel([TitlebarID, TitlebarLineID], "0x799eac")
-                CreatePixel([BorderTopID, BorderBottomID, BorderLeftID, BorderRightID], "0xAAAAAA")
+                FillPixel([TitlebarID, TitlebarLineID], 0x799EAC)
+                FillPixel([BorderTopID, BorderBottomID, BorderLeftID, BorderRightID], 0xAAAAAA)
                 GuiControl, +cEEEEEE, TitleBarText
                 GuiControl,, TitleBarText, % TITLE
+                vFront:=False
             }
             WinGetClass, AClass, ahk_id %lParam%
             ; 检查当前窗口是否是暗黑三
@@ -1883,18 +1856,25 @@ MouseMove(nCode, wParam, lParam)
                         PostMessage, 0xA1, 2,,, A ; 发送拖拽事件
                     }
                 }
-            case 0x201:
-                ; 左键按下
+            case 0x201,0x204:
+                ; 左键，右键按下
                 if (currentControlUnderMouse=UIHideButtonID and HideButtonState=1)
                 {
                     GuiControl,, % UIHideButtonID, % "HBITMAP:*" hBMPButtonClose_Pressed
                     HideButtonState:=2
                 }
-            case 0x202:
-                ; 左键弹起
+            case 0x202,0x205:
+                ; 左键，右键弹起
                 If (currentControlUnderMouse = UIHideButtonID)
                 {
-                    GuiClose()
+                    if (wParam=0x202)
+                    {
+                        GuiClose()
+                    }
+                    Else
+                    {
+                        SetTimer, GuiExit, -1
+                    }
                 } else if (HideButtonState=2)
                 {
                     GuiControl,, % UIHideButtonID, % "HBITMAP:*" hBMPButtonClose_Normal
@@ -1939,7 +1919,6 @@ SetQuickPause:
         GuiControl, Enable, skillset%currentProfile%clickpausedropdown2
         GuiControl, Enable, skillset%currentProfile%clickpausetext1
         GuiControl, Enable, skillset%currentProfile%clickpauseedit
-        GuiControl, Enable, skillset%currentProfile%clickpauseupdown
         GuiControl, Enable, skillset%currentProfile%clickpausetext2
         Try {
             Hotkey, ~*%quickPauseHK%, quickPause, off
@@ -1953,7 +1932,6 @@ SetQuickPause:
         GuiControl, Disable, skillset%currentProfile%clickpausedropdown2
         GuiControl, Disable, skillset%currentProfile%clickpausetext1
         GuiControl, Disable, skillset%currentProfile%clickpauseedit
-        GuiControl, Disable, skillset%currentProfile%clickpauseupdown
         GuiControl, Disable, skillset%currentProfile%clickpausetext2
         Hotkey, ~*%currentQuickPauseHK%, quickPause, off
         quickPauseHK:=""
@@ -2066,10 +2044,8 @@ SetStartRun:
             {
                 GuiControl, choose, skillset%A_Index%s6dropdown, 1
                 GuiControl, Disable, skillset%A_Index%s6dropdown
-                GuiControl, Disable, skillset%A_Index%s6updown
                 GuiControl, Disable, skillset%A_Index%s6edit
                 GuiControl, Disable, skillset%A_Index%s6delayedit
-                GuiControl, Disable, skillset%A_Index%s6delayupdown
             }
         }
         Else
@@ -2099,13 +2075,11 @@ SetMovingHelper:
         {
             GuiControl, Enable, skillset%A_Index%movingtext
             GuiControl, Enable, skillset%A_Index%movingedit
-            GuiControl, Enable, skillset%A_Index%movingupdown
         }
         Else
         { 
             GuiControl, Disable, skillset%A_Index%movingtext
             GuiControl, Disable, skillset%A_Index%movingedit
-            GuiControl, Disable, skillset%A_Index%movingupdown
         }
     }
 Return
@@ -2113,7 +2087,8 @@ Return
 ; 设置按键宏策略控件动画
 SetSkillsetDropdown:
     Gui, Submit, NoHide
-    Loop, %tabslen%{
+    Loop, %tabslen%
+    {
         npage:=A_Index
         Loop, 6
         {
@@ -2121,19 +2096,13 @@ SetSkillsetDropdown:
             {
                 case 1,2:
                     GuiControl, Disable, skillset%npage%s%A_Index%edit
-                    GuiControl, Disable, skillset%npage%s%A_Index%updown
                     GuiControl, Disable, skillset%npage%s%A_Index%delayedit
-                    GuiControl, Disable, skillset%npage%s%A_Index%delayupdown
                 case 3:
                     GuiControl, Enable, skillset%npage%s%A_Index%edit
-                    GuiControl, Enable, skillset%npage%s%A_Index%updown
                     GuiControl, Enable, skillset%npage%s%A_Index%delayedit
-                    GuiControl, Enable, skillset%npage%s%A_Index%delayupdown
                 case 4:
                     GuiControl, Enable, skillset%npage%s%A_Index%edit
-                    GuiControl, Enable, skillset%npage%s%A_Index%updown
                     GuiControl, Disable, skillset%npage%s%A_Index%delayedit
-                    GuiControl, Disable, skillset%npage%s%A_Index%delayupdown
             }
         }
     }
@@ -2342,15 +2311,20 @@ GuiClose(){
     Global
     Gui, Submit
     SaveCfgFile("d3oldsand.ini", tabs, currentProfile, safezone, VERSION)
-    vHidden:=True
+    vFront:=False
     Return
 }
 
-设置:
+GuiShowMainWindow(){
+    Global
     Gui, Show,, %TIELE%
-Return
+    Return
+}
 
-退出:
+
+GuiExit(){
+    Global
     Gui, Submit
     SaveCfgFile("d3oldsand.ini", tabs, currentProfile, safezone, VERSION)
-ExitApp
+    ExitApp
+}
