@@ -8,9 +8,11 @@
 ; 欢迎提交bug，PR
 ; =================================================================
 
-AHK_MIN_VERSION:="1.1.33.08"
+;@Ahk2Exe-IgnoreBegin
+AHK_MIN_VERSION:="1.1.33.00"
 if (A_AhkVersion < AHK_MIN_VERSION)
     MsgBox, 0x40, 若遇到错误请升级AHK软件！, % Format("本按键助手基于AHK v{:s}开发。`n你的AHK版本为：v{:s}。", AHK_MIN_VERSION, A_AhkVersion)
+;@Ahk2Exe-IgnoreEnd
 
 #SingleInstance Force
 #IfWinActive, ahk_class D3 Main Window Class
@@ -28,6 +30,10 @@ TITLE:=Format("暗黑3技能连点器 v1.2.{:d}   by Oldsand", VERSION)
 MainWindowW:=900
 MainWindowH:=550
 TitleBarHight:=25
+;@Ahk2Exe-SetFileVersion 1.2
+;@Ahk2Exe-SetLanguage 0x0804
+;@Ahk2Exe-SetDescription 暗黑3技能连点器
+;@Ahk2Exe-SetCopyright Oldsand
 ; ========================================来自配置文件的全局变量===================================================
 currentProfile:=ReadCfgFile("d3oldsand.ini", tabs, hotkeys, actions, intervals, ivdelays, others, generals)
 SendMode, % generals.sendmode
@@ -1779,6 +1785,7 @@ Watchdog(wParam, lParam){
     Global
     If (wParam = 32772 or wParam = 4)     ; HSHELL_WINDOWCREATED 1, HSHELL_WINDOWACTIVATED 4, HSHELL_RUDEAPPACTIVATED 32772
     {
+        helperBreak:=True
         if (lParam=0)
         {
             ; 当前窗口激活
