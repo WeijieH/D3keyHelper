@@ -30,10 +30,15 @@ TITLE:=Format("暗黑3技能连点器 v1.2.{:d}   by Oldsand", VERSION)
 MainWindowW:=900
 MainWindowH:=550
 TitleBarHight:=25
-;@Ahk2Exe-SetFileVersion 1.2
+;@Ahk2Exe-Obey U_Y, U_Y := A_YYYY
+;@Ahk2Exe-Obey U_M, U_M := A_MM
+;@Ahk2Exe-Obey U_D, U_D := A_DD
+;@Ahk2Exe-SetFileVersion 1.2.%U_Y%.%U_M%%U_D%
 ;@Ahk2Exe-SetLanguage 0x0804
 ;@Ahk2Exe-SetDescription 暗黑3技能连点器
+;@Ahk2Exe-SetProductName D3keyHelper
 ;@Ahk2Exe-SetCopyright Oldsand
+;@Ahk2Exe-Bin Unicode 64-bit.bin
 ; ========================================来自配置文件的全局变量===================================================
 currentProfile:=ReadCfgFile("d3oldsand.ini", tabs, hotkeys, actions, intervals, ivdelays, others, generals)
 SendMode, % generals.sendmode
