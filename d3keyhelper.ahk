@@ -25,7 +25,7 @@ CoordMode, Pixel, Client
 CoordMode, Mouse, Client
 Process, Priority, , High
 
-VERSION:=210507
+VERSION:=210513
 TITLE:=Format("暗黑3技能连点器 v1.2.{:d}   by Oldsand", VERSION)
 MainWindowW:=900
 MainWindowH:=550
@@ -734,17 +734,12 @@ oldsandHelper(){
         Sleep, 200
         Return
     }
-    ; 如果战斗宏开启，则返回
-    if vRunning{
+    ; 如果战斗宏开启或者无法获取游戏分辨率，则返回
+    if (vRunning or !getGameResulution(D3W, D3H)){
         Return
     }
     helperRunning:=True
     helperBreak:=False
-    ; 获得当前游戏分辨率
-    VarSetCapacity(rect, 16)
-    DllCall("GetClientRect", "ptr", WinExist("A"), "ptr", &rect)
-    D3W:=NumGet(rect, 8, "int")
-    D3H:=NumGet(rect, 12, "int")
     GuiControlGet, extraGambleHelperCKbox
     GuiControlGet, extraLootHelperCkbox
     GuiControlGet, extraSalvageHelperCkbox
@@ -1602,6 +1597,26 @@ isInventorySpaceEmpty(D3W, D3H, ID, ckpoints){
 }
 
 /*
+获取游戏的当前分辨率
+参数：
+    ByRef D3W：分辨率宽
+    ByRef D3H：分辨率高
+返回：
+    获取分辨率是否成功
+*/
+getGameResulution(ByRef D3W, ByRef D3H){
+    static _rect:=VarSetCapacity(rect, 16)
+    DllCall("GetClientRect", "ptr", WinExist("ahk_class D3 Main Window Class"), "ptr", &rect)
+    D3W:=NumGet(rect, 8, "int")
+    D3H:=NumGet(rect, 12, "int")
+    if (D3W*D3H=0){
+        MsgBox, % Format("无法获取到你的游戏分辨率，错误代码：0x{:X}，请尝试切换至窗口模式运行游戏。", A_LastError)
+        Return False
+    }
+    Return True
+}
+
+/*
 转化Object的所有key为字符串
 参数：
     sep：分隔符
@@ -2166,10 +2181,10 @@ RunMarco:
     GuiControlGet, extraCustomMovingHK
     forceMovingKey:=extraCustomMoving? extraCustomMovingHK:"e"
     skillQueue:=[]
-    VarSetCapacity(rect, 16)
-    DllCall("GetClientRect", "ptr", WinExist("A"), "ptr", &rect)
-    D3W:=NumGet(rect, 8, "int")
-    D3H:=NumGet(rect, 12, "int")
+    if !getGameResulution(D3W, D3H)
+    {
+        Return
+    }
     ; 处理技能按键
     Loop, 6
     {
