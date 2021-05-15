@@ -813,44 +813,21 @@ oldsandHelper(){
                     PixelGetColor, cpixel, p[4][1], p[4][2], rgb
                     r[5]:=splitRGB(cpixel)
                 }
-                if (r[5][1]>50)
+                ; [黄分解条件，蓝分解条件，白/灰分解条件]
+                for i, _c in [r[5][1]>50, r[4][3]>65, r[3][1]>65]
                 {
-                    ; 一键分解黄
-                    if helperBreak
+                    if _c
                     {
-                        helperRunning:=False
-                        Return
+                        if helperBreak
+                        {
+                            helperRunning:=False
+                            Return
+                        }
+                        MouseMove, salvageIconXY[5-i][1], salvageIconXY[5-i][2]
+                        Click
+                        Sleep, helperDelay
+                        Send {Enter}
                     }
-                    MouseMove, salvageIconXY[4][1], salvageIconXY[4][2]
-                    Click
-                    Sleep, helperDelay
-                    Send {Enter}
-                }
-                if (r[4][3]>65)
-                {
-                    ; 一键分解蓝
-                    if helperBreak
-                    {
-                        helperRunning:=False
-                        Return
-                    }
-                    MouseMove, salvageIconXY[3][1], salvageIconXY[3][2]
-                    Click
-                    Sleep, helperDelay
-                    Send {Enter}
-                }
-                if (r[3][1]>65)
-                {
-                    ; 一键分解白/灰
-                    if helperBreak
-                    {
-                        helperRunning:=False
-                        Return
-                    }
-                    MouseMove, salvageIconXY[2][1], salvageIconXY[2][2]
-                    Click
-                    Sleep, helperDelay
-                    Send {Enter}
                 }
                 ; 点击分解按钮
                 MouseMove, salvageIconXY[1][1], salvageIconXY[1][2]
@@ -983,7 +960,9 @@ oneButtonSalvageHelper(D3W, D3H, xpos, ypos){
     GuiControlGet, extraSalvageHelperDropdown
     while (i<=60)
     {
-        if (helperBreak) {
+        ; 防卡死
+        w++
+        if (helperBreak or w>200) {
             Break
         }
         ; 当前格子情况
@@ -992,10 +971,6 @@ oneButtonSalvageHelper(D3W, D3H, xpos, ypos){
             case -1:
             ; 当前格子还未探开
                 Sleep, 20
-                w++
-                if (w>100){
-                    Break   ; 防卡死
-                }
             case 10:
             ; 当前格子有装备
                 m:=getInventorySpaceXY(D3W, D3H, i)
