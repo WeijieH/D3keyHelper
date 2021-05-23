@@ -588,7 +588,7 @@ splitRGB(vthiscolor){
     vblue:=(vthiscolor & 0xFF)
     vgreen:=((vthiscolor & 0xFF00) >> 8)
     vred:=((vthiscolor & 0xFF0000) >> 16)
-    if (Abs(gameGamma-1)>0.05)
+    if (Abs(gameGamma-1)>=0.01)
     {
         vblue:=((vblue / 255) ** (1.75*gameGamma-0.75)) * 255
         vgreen:=((vgreen / 255) ** (1.9*gameGamma-0.9)) * 255
@@ -648,7 +648,7 @@ skillKey(currentProfile, nskill, D3W, D3H, forceStandingKey, useSkillQueue){
             PixelGetColor, cpixel, magicXY[1], magicXY[2], rgb
             crgb:=splitRGB(cpixel)
             ; 具体判断是否需要补buff
-            If (!vPausing and crgb[1]+crgb[2]+crgb[3] < 220)
+            If (!vPausing and crgb[1]+crgb[2]+crgb[3] < 210)
             {
                 switch nskill
                 {
