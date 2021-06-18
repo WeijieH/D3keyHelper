@@ -8,9 +8,11 @@
 ; 欢迎提交bug，PR
 ; =================================================================
 
-AHK_MIN_VERSION:="1.1.33.08"
+;@Ahk2Exe-IgnoreBegin
+AHK_MIN_VERSION:="1.1.33.00"
 if (A_AhkVersion < AHK_MIN_VERSION)
     MsgBox, 0x40, 若遇到错误请升级AHK软件！, % Format("本按键助手基于AHK v{:s}开发。`n你的AHK版本为：v{:s}。", AHK_MIN_VERSION, A_AhkVersion)
+;@Ahk2Exe-IgnoreEnd
 
 #SingleInstance Force
 #IfWinActive, ahk_class D3 Main Window Class
@@ -23,11 +25,20 @@ CoordMode, Pixel, Client
 CoordMode, Mouse, Client
 Process, Priority, , High
 
-VERSION:=210507
+VERSION:=210618
 TITLE:=Format("暗黑3技能连点器 v1.2.{:d}   by Oldsand", VERSION)
 MainWindowW:=900
 MainWindowH:=550
 TitleBarHight:=25
+;@Ahk2Exe-Obey U_Y, U_Y := A_YYYY
+;@Ahk2Exe-Obey U_M, U_M := A_MM
+;@Ahk2Exe-Obey U_D, U_D := A_DD
+;@Ahk2Exe-SetFileVersion 1.2.%U_Y%.%U_M%%U_D%
+;@Ahk2Exe-SetLanguage 0x0804
+;@Ahk2Exe-SetDescription 暗黑3技能连点器
+;@Ahk2Exe-SetProductName D3keyHelper
+;@Ahk2Exe-SetCopyright Oldsand
+;@Ahk2Exe-Bin Unicode 64-bit.bin
 ; ========================================来自配置文件的全局变量===================================================
 currentProfile:=ReadCfgFile("d3oldsand.ini", tabs, hotkeys, actions, intervals, ivdelays, others, generals)
 SendMode, % generals.sendmode
@@ -132,7 +143,7 @@ GuiCreate(){
     Gui, Add, Picture, % "x" MainWindowW-1 " y1 w1 h" MainWindowH-2 " +0x4E hwndBorderRightID"
     Gui, Add, Text, % "x0 y1 w" MainWindowW " h" TitleBarHight " vTitleBarText center +BackgroundTrans +0x200"
     Gui, Add, Picture, % "x" MainWindowW-31 " y1 w-1 h" TitleBarHight " hwndUIHideButtonID gdummyFunction +BackgroundTrans", % "HBITMAP:*" hBMPButtonClose_Normal
-    AddToolTip(UIHideButtonID, "左键：最小化窗口至右下角并保存当前设置到配置文件`n右键：保存设置并退出程序")
+    AddToolTip(UIHideButtonID, "左键：保存设置并最小化窗口至右下角`n右键：保存设置并退出程序")
     Gui Add, Tab3, xm ym w%tabw% h%tabh% vActiveTab gSetTabFocus AltSubmit, %tabs%
     Gui Font, s9, Segoe UI
     Loop, parse, tabs, `|
@@ -225,9 +236,9 @@ GuiCreate(){
     Gui Add, Updown, vextraGambleHelperUpdown Range2-60, % generals.gamblehelpertimes
 
     Gui Add, CheckBox, % "xs+20 yp+37 hwndextraSalvageHelperCkboxID vextraSalvageHelperCkbox gSetSalvageHelper Checked" generals.enablesalvagehelper, 铁匠分解助手：
-    Gui Add, DropDownList, % "x+5 yp-4 w150 AltSubmit hwndextraSalvageHelperDropdownID vextraSalvageHelperDropdown gSetSalvageHelper Choose" generals.salvagehelpermethod, 快速分解||一键分解||智能分解||智能分解（只留太古）
+    Gui Add, DropDownList, % "x+5 yp-4 w170 AltSubmit hwndextraSalvageHelperDropdownID vextraSalvageHelperDropdown gSetSalvageHelper Choose" generals.salvagehelpermethod, 快速分解||一键分解||智能分解||智能分解（留无形，太古）
     AddToolTip(extraSalvageHelperCkboxID, "分解装备时按下助手快捷键可以自动执行所选择的策略")
-    AddToolTip(extraSalvageHelperDropdownID, "快速分解：按下快捷键即等同于点击鼠标左键+回车`n一键分解：一键分解背包内所有非安全格的装备`n智能分解：同一键分解，但会跳过远古，太古`n智能分解（只留太古）：只保留太古装备")
+    AddToolTip(extraSalvageHelperDropdownID, "快速分解：按下快捷键即等同于点击鼠标左键+回车`n一键分解：一键分解背包内所有非安全格的装备`n智能分解：同一键分解，但会跳过远古，无形，太古`n智能分解（留无形，太古）：只保留无形，太古装备")
 
     Gui Add, CheckBox, xs+20 yp+40 vextramore3 +Disabled, 魔盒重铸助手（Coming Soon）
     Gui Add, CheckBox, xs+20 yp+37 vextramore4 +Disabled, 魔盒升级助手（Coming Soon）
@@ -577,7 +588,7 @@ splitRGB(vthiscolor){
     vblue:=(vthiscolor & 0xFF)
     vgreen:=((vthiscolor & 0xFF00) >> 8)
     vred:=((vthiscolor & 0xFF0000) >> 16)
-    if (Abs(gameGamma-1)>0.05)
+    if (Abs(gameGamma-1)>=0.01)
     {
         vblue:=((vblue / 255) ** (1.75*gameGamma-0.75)) * 255
         vgreen:=((vgreen / 255) ** (1.9*gameGamma-0.9)) * 255
@@ -637,7 +648,7 @@ skillKey(currentProfile, nskill, D3W, D3H, forceStandingKey, useSkillQueue){
             PixelGetColor, cpixel, magicXY[1], magicXY[2], rgb
             crgb:=splitRGB(cpixel)
             ; 具体判断是否需要补buff
-            If (!vPausing and crgb[1]+crgb[2]+crgb[3] < 220)
+            If (!vPausing and crgb[1]+crgb[2]+crgb[3] < 210)
             {
                 switch nskill
                 {
@@ -723,17 +734,12 @@ oldsandHelper(){
         Sleep, 200
         Return
     }
-    ; 如果战斗宏开启，则返回
-    if vRunning{
+    ; 如果战斗宏开启或者无法获取游戏分辨率，则返回
+    if (vRunning or !getGameResulution(D3W, D3H)){
         Return
     }
     helperRunning:=True
     helperBreak:=False
-    ; 获得当前游戏分辨率
-    VarSetCapacity(rect, 16)
-    DllCall("GetClientRect", "ptr", WinExist("A"), "ptr", &rect)
-    D3W:=NumGet(rect, 8, "int")
-    D3H:=NumGet(rect, 12, "int")
     GuiControlGet, extraGambleHelperCKbox
     GuiControlGet, extraLootHelperCkbox
     GuiControlGet, extraSalvageHelperCkbox
@@ -807,44 +813,21 @@ oldsandHelper(){
                     PixelGetColor, cpixel, p[4][1], p[4][2], rgb
                     r[5]:=splitRGB(cpixel)
                 }
-                if (r[5][1]>50)
+                ; [黄分解条件，蓝分解条件，白/灰分解条件]
+                for i, _c in [r[5][1]>50, r[4][3]>65, r[3][1]>65]
                 {
-                    ; 一键分解黄
-                    if helperBreak
+                    if _c
                     {
-                        helperRunning:=False
-                        Return
+                        if helperBreak
+                        {
+                            helperRunning:=False
+                            Return
+                        }
+                        MouseMove, salvageIconXY[5-i][1], salvageIconXY[5-i][2]
+                        Click
+                        Sleep, helperDelay
+                        Send {Enter}
                     }
-                    MouseMove, salvageIconXY[4][1], salvageIconXY[4][2]
-                    Click
-                    Sleep, helperDelay
-                    Send {Enter}
-                }
-                if (r[4][3]>65)
-                {
-                    ; 一键分解蓝
-                    if helperBreak
-                    {
-                        helperRunning:=False
-                        Return
-                    }
-                    MouseMove, salvageIconXY[3][1], salvageIconXY[3][2]
-                    Click
-                    Sleep, helperDelay
-                    Send {Enter}
-                }
-                if (r[3][1]>65)
-                {
-                    ; 一键分解白/灰
-                    if helperBreak
-                    {
-                        helperRunning:=False
-                        Return
-                    }
-                    MouseMove, salvageIconXY[2][1], salvageIconXY[2][2]
-                    Click
-                    Sleep, helperDelay
-                    Send {Enter}
                 }
                 ; 点击分解按钮
                 MouseMove, salvageIconXY[1][1], salvageIconXY[1][2]
@@ -970,14 +953,16 @@ oneButtonSalvageHelper(D3W, D3H, xpos, ypos){
     fn1:=Func("scanInventorySpace").Bind(D3W, D3H)
     SetTimer, %fn1%, -1
 
-    q:=0    ; 当前格子装备品质，1：普通传奇，2：远古传奇，3：太古传奇
+    q:=0    ; 当前格子装备品质，2：普通传奇，3：远古传奇，4：无形装备，5：太古传奇
     i:=1    ; 当前格子ID
     w:=0
     SetDefaultMouseSpeed, mouseDelay
     GuiControlGet, extraSalvageHelperDropdown
     while (i<=60)
     {
-        if (helperBreak) {
+        ; 防卡死
+        w++
+        if (helperBreak or w>200) {
             Break
         }
         ; 当前格子情况
@@ -986,10 +971,6 @@ oneButtonSalvageHelper(D3W, D3H, xpos, ypos){
             case -1:
             ; 当前格子还未探开
                 Sleep, 20
-                w++
-                if (w>100){
-                    Break   ; 防卡死
-                }
             case 10:
             ; 当前格子有装备
                 m:=getInventorySpaceXY(D3W, D3H, i)
@@ -1008,7 +989,10 @@ oneButtonSalvageHelper(D3W, D3H, xpos, ypos){
                     c:=[Max(c1[1],c2[1],c3[1]),Max(c1[2],c2[2],c3[2]),Max(c1[3],c2[3],c3[3])]
                     if (c[1]>100 or c[3]<20) {
                         ; 装备是太古或者远古
-                        q:=(c[2]<35) ? 4:3
+                        q:=(c[2]<35) ? 5:3
+                    } else if (c[1]<50 and c[2]>c[3] and c[3]>c[1]) {
+                        ; 装备是无形武器
+                        q:=4
                     } else {
                         ; 装备是普通传奇
                         q:=2
@@ -1019,6 +1003,7 @@ oneButtonSalvageHelper(D3W, D3H, xpos, ypos){
                     i++
                     Continue
                 }
+                ; 开始分解
                 Click
                 Sleep, helperDelay  ; 等待对话框显示完毕
                 if isDialogBoXOnScreen(D3W, D3H)
@@ -1591,6 +1576,26 @@ isInventorySpaceEmpty(D3W, D3H, ID, ckpoints){
 }
 
 /*
+获取游戏的当前分辨率
+参数：
+    ByRef D3W：分辨率宽
+    ByRef D3H：分辨率高
+返回：
+    获取分辨率是否成功
+*/
+getGameResulution(ByRef D3W, ByRef D3H){
+    static _rect:=VarSetCapacity(rect, 16)
+    DllCall("GetClientRect", "ptr", WinExist("ahk_class D3 Main Window Class"), "ptr", &rect)
+    D3W:=NumGet(rect, 8, "int")
+    D3H:=NumGet(rect, 12, "int")
+    if (D3W*D3H=0){
+        MsgBox, % Format("无法获取到你的游戏分辨率，错误代码：0x{:X}，请尝试切换至窗口模式运行游戏。", A_LastError)
+        Return False
+    }
+    Return True
+}
+
+/*
 转化Object的所有key为字符串
 参数：
     sep：分隔符
@@ -1779,11 +1784,12 @@ Watchdog(wParam, lParam){
     Global
     If (wParam = 32772 or wParam = 4)     ; HSHELL_WINDOWCREATED 1, HSHELL_WINDOWACTIVATED 4, HSHELL_RUDEAPPACTIVATED 32772
     {
+        helperBreak:=True
         if (lParam=0)
         {
             ; 当前窗口激活
             vFront:=True
-            FillPixel(TitlebarID, 0x2B5361)
+            FillPixel(TitlebarID, 0x34495e)
             FillPixel([TitlebarLineID, BorderTopID, BorderBottomID, BorderLeftID, BorderRightID], 0x000000)
             Gui, Font, s11 +cFFFFFF Normal
             GuiControl, Font, TitleBarText
@@ -1802,8 +1808,8 @@ Watchdog(wParam, lParam){
             }
             if (vFront)
             {
-                FillPixel([TitlebarID, TitlebarLineID], 0x799EAC)
-                FillPixel([BorderTopID, BorderBottomID, BorderLeftID, BorderRightID], 0xAAAAAA)
+                FillPixel([TitlebarID, TitlebarLineID], 0x607e9d)
+                FillPixel([BorderTopID, BorderBottomID, BorderLeftID, BorderRightID], 0x607e9d)
                 GuiControl, +cEEEEEE, TitleBarText
                 GuiControl,, TitleBarText, % TITLE
                 vFront:=False
@@ -2154,10 +2160,10 @@ RunMarco:
     GuiControlGet, extraCustomMovingHK
     forceMovingKey:=extraCustomMoving? extraCustomMovingHK:"e"
     skillQueue:=[]
-    VarSetCapacity(rect, 16)
-    DllCall("GetClientRect", "ptr", WinExist("A"), "ptr", &rect)
-    D3W:=NumGet(rect, 8, "int")
-    D3H:=NumGet(rect, 12, "int")
+    if !getGameResulution(D3W, D3H)
+    {
+        Return
+    }
     ; 处理技能按键
     Loop, 6
     {
