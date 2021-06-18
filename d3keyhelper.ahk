@@ -25,8 +25,8 @@ CoordMode, Pixel, Client
 CoordMode, Mouse, Client
 Process, Priority, , High
 
-VERSION:=210613
-TITLE:=Format("暗黑3技能连点器 v1.3.{:d}   by Oldsand", VERSION)
+VERSION:=210618
+TITLE:=Format("暗黑3技能连点器 v1.2.{:d}   by Oldsand", VERSION)
 MainWindowW:=900
 MainWindowH:=550
 TitleBarHight:=25
@@ -1003,7 +1003,7 @@ oneButtonSalvageHelper(D3W, D3H, xpos, ypos){
                     i++
                     Continue
                 }
-                OutputDebug, % c[1] " " c[2] " " c[3]
+                ; 开始分解
                 Click
                 Sleep, helperDelay  ; 等待对话框显示完毕
                 if isDialogBoXOnScreen(D3W, D3H)
