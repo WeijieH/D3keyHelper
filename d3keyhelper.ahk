@@ -26,7 +26,7 @@ CoordMode, Mouse, Client
 Process, Priority, , High
 
 VERSION:=210618
-TITLE:=Format("暗黑3技能连点器 v1.2.{:d}   by Oldsand", VERSION)
+TITLE:=Format("暗黑3技能连点器 v1.3.{:d}   by Oldsand", VERSION)
 MainWindowW:=900
 MainWindowH:=550
 TitleBarHight:=25
@@ -236,11 +236,15 @@ GuiCreate(){
     Gui Add, Updown, vextraGambleHelperUpdown Range2-60, % generals.gamblehelpertimes
 
     Gui Add, CheckBox, % "xs+20 yp+37 hwndextraSalvageHelperCkboxID vextraSalvageHelperCkbox gSetSalvageHelper Checked" generals.enablesalvagehelper, 铁匠分解助手：
-    Gui Add, DropDownList, % "x+5 yp-4 w170 AltSubmit hwndextraSalvageHelperDropdownID vextraSalvageHelperDropdown gSetSalvageHelper Choose" generals.salvagehelpermethod, 快速分解||一键分解||智能分解||智能分解（留无形，太古）
+    Gui Add, DropDownList, % "x+5 yp-4 w180 AltSubmit hwndextraSalvageHelperDropdownID vextraSalvageHelperDropdown gSetSalvageHelper Choose" generals.salvagehelpermethod, 快速分解||一键分解||智能分解||智能分解（留无形，太古）
     AddToolTip(extraSalvageHelperCkboxID, "分解装备时按下助手快捷键可以自动执行所选择的策略")
     AddToolTip(extraSalvageHelperDropdownID, "快速分解：按下快捷键即等同于点击鼠标左键+回车`n一键分解：一键分解背包内所有非安全格的装备`n智能分解：同一键分解，但会跳过远古，无形，太古`n智能分解（留无形，太古）：只保留无形，太古装备")
 
-    Gui Add, CheckBox, xs+20 yp+40 vextramore3 +Disabled, 魔盒重铸助手（Coming Soon）
+    Gui Add, CheckBox, % "xs+20 yp+40 hwndextraReforgeHelperCkboxID vextraReforgeHelperCkbox gSetReforgeHelper Checked" generals.enablereforgehelper, 魔盒重铸助手：
+    AddToolTip(extraReforgeHelperCkboxID, "当魔盒打开且在重铸页面时，按下助手快捷键即自动重铸鼠标指针处的装备一次")
+    Gui Add, CheckBox, % "x+5 yp+0 hwndextraReforgeHelperInventoryOnlyID vextraReforgeHelperInventoryOnlyCkbox Checked" generals.reforgehelperinventoryonly, 仅限背包内区域
+    AddToolTip(extraReforgeHelperInventoryOnlyID, "勾选后重铸助手只会在鼠标指针位于背包栏内时有效")
+
     Gui Add, CheckBox, xs+20 yp+37 vextramore4 +Disabled, 魔盒升级助手（Coming Soon）
     Gui Add, CheckBox, % "xs+20 yp+37 hwndextraLootHelperCkboxID vextraLootHelperCkbox gSetLootHelper Checked" generals.enableloothelper, 快速拾取助手：
     AddToolTip(extraLootHelperCkboxID, "拾取装备时按下助手快捷键可以自动点击左键")
@@ -294,6 +298,7 @@ StartUp(){
     SetGambleHelper()
     SetLootHelper()
     SetSalvageHelper()
+    SetReforgeHelper()
     SetCustomStanding()
     SetCustomMoving()
     SetSkillQueue()
@@ -353,6 +358,8 @@ ReadCfgFile(cfgFileName, ByRef tabs, ByRef hotkeys, ByRef actions, ByRef interva
         IniRead, gamblehelpertimes, %cfgFileName%, General, gamblehelpertimes, 15
         IniRead, enablesalvagehelper, %cfgFileName%, General, enablesalvagehelper, 0
         IniRead, salvagehelpermethod, %cfgFileName%, General, salvagehelpermethod, 1
+        IniRead, enablereforgehelper, %cfgFileName%, General, enablereforgehelper, 0
+        IniRead, reforgehelperinventoryonly, %cfgFileName%, General, reforgehelperinventoryonly, 1
         IniRead, enablesmartpause, %cfgFileName%, General, enablesmartpause, 0
         IniRead, enablesoundplay, %cfgFileName%, General, enablesoundplay, 1
         IniRead, startmethod, %cfgFileName%, General, startmethod, 7
@@ -370,6 +377,7 @@ ReadCfgFile(cfgFileName, ByRef tabs, ByRef hotkeys, ByRef actions, ByRef interva
         IniRead, loothelpertimes, %cfgFileName%, General, loothelpertimes, 30
         generals:={"oldsandhelpermethod":oldsandhelpermethod, "oldsandhelperhk":oldsandhelperhk
         , "enablesalvagehelper":enablesalvagehelper, "salvagehelpermethod":salvagehelpermethod
+        , "enablereforgehelper":enablereforgehelper, "reforgehelperinventoryonly":reforgehelperinventoryonly
         , "enablegamblehelper":enablegamblehelper, "gamblehelpertimes":gamblehelpertimes
         , "startmethod":startmethod, "starthotkey":starthotkey
         , "enablesmartpause":enablesmartpause, "enablesoundplay":enablesoundplay
@@ -447,6 +455,7 @@ ReadCfgFile(cfgFileName, ByRef tabs, ByRef hotkeys, ByRef actions, ByRef interva
         generals:={"enablegamblehelper":1 ,"gamblehelpertimes":15, "oldsandhelperhk":"F5"
         , "startmethod":7, "starthotkey":"F2", "enablesmartpause":1, "salvagehelpermethod":1
         , "oldsandhelpermethod":7, "enablesalvagehelper":0, "enablesoundplay":1
+        , "enablereforgehelper":0, "reforgehelperinventoryonly":1
         , "custommoving":0, "custommovinghk":"e", "customstanding":0, "customstandinghk":"LShift"
         , "safezone":"61,62,63", "helperspeed":3, "gamegamma":1.000000, "sendmode":"Event"
         , "buffpercent":0.050000, "enableloothelper":0, "loothelpertimes":30}
@@ -477,6 +486,8 @@ SaveCfgFile(cfgFileName, tabs, currentProfile, safezone, VERSION){
     GuiControlGet, extraSmartPause
     GuiControlGet, extraSalvageHelperCkbox
     GuiControlGet, extraSalvageHelperDropdown
+    GuiControlGet, extraReforgeHelperCkbox
+    GuiControlGet, extraReforgeHelperInventoryOnlyCkbox
     GuiControlGet, extraSoundonProfileSwitch
     GuiControlGet, extraCustomMoving
     GuiControlGet, extraCustomMovingHK
@@ -491,6 +502,8 @@ SaveCfgFile(cfgFileName, tabs, currentProfile, safezone, VERSION){
     IniWrite, %extraSmartPause%, %cfgFileName%, General, enablesmartpause
     IniWrite, %extraSalvageHelperCkbox%, %cfgFileName%, General, enablesalvagehelper
     IniWrite, %extraSalvageHelperDropdown%, %cfgFileName%, General, salvagehelpermethod
+    IniWrite, %extraReforgeHelperCkbox%, %cfgFileName%, General, enablereforgehelper
+    IniWrite, %extraReforgeHelperInventoryOnlyCkbox%, %cfgFileName%, General, reforgehelperinventoryonly
     IniWrite, %extraLootHelperCkbox%, %cfgFileName%, General, enableloothelper
     IniWrite, %extraLootHelperUpdown%, %cfgFileName%, General, loothelpertimes
     IniWrite, %extraSoundonProfileSwitch%, %cfgFileName%, General, enablesoundplay
@@ -743,6 +756,7 @@ oldsandHelper(){
     GuiControlGet, extraGambleHelperCKbox
     GuiControlGet, extraLootHelperCkbox
     GuiControlGet, extraSalvageHelperCkbox
+    GuiControlGet, extraReforgeHelperCkbox
     GuiControlGet, extraSalvageHelperDropdown
     GuiControlGet, helperAnimationSpeedDropdown
     MouseGetPos, xpos, ypos ; 当前鼠标位置，用于宏结束后返回
@@ -851,12 +865,65 @@ oldsandHelper(){
                 ; 铁匠页面未打卡 
         }
     }
+    ; 卡奈魔盒助手
+    if (extraReforgeHelperCkbox)
+    {
+        r:=isKanaiCubeOpen(D3W, D3H)
+        switch r
+        {
+            case 1:
+                helperRunning:=False
+                Return
+            case 2:
+            ; 一键重铸
+                fn:=Func("oneButtonReforgeHelper").Bind(D3W, D3H, xpos, ypos)
+                SetTimer, %fn%, -1
+                Return
+            case 3:
+            ; 一键升级
+                helperRunning:=False
+                Return
+            Default:
+                ; 卡奈魔盒未打开
+        }
+    }
     ; 一键拾取
     if (extraLootHelperCkbox)
     {
         fn:=Func("lootHelper").Bind(D3W, D3H, helperDelay)
         SetTimer, %fn%, -1
     }
+    Return
+}
+
+/*
+负责一键重铸
+参数：
+    D3W：int，窗口区域的宽度
+    D3H：int，窗口区域的高度
+    xpos：之前鼠标x坐标
+    ypos：之前鼠标y坐标
+返回：
+    无
+*/
+oneButtonReforgeHelper(D3W, D3H, xpos, ypos){
+    local
+    Global helperRunning, helperDelay, mouseDelay
+    GuiControlGet, extraReforgeHelperInventoryOnlyCkbox
+    if (!extraReforgeHelperInventoryOnlyCkbox or (xpos>D3W-(3440-2740)*D3H/1440 and ypos>730*D3H/1440 and ypos<1150*D3H/1440)) {
+        SetDefaultMouseSpeed, mouseDelay
+        kanai:=getKanaiCubeButtonPos(D3W, D3H)
+        Click, Right
+        Sleep, helperDelay
+        MouseMove, kanai[2][1], kanai[2][2]
+        Click
+        Sleep, helperDelay
+        MouseMove, kanai[1][1], kanai[1][2]
+        Click
+        ; 鼠标回到原位置
+        MouseMove, xpos, ypos
+    }
+    helperRunning:=False
     Return
 }
 
@@ -1286,6 +1353,27 @@ SetSalvageHelper(){
 }
 
 /*
+设置重铸助手相关的控件动画
+参数：
+    无
+返回：
+    无
+*/
+SetReforgeHelper(){
+    local
+    GuiControlGet, extraReforgeHelperCkbox
+    If extraReforgeHelperCkbox
+    {
+        GuiControl, Enable, extraReforgeHelperInventoryOnlyCkbox
+    }
+    Else
+    {
+        GuiControl, Disable, extraReforgeHelperInventoryOnlyCkbox
+    }
+    Return
+}
+
+/*
 设置技能队列相关的控件动画
 参数：
     无
@@ -1487,8 +1575,64 @@ isSalvagePageOpen(D3W, D3H){
             Return [1]
         }
     }
-    Else{
+    Else {
         Return [0]
+    }
+}
+
+/*
+判断卡奈魔盒页面是否开启
+参数：
+    D3W：int，窗口区域的宽度
+    D3H：int，窗口区域的高度
+返回：
+    0：卡奈魔盒没有开启
+    1：卡奈魔盒开启但页面未知
+    2：卡奈魔盒开启，且开启了重铸界面
+    3：卡奈魔盒开启，且开启了升级界面
+*/
+isKanaiCubeOpen(D3W, D3H){
+    point1:=[Round(353*D3H/1440),Round(81*D3H/1440)]
+    point2:=[Round(353*D3H/1440),Round(100*D3H/1440)]
+    point3:=[Round(335*D3H/1440),Round(66*D3H/1440)]
+    point4:=[Round(405*D3H/1440),Round(106*D3H/1440)]
+    PixelGetColor, cpixel, point1[1], point1[2], rgb
+    c1:=splitRGB(cpixel)
+    PixelGetColor, cpixel, point2[1], point2[2], rgb
+    c2:=splitRGB(cpixel)
+    PixelGetColor, cpixel, point3[1], point3[2], rgb
+    c3:=splitRGB(cpixel)
+    PixelGetColor, cpixel, point4[1], point4[2], rgb
+    c4:=splitRGB(cpixel)
+
+    if (c1[1]>c1[2] and c2[1]+c2[2]+c2[3]<20 and c3[1]>c3[3] and c3[1]>c3[2] and c4[3]>c4[2] and c4[2]>c4[1]){
+        p1:=[Round(788*D3H/1440),Round(428*D3H/1440)]
+        p2:=[Round(810*D3H/1440),Round(429*D3H/1440)]
+        PixelGetColor, cpixel, p1[1], p1[2], rgb
+        cc1:=splitRGB(cpixel)
+        PixelGetColor, cpixel, p2[1], p2[2], rgb
+        cc2:=splitRGB(cpixel)
+        if (cc1[3]>230 and cc2[3]>230 and cc1[3]>cc1[2] and cc2[3]>cc2[2] and cc1[2]>cc1[1] and cc2[2]>cc2[1])
+        {
+            Return 2
+        }
+        else
+        {
+            p1:=[Round(799*D3H/1440),Round(406*D3H/1440)]
+            p2:=[Round(795*D3H/1440),Round(592*D3H/1440)]
+            PixelGetColor, cpixel, p1[1], p1[2], rgb
+            cc1:=splitRGB(cpixel)
+            PixelGetColor, cpixel, p2[1], p2[2], rgb
+            cc2:=splitRGB(cpixel)
+            if (cc1[1]+cc1[2]+cc1[3]>550 and cc1[1]>cc1[3] and cc2[1]+cc2[2]>400 and cc2[1]>cc2[3])
+            {
+                Return 3
+            }
+        }
+        Return 1
+    }
+    Else {
+        Return 0
     }
 }
 
@@ -1593,6 +1737,20 @@ getGameResulution(ByRef D3W, ByRef D3H){
         Return False
     }
     Return True
+}
+
+/*
+获取卡奈魔盒转化和放入材料按钮位置
+参数：
+    ByRef D3W：分辨率宽
+    ByRef D3H：分辨率高
+返回：
+    [[转化按钮x，转化按钮y]，[放入材料按钮x，放入材料按钮y]]
+*/
+getKanaiCubeButtonPos(ByRef D3W, ByRef D3H){
+    point1:=[Round(320*D3H/1440),Round(1105*D3H/1440)]
+    point2:=[Round(955*D3H/1440),Round(1115*D3H/1440)]
+    Return [point1, point2]
 }
 
 /*
