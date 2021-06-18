@@ -25,8 +25,8 @@ CoordMode, Pixel, Client
 CoordMode, Mouse, Client
 Process, Priority, , High
 
-VERSION:=210513
-TITLE:=Format("暗黑3技能连点器 v1.2.{:d}   by Oldsand", VERSION)
+VERSION:=210613
+TITLE:=Format("暗黑3技能连点器 v1.3.{:d}   by Oldsand", VERSION)
 MainWindowW:=900
 MainWindowH:=550
 TitleBarHight:=25
@@ -143,7 +143,7 @@ GuiCreate(){
     Gui, Add, Picture, % "x" MainWindowW-1 " y1 w1 h" MainWindowH-2 " +0x4E hwndBorderRightID"
     Gui, Add, Text, % "x0 y1 w" MainWindowW " h" TitleBarHight " vTitleBarText center +BackgroundTrans +0x200"
     Gui, Add, Picture, % "x" MainWindowW-31 " y1 w-1 h" TitleBarHight " hwndUIHideButtonID gdummyFunction +BackgroundTrans", % "HBITMAP:*" hBMPButtonClose_Normal
-    AddToolTip(UIHideButtonID, "左键：最小化窗口至右下角并保存当前设置到配置文件`n右键：保存设置并退出程序")
+    AddToolTip(UIHideButtonID, "左键：保存设置并最小化窗口至右下角`n右键：保存设置并退出程序")
     Gui Add, Tab3, xm ym w%tabw% h%tabh% vActiveTab gSetTabFocus AltSubmit, %tabs%
     Gui Font, s9, Segoe UI
     Loop, parse, tabs, `|
@@ -236,9 +236,9 @@ GuiCreate(){
     Gui Add, Updown, vextraGambleHelperUpdown Range2-60, % generals.gamblehelpertimes
 
     Gui Add, CheckBox, % "xs+20 yp+37 hwndextraSalvageHelperCkboxID vextraSalvageHelperCkbox gSetSalvageHelper Checked" generals.enablesalvagehelper, 铁匠分解助手：
-    Gui Add, DropDownList, % "x+5 yp-4 w150 AltSubmit hwndextraSalvageHelperDropdownID vextraSalvageHelperDropdown gSetSalvageHelper Choose" generals.salvagehelpermethod, 快速分解||一键分解||智能分解||智能分解（只留太古）
+    Gui Add, DropDownList, % "x+5 yp-4 w170 AltSubmit hwndextraSalvageHelperDropdownID vextraSalvageHelperDropdown gSetSalvageHelper Choose" generals.salvagehelpermethod, 快速分解||一键分解||智能分解||智能分解（留无形，太古）
     AddToolTip(extraSalvageHelperCkboxID, "分解装备时按下助手快捷键可以自动执行所选择的策略")
-    AddToolTip(extraSalvageHelperDropdownID, "快速分解：按下快捷键即等同于点击鼠标左键+回车`n一键分解：一键分解背包内所有非安全格的装备`n智能分解：同一键分解，但会跳过远古，太古`n智能分解（只留太古）：只保留太古装备")
+    AddToolTip(extraSalvageHelperDropdownID, "快速分解：按下快捷键即等同于点击鼠标左键+回车`n一键分解：一键分解背包内所有非安全格的装备`n智能分解：同一键分解，但会跳过远古，无形，太古`n智能分解（留无形，太古）：只保留无形，太古装备")
 
     Gui Add, CheckBox, xs+20 yp+40 vextramore3 +Disabled, 魔盒重铸助手（Coming Soon）
     Gui Add, CheckBox, xs+20 yp+37 vextramore4 +Disabled, 魔盒升级助手（Coming Soon）
@@ -953,7 +953,7 @@ oneButtonSalvageHelper(D3W, D3H, xpos, ypos){
     fn1:=Func("scanInventorySpace").Bind(D3W, D3H)
     SetTimer, %fn1%, -1
 
-    q:=0    ; 当前格子装备品质，1：普通传奇，2：远古传奇，3：太古传奇
+    q:=0    ; 当前格子装备品质，2：普通传奇，3：远古传奇，4：无形装备，5：太古传奇
     i:=1    ; 当前格子ID
     w:=0
     SetDefaultMouseSpeed, mouseDelay
@@ -989,7 +989,10 @@ oneButtonSalvageHelper(D3W, D3H, xpos, ypos){
                     c:=[Max(c1[1],c2[1],c3[1]),Max(c1[2],c2[2],c3[2]),Max(c1[3],c2[3],c3[3])]
                     if (c[1]>100 or c[3]<20) {
                         ; 装备是太古或者远古
-                        q:=(c[2]<35) ? 4:3
+                        q:=(c[2]<35) ? 5:3
+                    } else if (c[1]<50 and c[2]>c[3] and c[3]>c[1]) {
+                        ; 装备是无形武器
+                        q:=4
                     } else {
                         ; 装备是普通传奇
                         q:=2
@@ -1000,6 +1003,7 @@ oneButtonSalvageHelper(D3W, D3H, xpos, ypos){
                     i++
                     Continue
                 }
+                OutputDebug, % c[1] " " c[2] " " c[3]
                 Click
                 Sleep, helperDelay  ; 等待对话框显示完毕
                 if isDialogBoXOnScreen(D3W, D3H)
@@ -1785,7 +1789,7 @@ Watchdog(wParam, lParam){
         {
             ; 当前窗口激活
             vFront:=True
-            FillPixel(TitlebarID, 0x2B5361)
+            FillPixel(TitlebarID, 0x34495e)
             FillPixel([TitlebarLineID, BorderTopID, BorderBottomID, BorderLeftID, BorderRightID], 0x000000)
             Gui, Font, s11 +cFFFFFF Normal
             GuiControl, Font, TitleBarText
@@ -1804,8 +1808,8 @@ Watchdog(wParam, lParam){
             }
             if (vFront)
             {
-                FillPixel([TitlebarID, TitlebarLineID], 0x799EAC)
-                FillPixel([BorderTopID, BorderBottomID, BorderLeftID, BorderRightID], 0xAAAAAA)
+                FillPixel([TitlebarID, TitlebarLineID], 0x607e9d)
+                FillPixel([BorderTopID, BorderBottomID, BorderLeftID, BorderRightID], 0x607e9d)
                 GuiControl, +cEEEEEE, TitleBarText
                 GuiControl,, TitleBarText, % TITLE
                 vFront:=False
