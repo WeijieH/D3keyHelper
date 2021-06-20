@@ -203,7 +203,9 @@ GuiCreate(){
         Gui Add, Text, xs+20 ys+30, 快速切换至本配置：
         Gui Add, DropDownList, % "x+5 yp-3 w90 AltSubmit Choose" others[currentTab].profilemethod " vskillset" currentTab "profilekeybindingdropdown gSetProfileKeybinding", 无||鼠标中键||滚轮向上||滚轮向下||侧键1||侧键2||键盘按键
         Gui Add, Hotkey, x+15 w100 vskillset%currentTab%profilekeybindinghkbox gSetProfileKeybinding, % others[currentTab].profilehotkey
-        
+        Gui Add, Checkbox, % "x+15 yp+3 Checked" others[currentTab].autostartmarco " vskillset" currentTab "autostartmarcockbox hwndskillset" currentTab "autostartmarcockboxID", 切换后自动启动宏
+        AddToolTip(skillset%currentTab%autostartmarcockboxID, "开启后，以懒人模式启动的战斗宏可以在运行中无缝切换")
+
         Gui Add, Text, xs+20 yp+37, 走位辅助：
         Gui Add, DropDownList, % "x+5 yp-3 w150 AltSubmit Choose" pfmv:=others[currentTab].movingmethod " vskillset" currentTab "movingdropdown gSetMovingHelper", 无||强制站立||强制走位（按住不放）||强制走位（连点）
         Gui Add, Text, vskillset%currentTab%movingtext x+10 yp+3, 间隔（毫秒）：
@@ -273,6 +275,7 @@ GuiCreate(){
     Gui Add, CheckBox, % "xs+20 yp+70 vextraSoundonProfileSwitch Checked" generals.enablesoundplay, 使用快捷键切换配置成功时播放声音
     Gui Add, CheckBox, % "xs+20 yp+35 hwndextraSmartPauseID vextraSmartPause Checked" generals.enablesmartpause, 智能暂停
     AddToolTip(extraSmartPauseID, "开启后，游戏中按tab键可以暂停宏`n回车键，M键，T键会停止宏")
+
     Gui Add, CheckBox, % "xs+20 yp+35 vextraCustomStanding gSetCustomStanding Checked" generals.customstanding, 使用自定义强制站立按键：
     Gui Add, Hotkey, x+5 yp-3 w70 vextraCustomStandingHK gSetCustomStanding, % generals.customstandinghk
 
@@ -288,7 +291,7 @@ GuiCreate(){
 
     Gui Add, Text, % "x10 y" MainWindowH-20 " section", 当前激活配置：
     Gui Font, s11
-    Gui Add, Text, x+5 ys-4 w350 +cRed vStatuesSkillsetText, % tabsarray[currentProfile]
+    Gui Add, Text, x+5 ys-4 w300 +cRed vStatuesSkillsetText, % tabsarray[currentProfile]
     Gui Add, Text, x505 yp +cRed hwndCurrentmodeTextID gdummyFunction, % A_SendMode
     Gui Font, s9
     Gui Add, Text, xp-95 ys hwndSendmodeTextID gdummyFunction, 按键发送模式：
@@ -447,9 +450,10 @@ ReadCfgFile(cfgFileName, ByRef tabs, ByRef hotkeys, ByRef actions, ByRef interva
             IniRead, pfqpdy, %cfgFileName%, %cSection%, quickpausedelay, 1500
             IniRead, pfusq, %cfgFileName%, %cSection%, useskillqueue, 0
             IniRead, pfusqiv, %cfgFileName%, %cSection%, useskillqueueinterval, 200
+            IniRead, pfasm, %cfgFileName%, %cSection%, autostartmarco, 0
             tos:={"profilemethod":pfmd, "profilehotkey":pfhk, "movingmethod":pfmv, "movinginterval":pfmi, "lazymode":pflm
             , "enablequickpause":pfqp, "quickpausemethod1":pfqpm1, "quickpausemethod2":pfqpm2, "quickpausedelay":pfqpdy
-            , "useskillqueue":pfusq, "useskillqueueinterval":pfusqiv}
+            , "useskillqueue":pfusq, "useskillqueueinterval":pfusqiv, "autostartmarco":pfasm}
             others.Push(tos)
         }
 
@@ -471,7 +475,7 @@ ReadCfgFile(cfgFileName, ByRef tabs, ByRef hotkeys, ByRef actions, ByRef interva
             ivdelays.Push([10,10,10,10,10,10])
             others.Push({"profilemethod":1, "profilehotkey":"", "movingmethod":1, "movinginterval":100, "lazymode":1
             , "enablequickpause":0, "quickpausemethod1":1, "quickpausemethod2":1, "quickpausedelay":1500
-            , "useskillqueue":0, "useskillqueueinterval":200})
+            , "useskillqueue":0, "useskillqueueinterval":200, "autostartmarco":0})
         }
         generals:={"enablegamblehelper":1 ,"gamblehelpertimes":15, "oldsandhelperhk":"F5"
         , "startmethod":7, "starthotkey":"F2", "enablesmartpause":1, "salvagehelpermethod":1
@@ -590,6 +594,8 @@ SaveCfgFile(cfgFileName, tabs, currentProfile, safezone, VERSION){
         IniWrite, % skillset%cSection%useskillqueueckbox, %cfgFileName%, %nSction%, useskillqueue
         GuiControlGet, skillset%cSection%useskillqueueedit
         IniWrite, % skillset%cSection%useskillqueueedit, %cfgFileName%, %nSction%, useskillqueueinterval
+        GuiControlGet, skillset%cSection%autostartmarcockbox
+        IniWrite, % skillset%cSection%autostartmarcockbox, %cfgFileName%, %nSction%, autostartmarco
     }
     Return
 }
@@ -1380,6 +1386,8 @@ SetStartMode(){
         case 2:
             GuiControl, , skillset%currentProfile%clickpauseckbox, 0
             GuiControl, Disable, skillset%currentProfile%clickpauseckbox
+            GuiControl, Enable, skillset%currentProfile%useskillqueueckbox
+            GuiControl, Enable, skillset%currentProfile%movingdropdown
         case 3:
             GuiControl, , skillset%currentProfile%useskillqueueckbox, 0
             GuiControl, Choose, skillset%currentProfile%movingdropdown, 1
@@ -1387,6 +1395,7 @@ SetStartMode(){
             GuiControl, Disable, skillset%currentProfile%useskillqueueckbox
             GuiControl, Disable, skillset%currentProfile%movingdropdown
             GuiControl, Disable, skillset%currentProfile%clickpauseckbox
+            WinSet, Redraw,, A
         Default:
             GuiControl, Enable, skillset%currentProfile%useskillqueueckbox
             GuiControl, Enable, skillset%currentProfile%movingdropdown
@@ -2344,7 +2353,6 @@ SetTabFocus:
     Gui, Submit, NoHide
     GuiControl, , StatuesSkillsetText, % tabsarray[ActiveTab]
     currentProfile:=ActiveTab
-    Gosub, SetQuickPause
     SetStartMode()
 Return
 
@@ -2429,13 +2437,16 @@ SetProfileKeybinding:
         {
             case 1:
                 GuiControl, Disable, skillset%currentPage%profilekeybindinghkbox
+                GuiControl, Disable, skillset%currentPage%autostartmarcockbox
             case 2,3,4,5,6:
                 GuiControl, Disable, skillset%currentPage%profilekeybindinghkbox
+                GuiControl, Enable, skillset%currentPage%autostartmarcockbox
                 ckey:=mouseKeyArray[skillset%currentPage%profilekeybindingdropdown]
                 Hotkey, ~*%ckey%, SwitchProfile, on
                 profileKeybinding[ckey]:=currentPage
             case 7:
                 GuiControl, Enable, skillset%currentPage%profilekeybindinghkbox
+                GuiControl, Enable, skillset%currentPage%autostartmarcockbox
                 ckey:=skillset%currentPage%profilekeybindinghkbox
                 if (ckey!="")
                 {
@@ -2452,16 +2463,21 @@ SwitchProfile:
     currentHK:=RegExReplace(A_ThisHotkey, "[~*]")
     if (currentProfile!=profileKeybinding[currentHK])
     {
+        wasRunning:=vRunning
+        wasPausing:=vPausing
         currentProfile:=profileKeybinding[currentHK]
-        GuiControl, , StatuesSkillsetText, % tabsarray[currentProfile]
         GuiControl , Choose, ActiveTab, % tabsarray[currentProfile]
+        Gosub, SetTabFocus
         Gosub, StopMarco
         GuiControlGet, extraSoundonProfileSwitch
         if extraSoundonProfileSwitch
         {
             SoundBeep, 750, 250
         }
-        Gosub, StopMarco
+        if (wasRunning and !wasPausing and skillset%currentProfile%autostartmarcockbox and skillset%currentProfile%profilestartmodedropdown=1)
+        {
+            Gosub, RunMarco
+        }
     }
 Return
 
