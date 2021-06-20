@@ -25,15 +25,16 @@ CoordMode, Pixel, Client
 CoordMode, Mouse, Client
 Process, Priority, , High
 
-VERSION:=210618
+VERSION:=210619
 TITLE:=Format("暗黑3技能连点器 v1.3.{:d}   by Oldsand", VERSION)
 MainWindowW:=900
 MainWindowH:=550
+CompactWindowW:=550
 TitleBarHight:=25
 ;@Ahk2Exe-Obey U_Y, U_Y := A_YYYY
 ;@Ahk2Exe-Obey U_M, U_M := A_MM
 ;@Ahk2Exe-Obey U_D, U_D := A_DD
-;@Ahk2Exe-SetFileVersion 1.2.%U_Y%.%U_M%%U_D%
+;@Ahk2Exe-SetFileVersion 1.3.%U_Y%.%U_M%%U_D%
 ;@Ahk2Exe-SetLanguage 0x0804
 ;@Ahk2Exe-SetDescription 暗黑3技能连点器
 ;@Ahk2Exe-SetProductName D3keyHelper
@@ -45,6 +46,10 @@ SendMode, % generals.sendmode
 tabsarray:=StrSplit(tabs, "`|")
 tabslen:=ObjCount(tabsarray)
 safezone:={}
+isCompact:= generals.compactmode
+hBMPButtonLeft_Normal := isCompact? hBMPButtonExpand_Normal:hBMPButtonBack_Normal
+hBMPButtonLeft_Hover := isCompact? hBMPButtonExpand_Hover:hBMPButtonBack_Hover
+hBMPButtonLeft_Pressed := isCompact? hBMPButtonExpand_Pressed:hBMPButtonBack_Pressed
 Loop, Parse, % generals.safezone, CSV
 {
     safezone[A_LoopField]:=1
@@ -55,7 +60,7 @@ buffpercent:=(generals.buffpercent>=0 and generals.buffpercent<=1)? generals.buf
 GuiCreate()
 SetTrayMenu()
 StartUp()
-Gui Show, w%MainWindowW% h%MainWindowH%, %TITLE%
+showMainWindow(isCompact? CompactWindowW:MainWindowW, MainWindowH, False)
 
 OnExit("OnUnload")
 Return
@@ -83,10 +88,17 @@ OnLoad(){
     profileKeybinding:={}
     keysOnHold:={}
     DblClickTime:=DllCall("GetDoubleClickTime", "UInt")
-    HideButtonState:=0
-    _ButtonNormal := "iVBORw0KGgoAAAANSUhEUgAAAB4AAAAZCAYAAAAmNZ4aAAAAM0lEQVRIiWMYBaNgFIyCUUAsYCSkrnLe2v/khGZ7UjBes5lGo2gUjIJRMApGAVbAwMAAAMjYBAQ0LnL/AAAAAElFTkSuQmCC"
-    _ButtonHover := "iVBORw0KGgoAAAANSUhEUgAAAB4AAAAZCAYAAAAmNZ4aAAAARklEQVRIiWN8Iaj8n2EAANNAWMowavGoxaMWj1pMCWAhpFfi/V2yjH8hqIxXfvD6mJDLyQWjqXrU4lGLRy0etZg4wMDAAACGJAZtrV+pPwAAAABJRU5ErkJggg=="
-    _ButtonPressed := "iVBORw0KGgoAAAANSUhEUgAAAB4AAAAZCAYAAAAmNZ4aAAAARklEQVRIiWO85B32n2EAANNAWMowavGoxaMWj1pMCWAhpNftwjGyjN9lYIVXfvD6mJDLyQWjqXrU4lGLRy0etZg4wMDAAACzuwbMPgoPPgAAAABJRU5ErkJggg=="
+    RightButtonState:=0
+    LeftButtonState:=0
+    _CloseButtonNormal := "iVBORw0KGgoAAAANSUhEUgAAAB4AAAAZCAYAAAAmNZ4aAAAAM0lEQVRIiWMYBaNgFIyCUUAsYCSkrnLe2v/khGZ7UjBes5lGo2gUjIJRMApGAVbAwMAAAMjYBAQ0LnL/AAAAAElFTkSuQmCC"
+    _CloseButtonHover := "iVBORw0KGgoAAAANSUhEUgAAAB4AAAAZCAYAAAAmNZ4aAAAARklEQVRIiWN8Iaj8n2EAANNAWMowavGoxaMWj1pMCWAhpFfi/V2yjH8hqIxXfvD6mJDLyQWjqXrU4lGLRy0etZg4wMDAAACGJAZtrV+pPwAAAABJRU5ErkJggg=="
+    _CloseButtonPressed := "iVBORw0KGgoAAAANSUhEUgAAAB4AAAAZCAYAAAAmNZ4aAAAARklEQVRIiWO85B32n2EAANNAWMowavGoxaMWj1pMCWAhpNftwjGyjN9lYIVXfvD6mJDLyQWjqXrU4lGLRy0etZg4wMDAAACzuwbMPgoPPgAAAABJRU5ErkJggg=="
+    _BackButtonNormal := "iVBORw0KGgoAAAANSUhEUgAAAB4AAAAZCAYAAAAmNZ4aAAAAr0lEQVRIie2UwQ3CMAwA7Sa0ZhJGYAOWoCswDSuUJdiAFViEtIkw8gMJEKiOan4+KY9Iji+2nIDjOFagJs/xfHnb853345gGItoA4vUz/rDbzuZsagsQaUq3IYQA36RaqsRPaYwRVm2r6tYv1GJLKWjF1lIhaoJkkJgZcs6yWHFk9nIqcddRb12xqtXY4Ilo3ZdSIE+TpmIb8T/kVc/JUl79gbzKZdqXyB3HWQ4APACzI1jSHwESAQAAAABJRU5ErkJggg=="
+    _BackButtonHover := "iVBORw0KGgoAAAANSUhEUgAAAB4AAAAZCAYAAAAmNZ4aAAAAn0lEQVRIiWOUbL31n2EAANNAWMowavGoxYPO4j/XdzK8qFFn+Pf+Ef0sBln6ekkuAzMLCwOToBx9LIZZysLKyiDacJVsS0mymJqWEm0xtS0FAaLKalBC+v+f+CJdsvUWQTUsxBgkEj2J6j4mKqhZNN0ZRGMmM/z5/ZvhdYM2/SymheUkZSdqWk5yAYJsOSi1kwtGWyCjFo9aTB3AwMAAAPFsSKyupuluAAAAAElFTkSuQmCC"
+    _BackButtonPressed := "iVBORw0KGgoAAAANSUhEUgAAAB4AAAAZCAYAAAAmNZ4aAAAAn0lEQVRIiWM0nnz/P8MAAKaBsJRh1OJRiwedxZ8v7WA4l6fE8OvtI/pZDLL01uxMBmYWFgY2YTn6WAyzlIWVlUG/7xbZlpJkMTUtJdpialsKAkSV1aCE9P8/8UW68eT7BNWwEGOQaso0qvuYqKDm1fNgUEudzvDn92+Gi0Vq9LOYFpaTlJ2oaTnJBQiy5aDUTi4YbYGMWjxqMXUAAwMDALPRSRXM0WlaAAAAAElFTkSuQmCC"
+    _ExpandButtonNormal := "iVBORw0KGgoAAAANSUhEUgAAAB4AAAAZCAYAAAAmNZ4aAAAAVUlEQVRIiWMYBaOAVoCRkLmV89b+J8fu9qRgvGYzDVSUEvTx//9keZiBkRG/0QPm45FnMQshBVXz15EXyQTSz2iqphsYTdUYYNil6lEwCoYZYGBgAACe2A+sakz0agAAAABJRU5ErkJggg=="
+    _ExpandButtonHover := "iVBORw0KGgoAAAANSUhEUgAAAB4AAAAZCAYAAAAmNZ4aAAAASklEQVRIiWOUbL31n2EAANNAWMowajE9AQshu55Xq5HlHMnWW0PUx4RcTi4YzU50A6OpGgOMpuohb/FoqsYAo6l61OKhZTEDAwMAZw0QHWhren8AAAAASUVORK5CYII="
+    _ExpandButtonPressed := "iVBORw0KGgoAAAANSUhEUgAAAB4AAAAZCAYAAAAmNZ4aAAAASklEQVRIiWM0nnz/P8MAAKaBsJRh1GJ6AhZCdp3NVSTLOcaT7w9RHxNyOblgNDvRDYymagwwmqqHvMWjqRoDjKbqUYuHlsUMDAwASU0Q0fLg6gAAAAAASUVORK5CYII="
     DllCall("LoadLibrary", "Str", "Crypt32.dll")
     DllCall("LoadLibrary", "Str", "Shlwapi.dll")
     DllCall("LoadLibrary", "Str", "Gdiplus.dll")
@@ -94,9 +106,15 @@ OnLoad(){
     NumPut(1, GdiplusStartupInput, 0, "UInt") ; GdiplusVersion
     DllCall("Gdiplus.dll\GdiplusStartup", "PtrP", pToken, "Ptr", &GdiplusStartupInput, "Ptr", 0) ; Initialize GDI+
 
-    hBMPButtonClose_Normal := GdipCreateFromBase64(_ButtonNormal)
-    hBMPButtonClose_Hover := GdipCreateFromBase64(_ButtonHover)
-    hBMPButtonClose_Pressed := GdipCreateFromBase64(_ButtonPressed)
+    hBMPButtonClose_Normal := GdipCreateFromBase64(_CloseButtonNormal)
+    hBMPButtonClose_Hover := GdipCreateFromBase64(_CloseButtonHover)
+    hBMPButtonClose_Pressed := GdipCreateFromBase64(_CloseButtonPressed)
+    hBMPButtonBack_Normal := GdipCreateFromBase64(_BackButtonNormal)
+    hBMPButtonBack_Hover := GdipCreateFromBase64(_BackButtonHover)
+    hBMPButtonBack_Pressed := GdipCreateFromBase64(_BackButtonPressed)
+    hBMPButtonExpand_Normal := GdipCreateFromBase64(_ExpandButtonNormal)
+    hBMPButtonExpand_Hover := GdipCreateFromBase64(_ExpandButtonHover)
+    hBMPButtonExpand_Pressed := GdipCreateFromBase64(_ExpandButtonPressed)
 }
 
 /*
@@ -137,13 +155,16 @@ GuiCreate(){
     ; 0x4E=SS_BITMAP|SS_REALSIZECONTROL
     Gui, Add, Picture, % "x1 y1 w" MainWindowW-2 " h" TitleBarHight " +0x4E hwndTitlebarID"
     Gui, Add, Picture, % "x1 y+0 w" MainWindowW-2 " h1 +0x4E hwndTitlebarLineID"
-    Gui, Add, Picture, % "x0 y0 w" MainWindowW " h1 +0x4E hwndBorderTopID"
-    Gui, Add, Picture, % "x0 y" MainWindowH-1 " w" MainWindowW " h1 +0x4E hwndBorderBottomID"
-    Gui, Add, Picture, % "x0 y1 w1 h" MainWindowH-2 " +0x4E hwndBorderLeftID"
-    Gui, Add, Picture, % "x" MainWindowW-1 " y1 w1 h" MainWindowH-2 " +0x4E hwndBorderRightID"
-    Gui, Add, Text, % "x0 y1 w" MainWindowW " h" TitleBarHight " vTitleBarText center +BackgroundTrans +0x200"
-    Gui, Add, Picture, % "x" MainWindowW-31 " y1 w-1 h" TitleBarHight " hwndUIHideButtonID gdummyFunction +BackgroundTrans", % "HBITMAP:*" hBMPButtonClose_Normal
-    AddToolTip(UIHideButtonID, "左键：保存设置并最小化窗口至右下角`n右键：保存设置并退出程序")
+    Gui, Add, Picture, % "x0 y0 w" MainWindowW " h1 +0x4E hwndBorderTopID vBorderTop"
+    Gui, Add, Picture, % "x0 y" MainWindowH-1 " w" MainWindowW " h1 +0x4E hwndBorderBottomID vBorderBottom"
+    Gui, Add, Picture, % "x0 y1 w1 h" MainWindowH-2 " +0x4E hwndBorderLeftID vBorderLeft"
+    Gui, Add, Picture, % "x" MainWindowW-1 " y1 w1 h" MainWindowH-2 " +0x4E hwndBorderRightID vBorderRight"
+    Gui, Add, Text, % "x1 y1 h" TitleBarHight " hwndTitleBarTextID vTitleBarText +BackgroundTrans +0x200", %TITLE%
+    Gui, Add, Picture, % "x" MainWindowW-31 " y1 w-1 h" TitleBarHight " hwndUIRightButtonID vUIRightButton gdummyFunction +BackgroundTrans", % "HBITMAP:*" hBMPButtonClose_Normal
+    AddToolTip(UIRightButtonID, "左键：保存设置并最小化窗口至右下角`n右键：保存设置并退出程序")
+    Gui, Add, Picture, % "x" 1 " y1 w-1 h" TitleBarHight " hwndUILeftButtonID vUILeftButton gdummyFunction +BackgroundTrans", % "HBITMAP:*" hBMPButtonLeft_Normal
+    AddToolTip(UILeftButtonID, "点击以在完整，紧凑布局中切换")
+    GuiControlGet, TitleBarSize, Pos , TitleBarText
     Gui Add, Tab3, xm ym w%tabw% h%tabh% vActiveTab gSetTabFocus AltSubmit, %tabs%
     Gui Font, s9, Segoe UI
     Loop, parse, tabs, `|
@@ -235,22 +256,26 @@ GuiCreate(){
     Gui Add, Edit, vextraGambleHelperEdit x+10 yp-3 w60 Number
     Gui Add, Updown, vextraGambleHelperUpdown Range2-60, % generals.gamblehelpertimes
 
+    Gui Add, CheckBox, % "xs+20 yp+37 hwndextraLootHelperCkboxID vextraLootHelperCkbox gSetLootHelper Checked" generals.enableloothelper, 快速拾取助手：
+    AddToolTip(extraLootHelperCkboxID, "拾取装备时按下助手快捷键可以自动点击左键")
+    Gui Add, Text, vextraLootHelperText x+5 yp, 发送左键次数
+    Gui Add, Edit, vextraLootHelperEdit x+10 yp-4 w60 Number
+    Gui Add, Updown, vextraLootHelperUpdown Range2-99, % generals.loothelpertimes
+
     Gui Add, CheckBox, % "xs+20 yp+37 hwndextraSalvageHelperCkboxID vextraSalvageHelperCkbox gSetSalvageHelper Checked" generals.enablesalvagehelper, 铁匠分解助手：
-    Gui Add, DropDownList, % "x+5 yp-4 w180 AltSubmit hwndextraSalvageHelperDropdownID vextraSalvageHelperDropdown gSetSalvageHelper Choose" generals.salvagehelpermethod, 快速分解||一键分解||智能分解||智能分解（留无形，太古）
+    Gui Add, DropDownList, % "x+5 yp-4 w180 AltSubmit hwndextraSalvageHelperDropdownID vextraSalvageHelperDropdown gSetSalvageHelper Choose" generals.salvagehelpermethod, 快速分解||一键分解||智能分解||智能分解（留无形，太古）||智能分解（只留太古）
     AddToolTip(extraSalvageHelperCkboxID, "分解装备时按下助手快捷键可以自动执行所选择的策略")
-    AddToolTip(extraSalvageHelperDropdownID, "快速分解：按下快捷键即等同于点击鼠标左键+回车`n一键分解：一键分解背包内所有非安全格的装备`n智能分解：同一键分解，但会跳过远古，无形，太古`n智能分解（留无形，太古）：只保留无形，太古装备")
+    AddToolTip(extraSalvageHelperDropdownID, "快速分解：按下快捷键即等同于点击鼠标左键+回车`n一键分解：一键分解背包内所有非安全格的装备`n智能分解：同一键分解，但会跳过远古，无形，太古`n智能分解（留无形，太古）：只保留无形，太古装备`n智能分解（只留太古）：只保留太古装备")
 
     Gui Add, CheckBox, % "xs+20 yp+40 hwndextraReforgeHelperCkboxID vextraReforgeHelperCkbox gSetReforgeHelper Checked" generals.enablereforgehelper, 魔盒重铸助手：
     AddToolTip(extraReforgeHelperCkboxID, "当魔盒打开且在重铸页面时，按下助手快捷键即自动重铸鼠标指针处的装备一次")
     Gui Add, CheckBox, % "x+5 yp+0 hwndextraReforgeHelperInventoryOnlyID vextraReforgeHelperInventoryOnlyCkbox Checked" generals.reforgehelperinventoryonly, 仅限背包内区域
     AddToolTip(extraReforgeHelperInventoryOnlyID, "勾选后重铸助手只会在鼠标指针位于背包栏内时有效")
 
-    Gui Add, CheckBox, xs+20 yp+37 vextramore4 +Disabled, 魔盒升级助手（Coming Soon）
-    Gui Add, CheckBox, % "xs+20 yp+37 hwndextraLootHelperCkboxID vextraLootHelperCkbox gSetLootHelper Checked" generals.enableloothelper, 快速拾取助手：
-    AddToolTip(extraLootHelperCkboxID, "拾取装备时按下助手快捷键可以自动点击左键")
-    Gui Add, Text, vextraLootHelperText x+5 yp, 发送左键次数
-    Gui Add, Edit, vextraLootHelperEdit x+10 yp-4 w60 Number
-    Gui Add, Updown, vextraLootHelperUpdown Range2-99, % generals.loothelpertimes
+    Gui Add, CheckBox, % "xs+20 yp+37 hwndextraUpgradeHelperCkboxID vextraUpgradeHelperCkbox Checked" generals.enableupgradehelper, 魔盒升级助手
+    AddToolTip(extraUpgradeHelperCkboxID, "当魔盒打开且在升级页面时，按下助手快捷键即自动升级所有非安全格内的稀有（黄色）装备")
+    ; Gui Add, CheckBox, % "x+5 yp+0 hwndextraUpgradeHelperInventoryOnlyID vextraUpgradeHelperInventoryOnlyCkbox Checked" generals.reforgehelperinventoryonly, 连续升级失败时停止宏
+
 
     Gui Add, CheckBox, % "xs+20 yp+70 vextraSoundonProfileSwitch Checked" generals.enablesoundplay, 使用快捷键切换配置成功时播放声音
     Gui Add, CheckBox, % "xs+20 yp+35 hwndextraSmartPauseID vextraSmartPause Checked" generals.enablesmartpause, 智能暂停
@@ -360,6 +385,7 @@ ReadCfgFile(cfgFileName, ByRef tabs, ByRef hotkeys, ByRef actions, ByRef interva
         IniRead, salvagehelpermethod, %cfgFileName%, General, salvagehelpermethod, 1
         IniRead, enablereforgehelper, %cfgFileName%, General, enablereforgehelper, 0
         IniRead, reforgehelperinventoryonly, %cfgFileName%, General, reforgehelperinventoryonly, 1
+        IniRead, enableupgradehelper, %cfgFileName%, General, enableupgradehelper, 0
         IniRead, enablesmartpause, %cfgFileName%, General, enablesmartpause, 0
         IniRead, enablesoundplay, %cfgFileName%, General, enablesoundplay, 1
         IniRead, startmethod, %cfgFileName%, General, startmethod, 7
@@ -373,17 +399,18 @@ ReadCfgFile(cfgFileName, ByRef tabs, ByRef hotkeys, ByRef actions, ByRef interva
         IniRead, gamegamma, %cfgFileName%, General, gamegamma, 1.000000
         IniRead, sendmode, %cfgFileName%, General, sendmode, "Event"
         IniRead, buffpercent, %cfgFileName%, General, buffpercent, 0.050000
+        IniRead, compactmode, %cfgFileName%, General, compactmode, 0
         IniRead, enableloothelper, %cfgFileName%, General, enableloothelper, 0
         IniRead, loothelpertimes, %cfgFileName%, General, loothelpertimes, 30
         generals:={"oldsandhelpermethod":oldsandhelpermethod, "oldsandhelperhk":oldsandhelperhk
         , "enablesalvagehelper":enablesalvagehelper, "salvagehelpermethod":salvagehelpermethod
         , "enablereforgehelper":enablereforgehelper, "reforgehelperinventoryonly":reforgehelperinventoryonly
         , "enablegamblehelper":enablegamblehelper, "gamblehelpertimes":gamblehelpertimes
-        , "startmethod":startmethod, "starthotkey":starthotkey
+        , "startmethod":startmethod, "starthotkey":starthotkey, "enableupgradehelper":enableupgradehelper
         , "enablesmartpause":enablesmartpause, "enablesoundplay":enablesoundplay
         , "custommoving":custommoving, "custommovinghk":custommovinghk, "customstanding":customstanding, "customstandinghk":customstandinghk
         , "safezone":safezone, "helperspeed":helperspeed, "gamegamma":gamegamma, "sendmode":sendmode, "buffpercent":buffpercent
-        , "enableloothelper":enableloothelper, "loothelpertimes":loothelpertimes}
+        , "enableloothelper":enableloothelper, "loothelpertimes":loothelpertimes, "compactmode":compactmode}
 
         IniRead, tabs, %cfgFileName%
         tabs:=StrReplace(StrReplace(tabs, "`n", "`|"), "General|", "")
@@ -455,10 +482,10 @@ ReadCfgFile(cfgFileName, ByRef tabs, ByRef hotkeys, ByRef actions, ByRef interva
         generals:={"enablegamblehelper":1 ,"gamblehelpertimes":15, "oldsandhelperhk":"F5"
         , "startmethod":7, "starthotkey":"F2", "enablesmartpause":1, "salvagehelpermethod":1
         , "oldsandhelpermethod":7, "enablesalvagehelper":0, "enablesoundplay":1
-        , "enablereforgehelper":0, "reforgehelperinventoryonly":1
+        , "enablereforgehelper":0, "reforgehelperinventoryonly":1, "enableupgradehelper":0
         , "custommoving":0, "custommovinghk":"e", "customstanding":0, "customstandinghk":"LShift"
         , "safezone":"61,62,63", "helperspeed":3, "gamegamma":1.000000, "sendmode":"Event"
-        , "buffpercent":0.050000, "enableloothelper":0, "loothelpertimes":30}
+        , "buffpercent":0.050000, "enableloothelper":0, "loothelpertimes":30, "compactmode":0}
     }
     Return currentProfile
 }
@@ -488,6 +515,7 @@ SaveCfgFile(cfgFileName, tabs, currentProfile, safezone, VERSION){
     GuiControlGet, extraSalvageHelperDropdown
     GuiControlGet, extraReforgeHelperCkbox
     GuiControlGet, extraReforgeHelperInventoryOnlyCkbox
+    GuiControlGet, extraUpgradeHelperCkbox
     GuiControlGet, extraSoundonProfileSwitch
     GuiControlGet, extraCustomMoving
     GuiControlGet, extraCustomMovingHK
@@ -504,6 +532,7 @@ SaveCfgFile(cfgFileName, tabs, currentProfile, safezone, VERSION){
     IniWrite, %extraSalvageHelperDropdown%, %cfgFileName%, General, salvagehelpermethod
     IniWrite, %extraReforgeHelperCkbox%, %cfgFileName%, General, enablereforgehelper
     IniWrite, %extraReforgeHelperInventoryOnlyCkbox%, %cfgFileName%, General, reforgehelperinventoryonly
+    IniWrite, %extraUpgradeHelperCkbox%, %cfgFileName%, General, enableupgradehelper
     IniWrite, %extraLootHelperCkbox%, %cfgFileName%, General, enableloothelper
     IniWrite, %extraLootHelperUpdown%, %cfgFileName%, General, loothelpertimes
     IniWrite, %extraSoundonProfileSwitch%, %cfgFileName%, General, enablesoundplay
@@ -516,10 +545,11 @@ SaveCfgFile(cfgFileName, tabs, currentProfile, safezone, VERSION){
     IniWrite, %helperAnimationSpeedDropdown%, %cfgFileName%, General, helperspeed
     safezone:=keyJoin(",", safezone)
     IniWrite, %safezone%, %cfgFileName%, General, safezone
-    Global gameGamma, buffpercent
+    Global gameGamma, buffpercent, isCompact
     IniWrite, %gameGamma%, %cfgFileName%, General, gamegamma
     IniWrite, %A_SendMode%, %cfgFileName%, General, sendmode
     IniWrite, %buffpercent%, %cfgFileName%, General, buffpercent
+    IniWrite, %isCompact%, %cfgFileName%, General, compactmode
     
     GuiControlGet, StartRunDropdown
     GuiControlGet, StartRunHKInput
@@ -757,6 +787,7 @@ oldsandHelper(){
     GuiControlGet, extraLootHelperCkbox
     GuiControlGet, extraSalvageHelperCkbox
     GuiControlGet, extraReforgeHelperCkbox
+    GuiControlGet, extraUpgradeHelperCkbox
     GuiControlGet, extraSalvageHelperDropdown
     GuiControlGet, helperAnimationSpeedDropdown
     MouseGetPos, xpos, ypos ; 当前鼠标位置，用于宏结束后返回
@@ -866,7 +897,7 @@ oldsandHelper(){
         }
     }
     ; 卡奈魔盒助手
-    if (extraReforgeHelperCkbox)
+    if (extraReforgeHelperCkbox or extraUpgradeHelperCkbox)
     {
         r:=isKanaiCubeOpen(D3W, D3H)
         switch r
@@ -876,13 +907,20 @@ oldsandHelper(){
                 Return
             case 2:
             ; 一键重铸
-                fn:=Func("oneButtonReforgeHelper").Bind(D3W, D3H, xpos, ypos)
-                SetTimer, %fn%, -1
-                Return
+                if extraReforgeHelperCkbox
+                {
+                    fn:=Func("oneButtonReforgeHelper").Bind(D3W, D3H, xpos, ypos)
+                    SetTimer, %fn%, -1
+                    Return
+                }
             case 3:
             ; 一键升级
-                helperRunning:=False
-                Return
+                if extraUpgradeHelperCkbox
+                {
+                    fn:=Func("oneButtonUpgradeHelper").Bind(D3W, D3H, xpos, ypos)
+                    SetTimer, %fn%, -1
+                    Return
+                }
             Default:
                 ; 卡奈魔盒未打开
         }
@@ -924,6 +962,113 @@ oneButtonReforgeHelper(D3W, D3H, xpos, ypos){
         MouseMove, xpos, ypos
     }
     helperRunning:=False
+    Return
+}
+
+/*
+负责一键升级稀有
+参数：
+    D3W：int，窗口区域的宽度
+    D3H：int，窗口区域的高度
+    xpos：之前鼠标x坐标
+    ypos：之前鼠标y坐标
+返回：
+    无
+*/
+oneButtonUpgradeHelper(D3W, D3H, xpos, ypos)
+{
+    local
+    Global helperBreak, helperRunning, helperDelay, helperBagZone, mouseDelay, helperKanaiZone
+    ; 魔盒动画检查点
+    point_kanai:=[Round(172*D3H/1440),Round(740*D3H/1440)]
+    helperBagZone:=make1DArray(60, -1)
+    k:=getKanaiCubeButtonPos(D3W, D3H)
+    ; 开启一单独线程查找空格子
+    fn1:=Func("scanInventorySpace").Bind(D3W, D3H)
+    SetTimer, %fn1%, -1
+
+    SetDefaultMouseSpeed, mouseDelay
+    i:=1 ; 当前格子ID
+    w:=0
+    while (i<=60)
+    {
+        ; 防卡死
+        w++
+        if (helperBreak or w>200) {
+            Break
+        }
+        ; 当前格子情况
+        switch helperBagZone[i]
+        {
+            case -1:
+                ; 还未探开，继续等待
+                Sleep, 20
+            case 10:
+                ; 格子有装备
+                pLargeItem:=False
+                ; 获取当前格子坐标和下方格子坐标
+                m:=getInventorySpaceXY(D3W, D3H, i, "bag")
+                m2:=getInventorySpaceXY(D3W, D3H, i+10, "bag")
+                ; 右键装备送进卡奈魔盒
+                MouseMove, m[1], m[2]
+                Click, Right
+                ; 如果格子不在最后一行，并且下方有装备或者下方未探开
+                if (i<=50 and (helperBagZone[i+10]=-1 or helperBagZone[i+10]=10))
+                {
+                    ; 当前装备可能是占用2个格子的大型装备，提前取出下方格子的中心像素
+                    pLargeItem:=True
+                    PixelGetColor, cpixel, m2[1], m2[2], RGB
+                    cd_before:=splitRGB(cpixel)
+                }
+                Sleep, helperDelay*2
+                ; 点击添加材料按钮
+                MouseMove, k[2][1], k[2][2]
+                Click
+                Sleep, 50+helperDelay*2
+                ; 点击转化按钮
+                MouseMove, k[1][1], k[1][2]
+                Click
+                ; 等待动画显示，然后取色
+                Sleep, 700
+                PixelGetColor, cpixel, point_kanai[1], point_kanai[2], RGB
+                c:=splitRGB(cpixel)
+                If (c[1]+c[2]+c[3]>400)
+                {
+                    ; 取色点变亮，转化成功
+                    if (pLargeItem)
+                    {
+                        ; 当前装备可能是大型装备，检查下方格子中心像素有没有一起变色
+                        PixelGetColor, cpixel, m2[1], m2[2], RGB
+                        cd_after:=splitRGB(cpixel)
+                        if !(abs(cd_before[1]-cd_after[1])<=3 and abs(cd_before[2]-cd_after[2]<=3) and abs(cd_before[3]-cd_after[3])<=3)
+                        {
+                            ; 如果变色，即当前装备是大型装备，标记下方格子未非装备格
+                            helperBagZone[i+10]:=5
+                        }
+                    }
+                    ; 等待转化动画显示完毕
+                    Sleep, 1600 + helperDelay*4
+                    ; 点击完成按钮
+                    MouseMove, k[1][1], k[1][2]
+                    Click
+                }
+                Else
+                {
+                    ; 取色点没有变亮，转化不成功
+                    helperKanaiZone:=make1DArray(9, -1)
+                    ; 清理卡奈魔盒
+                    cleanKanaiCube(D3W, D3H)
+                    Sleep, helperDelay*3
+                }
+                i++
+            Default:
+                ; 跳过无装备，或者非装备格
+                i++
+        }
+    }
+    helperRunning:=False
+    ; 鼠标回到原位置
+    MouseMove, xpos, ypos
     Return
 }
 
@@ -1040,7 +1185,7 @@ oneButtonSalvageHelper(D3W, D3H, xpos, ypos){
                 Sleep, 20
             case 10:
             ; 当前格子有装备
-                m:=getInventorySpaceXY(D3W, D3H, i)
+                m:=getInventorySpaceXY(D3W, D3H, i, "bag")
                 MouseMove, m[1], m[2]
                 ; 智能分解判断
                 if (extraSalvageHelperDropdown > 2)
@@ -1072,7 +1217,7 @@ oneButtonSalvageHelper(D3W, D3H, xpos, ypos){
                 }
                 ; 开始分解
                 Click
-                Sleep, helperDelay  ; 等待对话框显示完毕
+                Sleep, 50+helperDelay  ; 等待对话框显示完毕
                 if isDialogBoXOnScreen(D3W, D3H)
                 {
                     Send {Enter}
@@ -1080,7 +1225,7 @@ oneButtonSalvageHelper(D3W, D3H, xpos, ypos){
                     {
                         ; 如果不是最后一行，且下方格子有装备，判断下方格子是否变为空格
                         Sleep, Min(Round(helperDelay*3), 300) ; 等待装备消失动画显示完毕
-                        if (isInventorySpaceEmpty(D3W, D3H, i+10, [[0.65625,0.714285714], [0.375,0.365079365]])){
+                        if (isInventorySpaceEmpty(D3W, D3H, i+10, [[0.65625,0.714285714], [0.375,0.365079365]], "bag")){
                             helperBagZone[i+10]:=1
                         }
                     }
@@ -1119,7 +1264,60 @@ scanInventorySpace(D3W, D3H){
         }
         Else
         {
-            helperBagZone[A_Index]:=(isInventorySpaceEmpty(D3W, D3H, A_Index, _e)) ? 1:10
+            helperBagZone[A_Index]:=(isInventorySpaceEmpty(D3W, D3H, A_Index, _e, "bag")) ? 1:10
+        }
+    }
+    Return
+}
+
+/*
+扫描所有卡奈魔盒格子。未扫描-1，没东西1，有东西0
+参数：
+    D3W：int，窗口区域的宽度
+    D3H：int，窗口区域的高度
+返回：
+    无
+*/
+scanInventorySpaceKanai(D3W, D3H){
+    local
+    static _e:=[[0.65625,0.71429], [0.375,0.36508]]
+    Global helperKanaiZone
+    Loop, 9
+    {
+        helperKanaiZone[A_Index]:=isInventorySpaceEmpty(D3W, D3H, A_Index, _e, "kanai")
+    }
+    Return
+}
+
+/*
+移除卡奈魔盒中的所有物品
+参数：
+    D3W：int，窗口区域的宽度
+    D3H：int，窗口区域的高度
+返回：
+    无
+*/
+cleanKanaiCube(D3W, D3H){
+    local
+    Global helperKanaiZone, helperDelay
+    ; 开启一单独线程查找空格子
+    fn1:=Func("scanInventorySpaceKanai").Bind(D3W, D3H)
+    SetTimer, %fn1%, -1
+    i:=1
+    while (i<=9)
+    {
+        switch helperKanaiZone[i]
+        {
+            case -1:
+                Sleep, 20
+            case 0:
+                m:=getInventorySpaceXY(D3W, D3H, i, "kanai")
+                MouseMove, m[1], m[2]
+                Sleep, helperDelay
+                Click, Right
+                i++
+            Default:
+                i++
         }
     }
     Return
@@ -1320,7 +1518,7 @@ SetSalvageHelper(){
         {
             case 1:
                 GuiControl, hide, helperSafeZoneText
-            case 2,3,4:
+            case 2,3,4,5:
                 ; 如果是一键分解，检查安全区域设置
                 hasSafeZone:=False
                 Loop, 60
@@ -1521,19 +1719,31 @@ isRedXonScreen(D3W, D3H, position){
     D3W：int，窗口区域的宽度
     D3H：int，窗口区域的高度
     ID：int，格子的编号
+    zone: string, 基于背包区域或者卡纳魔盒
 返回：
     [格子中心x，格子中心y，格子左上角x，格子左上角y]
 */
-getInventorySpaceXY(D3W, D3H, ID){
-    static _firstSpaceUL:=[2753, 747]
+getInventorySpaceXY(D3W, D3H, ID, zone){
     static _spaceSizeInnerW:=64
     static _spaceSizeInnerH:=63
     static _spaceSizeW:=67
     static _spaceSizeH:=66
-    targetColumn:=Mod(ID-1,10)
-    targetRow:=Floor((ID-1)/10)
-    Return [Round(D3W-((3440-_firstSpaceUL[1]-_spaceSizeW*targetColumn-_spaceSizeInnerW/2)*D3H/1440)), Round((_firstSpaceUL[2]+targetRow*_spaceSizeH+_spaceSizeInnerH/2)*D3H/1440)
-    , Round(D3W-((3440-_firstSpaceUL[1]-_spaceSizeW*targetColumn)*D3H/1440)), Round((_firstSpaceUL[2]+targetRow*_spaceSizeH)*D3H/1440)]
+
+    switch zone
+    {
+        case "bag":
+            _firstSpaceUL:=[2753, 747]
+            targetColumn:=Mod(ID-1,10)
+            targetRow:=Floor((ID-1)/10)
+            Return [Round(D3W-((3440-_firstSpaceUL[1]-_spaceSizeW*targetColumn-_spaceSizeInnerW/2)*D3H/1440)), Round((_firstSpaceUL[2]+targetRow*_spaceSizeH+_spaceSizeInnerH/2)*D3H/1440)
+            , Round(D3W-((3440-_firstSpaceUL[1]-_spaceSizeW*targetColumn)*D3H/1440)), Round((_firstSpaceUL[2]+targetRow*_spaceSizeH)*D3H/1440)]
+        case "kanai":
+            _firstSpaceUL:=[242, 503]
+            targetColumn:=Mod(ID-1,3)
+            targetRow:=Floor((ID-1)/3)
+            Return [Round((_firstSpaceUL[1]+_spaceSizeW*targetColumn+_spaceSizeInnerW/2)*D3H/1440), Round((_firstSpaceUL[2]+targetRow*_spaceSizeH+_spaceSizeInnerH/2)*D3H/1440)
+            , Round((_firstSpaceUL[1]+_spaceSizeW*targetColumn)*D3H/1440), Round((_firstSpaceUL[2]+targetRow*_spaceSizeH)*D3H/1440)]
+    }
 }
 
 /*
@@ -1699,13 +1909,14 @@ isGambleOpen(D3W, D3H){
     D3H：int，窗口区域的高度
     ID：int，格子编号
     ckpoints：object，要检查的位置的xy百分比list
+    zone：string，基于背包区域或者卡奈魔盒
 返回：
     Bool
 */
-isInventorySpaceEmpty(D3W, D3H, ID, ckpoints){
+isInventorySpaceEmpty(D3W, D3H, ID, ckpoints, zone){
     static _spaceSizeInnerW:=64
     static _spaceSizeInnerH:=63
-    m:=getInventorySpaceXY(D3W, D3H, ID)
+    m:=getInventorySpaceXY(D3W, D3H, ID, zone)
     for i, p in ckpoints
     {
         xy:=[Round(m[3]+_spaceSizeInnerW*ckpoints[i][1]*D3H/1440), Round(m[4]+_spaceSizeInnerH*ckpoints[i][2]*D3H/1440)]
@@ -1742,12 +1953,12 @@ getGameResulution(ByRef D3W, ByRef D3H){
 /*
 获取卡奈魔盒转化和放入材料按钮位置
 参数：
-    ByRef D3W：分辨率宽
-    ByRef D3H：分辨率高
+    D3W：分辨率宽
+    D3H：分辨率高
 返回：
     [[转化按钮x，转化按钮y]，[放入材料按钮x，放入材料按钮y]]
 */
-getKanaiCubeButtonPos(ByRef D3W, ByRef D3H){
+getKanaiCubeButtonPos(D3W, D3H){
     point1:=[Round(320*D3H/1440),Round(1105*D3H/1440)]
     point2:=[Round(955*D3H/1440),Round(1115*D3H/1440)]
     Return [point1, point2]
@@ -1952,6 +2163,8 @@ Watchdog(wParam, lParam){
             Gui, Font, s11 +cFFFFFF Normal
             GuiControl, Font, TitleBarText
             GuiControl,, TitleBarText, % TITLE
+            GuiControl,, % UIRightButtonID, % "HBITMAP:*" hBMPButtonClose_Normal
+            GuiControl,, % UILeftButtonID, % "HBITMAP:*" hBMPButtonLeft_Normal
             if (hHookMouse){
                 DllCall("UnhookWindowsHookEx", "Uint", hHookMouse)
             }
@@ -2000,53 +2213,128 @@ MouseMove(nCode, wParam, lParam)
         {
             case 0x200:
                 ; 鼠标移动事件
-                If (currentControlUnderMouse=UIHideButtonID)
+                switch currentControlUnderMouse
                 {
-                    if (HideButtonState=0)
-                    {
-                        GuiControl,, % UIHideButtonID, % "HBITMAP:*" hBMPButtonClose_Hover
-                        HideButtonState:=1
-                    }
-                }
-                Else
-                {
-                    if (HideButtonState=1)
-                    {
-                        GuiControl,, % UIHideButtonID, % "HBITMAP:*" hBMPButtonClose_Normal
-                        HideButtonState:=0
-                    }
-                    ; 如果鼠标位于标题栏
-                    if (currentControlUnderMouse=TitleBarID){
+                    case UIRightButtonID:
+                        if (RightButtonState=0)
+                        {
+                            GuiControl,, % UIRightButtonID, % "HBITMAP:*" hBMPButtonClose_Hover
+                            RightButtonState:=1
+                        }
+                    case TitleBarID, TitleBarTextID:
+                        ; 如果鼠标位于标题栏
                         PostMessage, 0xA1, 2,,, A ; 发送拖拽事件
-                    }
+                        if (RightButtonState=1)
+                        {
+                            GuiControl,, % UIRightButtonID, % "HBITMAP:*" hBMPButtonClose_Normal
+                            RightButtonState:=0
+                        }
+                        if (LeftButtonState=1)
+                        {
+                            GuiControl,, % UILeftButtonID, % "HBITMAP:*" hBMPButtonLeft_Normal
+                            LeftButtonState:=0
+                        }
+                    case UILeftButtonID:
+                        if (LeftButtonState=0)
+                        {
+                            GuiControl,, % UILeftButtonID, % "HBITMAP:*" hBMPButtonLeft_Hover
+                            LeftButtonState:=1
+                        }
+                        if (RightButtonState=1)
+                        {
+                            GuiControl,, % UIRightButtonID, % "HBITMAP:*" hBMPButtonClose_Normal
+                            RightButtonState:=0
+                        }
+                    Default:
+                        if (RightButtonState=1)
+                        {
+                            GuiControl,, % UIRightButtonID, % "HBITMAP:*" hBMPButtonClose_Normal
+                            RightButtonState:=0
+                        }
+                        if (LeftButtonState=1)
+                        {
+                            GuiControl,, % UILeftButtonID, % "HBITMAP:*" hBMPButtonLeft_Normal
+                            LeftButtonState:=0
+                        }
                 }
             case 0x201,0x204:
                 ; 左键，右键按下
-                if (currentControlUnderMouse=UIHideButtonID and HideButtonState=1)
+                if (currentControlUnderMouse=UIRightButtonID and RightButtonState=1)
                 {
-                    GuiControl,, % UIHideButtonID, % "HBITMAP:*" hBMPButtonClose_Pressed
-                    HideButtonState:=2
+                    GuiControl,, % UIRightButtonID, % "HBITMAP:*" hBMPButtonClose_Pressed
+                    RightButtonState:=2
+                }
+                if (currentControlUnderMouse=UILeftButtonID and LeftButtonState=1)
+                {
+                    GuiControl,, % UILeftButtonID, % "HBITMAP:*" hBMPButtonLeft_Pressed
+                    LeftButtonState:=2
                 }
             case 0x202,0x205:
                 ; 左键，右键弹起
-                If (currentControlUnderMouse = UIHideButtonID)
+                switch currentControlUnderMouse
                 {
-                    if (wParam=0x202)
-                    {
-                        GuiClose()
-                    }
-                    Else
-                    {
-                        SetTimer, GuiExit, -1
-                    }
-                } else if (HideButtonState=2)
-                {
-                    GuiControl,, % UIHideButtonID, % "HBITMAP:*" hBMPButtonClose_Normal
-                    HideButtonState:=0
+                    case UIRightButtonID:
+                        if (LeftButtonState=2)
+                        {
+                            GuiControl,, % UILeftButtonID, % "HBITMAP:*" hBMPButtonLeft_Normal
+                            LeftButtonState:=0
+                        }
+                        if (wParam=0x202)
+                        {
+                            GuiClose()
+                        }
+                        Else
+                        {
+                            ; 必须使用SetTimer函数另起一“线程”退出程序，直接在Hook Callback函数内退出会引起钩子链断裂，鼠标失去响应。
+                            SetTimer, GuiExit, -1
+                        }
+                    case UILeftButtonID:
+                        showMainWindow(isCompact? MainWindowW:CompactWindowW, MainWindowH, True)
+                        isCompact:=!isCompact
+                        hBMPButtonLeft_Normal := isCompact? hBMPButtonExpand_Normal:hBMPButtonBack_Normal
+                        hBMPButtonLeft_Hover := isCompact? hBMPButtonExpand_Hover:hBMPButtonBack_Hover
+                        hBMPButtonLeft_Pressed := isCompact? hBMPButtonExpand_Pressed:hBMPButtonBack_Pressed
+                        if (RightButtonState=2)
+                        {
+                            GuiControl,, % UIRightButtonID, % "HBITMAP:*" hBMPButtonClose_Normal
+                            RightButtonState:=0
+                        }
+                        if (LeftButtonState=2)
+                        {
+                            GuiControl,, % UILeftButtonID, % "HBITMAP:*" hBMPButtonLeft_Hover
+                            LeftButtonState:=1
+                        }
+                    Default:
+                        if (RightButtonState=2)
+                        {
+                            GuiControl,, % UIRightButtonID, % "HBITMAP:*" hBMPButtonClose_Normal
+                            RightButtonState:=0
+                        }
+                        if (LeftButtonState=2)
+                        {
+                            GuiControl,, % UILeftButtonID, % "HBITMAP:*" hBMPButtonLeft_Normal
+                            LeftButtonState:=0
+                        }
                 }
         }
     }
     Return DllCall("CallNextHookEx", "Ptr", 0, "int", nCode, "Uint", wParam, "Ptr", lParam)
+}
+
+
+showMainWindow(windowSizeW, windowSizeH, _redraw){
+    global
+    Gui Show, w%windowSizeW% h%windowSizeH%
+    GuiControl, Move, UIRightButton, % "x" windowSizeW-31
+    GuiControl, Move, TitleBarText, % "x" (windowSizeW-TitleBarSizeW)/2
+    GuiControl, Move, BorderTop, % "w" windowSizeW
+    GuiControl, Move, BorderBottom, % "y" windowSizeH-1 " w" windowSizeW
+    GuiControl, Move, BorderLeft, % "h" windowSizeH-2
+    GuiControl, Move, BorderRight, % "x" windowSizeW-1 " h" windowSizeH-2 
+    if _redraw {
+        Winset, Redraw
+    }
+    Return
 }
 ; =====================================Subroutines===================================
 spamSkillKey1:
