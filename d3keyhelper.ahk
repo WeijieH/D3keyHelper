@@ -201,34 +201,27 @@ GuiCreate(){
         }
         Gui Add, GroupBox, xm+10 yp+45 w520 h170 section, 额外设置
         Gui Add, Text, xs+20 ys+30, 快速切换至本配置：
-        local pfmd:=others[currentTab].profilemethod
-        Gui Add, DropDownList, x+5 yp-3 w90 AltSubmit Choose%pfmd% vskillset%currentTab%profilekeybindingdropdown gSetProfileKeybinding, 无||鼠标中键||滚轮向上||滚轮向下||侧键1||侧键2||键盘按键
+        Gui Add, DropDownList, % "x+5 yp-3 w90 AltSubmit Choose" others[currentTab].profilemethod " vskillset" currentTab "profilekeybindingdropdown gSetProfileKeybinding", 无||鼠标中键||滚轮向上||滚轮向下||侧键1||侧键2||键盘按键
         Gui Add, Hotkey, x+15 w100 vskillset%currentTab%profilekeybindinghkbox gSetProfileKeybinding, % others[currentTab].profilehotkey
         
-        Gui Add, Text, xs+20 yp+40, 走位辅助：
-        local pfmv:=others[currentTab].movingmethod
-        local pflm:=others[currentTab].lazymode
-        Gui Add, DropDownList, x+5 yp-3 w150 AltSubmit Choose%pfmv% vskillset%currentTab%movingdropdown gSetMovingHelper, 无||强制站立||强制走位（按住不放）||强制走位（连点）
+        Gui Add, Text, xs+20 yp+37, 走位辅助：
+        Gui Add, DropDownList, % "x+5 yp-3 w150 AltSubmit Choose" pfmv:=others[currentTab].movingmethod " vskillset" currentTab "movingdropdown gSetMovingHelper", 无||强制站立||强制走位（按住不放）||强制走位（连点）
         Gui Add, Text, vskillset%currentTab%movingtext x+10 yp+3, 间隔（毫秒）：
         Gui Add, Edit, vskillset%currentTab%movingedit x+5 yp-3 w60 Number
         Gui Add, Updown, vskillset%currentTab%movingupdown Range20-3000, % others[currentTab].movinginterval
-        
-        local pfusq:=others[currentTab].useskillqueue
+
         Gui Add, Text, xs+20 yp+40, 宏启动方式：
-        Gui Add, DropDownList, x+5 yp-3 w90 AltSubmit Choose%pflm% hwndprofileStartModeDropdown%currentTab%ID vskillset%currentTab%profilestartmodedropdown gSetStartMode, 懒人模式||仅按下时||仅按一次
+        Gui Add, DropDownList, % "x+5 yp-3 w90 AltSubmit Choose" others[currentTab].lazymode " hwndprofileStartModeDropdown" currentTab "ID vskillset" currentTab "profilestartmodedropdown gSetStartMode", 懒人模式||仅按下时||仅按一次
         AddToolTip(profileStartModeDropdown%currentTab%ID, "懒人模式：按下战斗宏快捷键时开启宏，再按一下关闭宏`n仅按下时：仅在战斗宏快捷键被压下时启动宏`n仅按一次：按下战斗宏快捷键即按下所有“按住不放”的技能键一次")
-        Gui Add, Checkbox, x+20 yp+3 Checked%pfusq% hwnduseskillqueueckbox%currentTab%ID vskillset%currentTab%useskillqueueckbox gSetSkillQueue, 使用单线程按键队列（毫秒）：
+        Gui Add, Checkbox, % "x+20 yp+3 Checked" others[currentTab].useskillqueue " hwnduseskillqueueckbox" currentTab "ID vskillset" currentTab "useskillqueueckbox gSetSkillQueue", 使用单线程按键队列（毫秒）：
         AddToolTip(useskillqueueckbox%currentTab%ID, "开启后按键不会被立刻按下而是存储至一个按键队列中`n连点会使技能加入队列头部，保持buff会使技能加入队列尾部")
         Gui Add, Edit, vskillset%currentTab%useskillqueueedit hwnduseskillqueueedit%currentTab%ID x+0 yp-3 w50 Number
         Gui Add, Updown, vskillset%currentTab%useskillqueueupdown Range30-1000, % others[currentTab].useskillqueueinterval
         AddToolTip(useskillqueueedit%currentTab%ID, "按键队列中的连点按键会以此间隔一一发送至游戏窗口")
 
-        local pfqp:=others[currentTab].enablequickpause
-        local pfqpm1:=others[currentTab].quickpausemethod1
-        local pfqpm2:=others[currentTab].quickpausemethod2
-        Gui Add, Checkbox, xs+20 yp+40 Checked%pfqp% vskillset%currentTab%clickpauseckbox gSetQuickPause, 快速暂停：
-        Gui Add, DropDownList, x+0 yp-3 w50 AltSubmit Choose%pfqpm1% vskillset%currentTab%clickpausedropdown1 gSetQuickPause, 双击||单击
-        Gui Add, DropDownList, x+5 yp w100 AltSubmit Choose%pfqpm2% vskillset%currentTab%clickpausedropdown2 gSetQuickPause, 鼠标左键||鼠标右键||鼠标中键||侧键1||侧键2
+        Gui Add, Checkbox, % "xs+20 yp+40 Checked" others[currentTab].enablequickpause " vskillset" currentTab "clickpauseckbox gSetQuickPause", 快速暂停：
+        Gui Add, DropDownList, % "x+0 yp-3 w50 AltSubmit Choose" others[currentTab].quickpausemethod1 " vskillset" currentTab "clickpausedropdown1 gSetQuickPause", 双击||单击
+        Gui Add, DropDownList, % "x+5 yp w100 AltSubmit Choose" others[currentTab].quickpausemethod2 " vskillset" currentTab "clickpausedropdown2 gSetQuickPause", 鼠标左键||鼠标右键||鼠标中键||侧键1||侧键2
         Gui Add, Text, x+5 yp+3 vskillset%currentTab%clickpausetext1, 则暂停压键
         Gui Add, Edit, vskillset%currentTab%clickpauseedit x+5 yp-3 w60 Number
         Gui Add, Updown, vskillset%currentTab%clickpauseupdown Range500-5000, % others[currentTab].quickpausedelay
@@ -327,6 +320,7 @@ StartUp(){
     SetCustomStanding()
     SetCustomMoving()
     SetSkillQueue()
+    SetStartMode()
 
     DllCall("RegisterShellHookWindow", "Ptr", A_ScriptHwnd)
     hHookMouse:=0
@@ -2351,6 +2345,7 @@ SetTabFocus:
     GuiControl, , StatuesSkillsetText, % tabsarray[ActiveTab]
     currentProfile:=ActiveTab
     Gosub, SetQuickPause
+    SetStartMode()
 Return
 
 ; 设置快速暂停相关的快捷键和控件动画
@@ -2466,7 +2461,7 @@ SwitchProfile:
         {
             SoundBeep, 750, 250
         }
-        Gosub, SetQuickPause
+        Gosub, StopMarco
     }
 Return
 
