@@ -2216,55 +2216,52 @@ MouseMove(nCode, wParam, lParam)
                 switch currentControlUnderMouse
                 {
                     case UIRightButtonID:
-                        if (RightButtonState=0)
+                        if (RightButtonState!=1)
                         {
                             GuiControl,, % UIRightButtonID, % "HBITMAP:*" hBMPButtonClose_Hover
                             RightButtonState:=1
                         }
-                    case TitleBarID, TitleBarTextID:
-                        ; 如果鼠标位于标题栏
-                        PostMessage, 0xA1, 2,,, A ; 发送拖拽事件
-                        if (RightButtonState=1)
-                        {
-                            GuiControl,, % UIRightButtonID, % "HBITMAP:*" hBMPButtonClose_Normal
-                            RightButtonState:=0
-                        }
-                        if (LeftButtonState=1)
+                        if (LeftButtonState!=0)
                         {
                             GuiControl,, % UILeftButtonID, % "HBITMAP:*" hBMPButtonLeft_Normal
                             LeftButtonState:=0
                         }
                     case UILeftButtonID:
-                        if (LeftButtonState=0)
+                        if (LeftButtonState!=1)
                         {
                             GuiControl,, % UILeftButtonID, % "HBITMAP:*" hBMPButtonLeft_Hover
                             LeftButtonState:=1
                         }
-                        if (RightButtonState=1)
+                        if (RightButtonState!=0)
                         {
                             GuiControl,, % UIRightButtonID, % "HBITMAP:*" hBMPButtonClose_Normal
                             RightButtonState:=0
                         }
                     Default:
-                        if (RightButtonState=1)
+                        if (RightButtonState!=0)
                         {
                             GuiControl,, % UIRightButtonID, % "HBITMAP:*" hBMPButtonClose_Normal
                             RightButtonState:=0
                         }
-                        if (LeftButtonState=1)
+                        if (LeftButtonState!=0)
                         {
                             GuiControl,, % UILeftButtonID, % "HBITMAP:*" hBMPButtonLeft_Normal
                             LeftButtonState:=0
                         }
+                        if (currentControlUnderMouse=TitleBarID or currentControlUnderMouse=TitleBarTextID)
+                        {
+                            ; 如果鼠标位于标题栏
+                            PostMessage, 0xA1, 2,,, A ; 发送拖拽事件
+                        }
                 }
             case 0x201,0x204:
                 ; 左键，右键按下
-                if (currentControlUnderMouse=UIRightButtonID and RightButtonState=1)
+                if (currentControlUnderMouse=UIRightButtonID)
                 {
                     GuiControl,, % UIRightButtonID, % "HBITMAP:*" hBMPButtonClose_Pressed
                     RightButtonState:=2
                 }
-                if (currentControlUnderMouse=UILeftButtonID and LeftButtonState=1)
+                if (currentControlUnderMouse=UILeftButtonID)
                 {
                     GuiControl,, % UILeftButtonID, % "HBITMAP:*" hBMPButtonLeft_Pressed
                     LeftButtonState:=2
@@ -2274,11 +2271,6 @@ MouseMove(nCode, wParam, lParam)
                 switch currentControlUnderMouse
                 {
                     case UIRightButtonID:
-                        if (LeftButtonState=2)
-                        {
-                            GuiControl,, % UILeftButtonID, % "HBITMAP:*" hBMPButtonLeft_Normal
-                            LeftButtonState:=0
-                        }
                         if (wParam=0x202)
                         {
                             GuiClose()
@@ -2294,23 +2286,18 @@ MouseMove(nCode, wParam, lParam)
                         hBMPButtonLeft_Normal := isCompact? hBMPButtonExpand_Normal:hBMPButtonBack_Normal
                         hBMPButtonLeft_Hover := isCompact? hBMPButtonExpand_Hover:hBMPButtonBack_Hover
                         hBMPButtonLeft_Pressed := isCompact? hBMPButtonExpand_Pressed:hBMPButtonBack_Pressed
-                        if (RightButtonState=2)
-                        {
-                            GuiControl,, % UIRightButtonID, % "HBITMAP:*" hBMPButtonClose_Normal
-                            RightButtonState:=0
-                        }
-                        if (LeftButtonState=2)
+                        if (LeftButtonState!=1)
                         {
                             GuiControl,, % UILeftButtonID, % "HBITMAP:*" hBMPButtonLeft_Hover
                             LeftButtonState:=1
                         }
                     Default:
-                        if (RightButtonState=2)
+                        if (RightButtonState!=0)
                         {
                             GuiControl,, % UIRightButtonID, % "HBITMAP:*" hBMPButtonClose_Normal
                             RightButtonState:=0
                         }
-                        if (LeftButtonState=2)
+                        if (LeftButtonState!=0)
                         {
                             GuiControl,, % UILeftButtonID, % "HBITMAP:*" hBMPButtonLeft_Normal
                             LeftButtonState:=0
@@ -2321,18 +2308,26 @@ MouseMove(nCode, wParam, lParam)
     Return DllCall("CallNextHookEx", "Ptr", 0, "int", nCode, "Uint", wParam, "Ptr", lParam)
 }
 
-
+/*
+以指定大小显示主窗口
+参数：
+    windowSizeW：主窗口宽
+    windowSizeH：主窗口高
+    _redraw：是否重绘整个窗体
+返回：
+    无
+*/
 showMainWindow(windowSizeW, windowSizeH, _redraw){
     global
     Gui Show, w%windowSizeW% h%windowSizeH%
-    GuiControl, Move, UIRightButton, % "x" windowSizeW-31
+    GuiControl, Move, UIRightButton, % "x" windowSizeW-30-1
     GuiControl, Move, TitleBarText, % "x" (windowSizeW-TitleBarSizeW)/2
     GuiControl, Move, BorderTop, % "w" windowSizeW
     GuiControl, Move, BorderBottom, % "y" windowSizeH-1 " w" windowSizeW
     GuiControl, Move, BorderLeft, % "h" windowSizeH-2
-    GuiControl, Move, BorderRight, % "x" windowSizeW-1 " h" windowSizeH-2 
+    GuiControl, Move, BorderRight, % "x" windowSizeW-1 " h" windowSizeH-2
     if _redraw {
-        Winset, Redraw
+        WinSet, Redraw,, A
     }
     Return
 }
