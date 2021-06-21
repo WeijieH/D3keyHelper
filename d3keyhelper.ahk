@@ -25,7 +25,7 @@ CoordMode, Pixel, Client
 CoordMode, Mouse, Client
 Process, Priority, , High
 
-VERSION:=210619
+VERSION:=210621
 TITLE:=Format("暗黑3技能连点器 v1.3.{:d}   by Oldsand", VERSION)
 MainWindowW:=900
 MainWindowH:=550
@@ -269,7 +269,8 @@ GuiCreate(){
 
     Gui Add, CheckBox, % "xs+20 yp+37 hwndextraUpgradeHelperCkboxID vextraUpgradeHelperCkbox Checked" generals.enableupgradehelper, 魔盒升级助手
     AddToolTip(extraUpgradeHelperCkboxID, "当魔盒打开且在升级页面时，按下助手快捷键即自动升级所有非安全格内的稀有（黄色）装备")
-    ; Gui Add, CheckBox, % "x+5 yp+0 hwndextraUpgradeHelperInventoryOnlyID vextraUpgradeHelperInventoryOnlyCkbox Checked" generals.reforgehelperinventoryonly, 连续升级失败时停止宏
+    Gui Add, CheckBox, % "x+40 yp+0 hwndextraConvertHelperCkboxID vextraConvertHelperCkbox Checked" generals.enableconverthelper, 魔盒转化助手
+    AddToolTip(extraConvertHelperCkboxID, "当魔盒打开且在转化材料页面时，按下助手快捷键即自动使用所有非安全格内的装备进行材料转化")
 
 
     Gui Add, CheckBox, % "xs+20 yp+70 vextraSoundonProfileSwitch Checked" generals.enablesoundplay, 使用快捷键切换配置成功时播放声音
@@ -381,6 +382,7 @@ ReadCfgFile(cfgFileName, ByRef tabs, ByRef hotkeys, ByRef actions, ByRef interva
         IniRead, enablesalvagehelper, %cfgFileName%, General, enablesalvagehelper, 0
         IniRead, salvagehelpermethod, %cfgFileName%, General, salvagehelpermethod, 1
         IniRead, enablereforgehelper, %cfgFileName%, General, enablereforgehelper, 0
+        IniRead, enableconverthelper, %cfgFileName%, General, enableconverthelper, 0
         IniRead, reforgehelperinventoryonly, %cfgFileName%, General, reforgehelperinventoryonly, 1
         IniRead, enableupgradehelper, %cfgFileName%, General, enableupgradehelper, 0
         IniRead, enablesmartpause, %cfgFileName%, General, enablesmartpause, 0
@@ -404,7 +406,7 @@ ReadCfgFile(cfgFileName, ByRef tabs, ByRef hotkeys, ByRef actions, ByRef interva
         , "enablereforgehelper":enablereforgehelper, "reforgehelperinventoryonly":reforgehelperinventoryonly
         , "enablegamblehelper":enablegamblehelper, "gamblehelpertimes":gamblehelpertimes
         , "startmethod":startmethod, "starthotkey":starthotkey, "enableupgradehelper":enableupgradehelper
-        , "enablesmartpause":enablesmartpause, "enablesoundplay":enablesoundplay
+        , "enablesmartpause":enablesmartpause, "enablesoundplay":enablesoundplay, "enableconverthelper":enableconverthelper
         , "custommoving":custommoving, "custommovinghk":custommovinghk, "customstanding":customstanding, "customstandinghk":customstandinghk
         , "safezone":safezone, "helperspeed":helperspeed, "gamegamma":gamegamma, "sendmode":sendmode, "buffpercent":buffpercent
         , "enableloothelper":enableloothelper, "loothelpertimes":loothelpertimes, "compactmode":compactmode}
@@ -479,7 +481,7 @@ ReadCfgFile(cfgFileName, ByRef tabs, ByRef hotkeys, ByRef actions, ByRef interva
         }
         generals:={"enablegamblehelper":1 ,"gamblehelpertimes":15, "oldsandhelperhk":"F5"
         , "startmethod":7, "starthotkey":"F2", "enablesmartpause":1, "salvagehelpermethod":1
-        , "oldsandhelpermethod":7, "enablesalvagehelper":0, "enablesoundplay":1
+        , "oldsandhelpermethod":7, "enablesalvagehelper":0, "enablesoundplay":1, "enableconverthelper":0
         , "enablereforgehelper":0, "reforgehelperinventoryonly":1, "enableupgradehelper":0
         , "custommoving":0, "custommovinghk":"e", "customstanding":0, "customstandinghk":"LShift"
         , "safezone":"61,62,63", "helperspeed":3, "gamegamma":1.000000, "sendmode":"Event"
@@ -512,6 +514,7 @@ SaveCfgFile(cfgFileName, tabs, currentProfile, safezone, VERSION){
     GuiControlGet, extraSalvageHelperCkbox
     GuiControlGet, extraSalvageHelperDropdown
     GuiControlGet, extraReforgeHelperCkbox
+    GuiControlGet, extraConvertHelperCkbox
     GuiControlGet, extraReforgeHelperInventoryOnlyCkbox
     GuiControlGet, extraUpgradeHelperCkbox
     GuiControlGet, extraSoundonProfileSwitch
@@ -531,6 +534,7 @@ SaveCfgFile(cfgFileName, tabs, currentProfile, safezone, VERSION){
     IniWrite, %extraReforgeHelperCkbox%, %cfgFileName%, General, enablereforgehelper
     IniWrite, %extraReforgeHelperInventoryOnlyCkbox%, %cfgFileName%, General, reforgehelperinventoryonly
     IniWrite, %extraUpgradeHelperCkbox%, %cfgFileName%, General, enableupgradehelper
+    IniWrite, %extraConvertHelperCkbox%, %cfgFileName%, General, enableconverthelper
     IniWrite, %extraLootHelperCkbox%, %cfgFileName%, General, enableloothelper
     IniWrite, %extraLootHelperUpdown%, %cfgFileName%, General, loothelpertimes
     IniWrite, %extraSoundonProfileSwitch%, %cfgFileName%, General, enablesoundplay
@@ -688,8 +692,7 @@ skillKey(currentProfile, nskill, D3W, D3H, forceStandingKey, useSkillQueue){
         case 4:
             ; 获得对应按键buff条最左侧坐标
             magicXY:=getSkillButtonBuffPos(D3W, D3H, nskill, buffpercent)
-            PixelGetColor, cpixel, magicXY[1], magicXY[2], rgb
-            crgb:=splitRGB(cpixel)
+            crgb:=getPixelRGB(magicXY)
             ; 具体判断是否需要补buff
             If (!vPausing and crgb[1]+crgb[2]+crgb[3] < 210)
             {
@@ -788,6 +791,7 @@ oldsandHelper(){
     GuiControlGet, extraSalvageHelperCkbox
     GuiControlGet, extraReforgeHelperCkbox
     GuiControlGet, extraUpgradeHelperCkbox
+    GuiControlGet, extraConvertHelperCkbox
     GuiControlGet, extraSalvageHelperDropdown
     GuiControlGet, helperAnimationSpeedDropdown
     MouseGetPos, xpos, ypos ; 当前鼠标位置，用于宏结束后返回
@@ -851,12 +855,9 @@ oldsandHelper(){
                     Click, Right
                     Sleep, helperDelay
                     p:=getSalvageIconXY(D3W, D3H, "edge")
-                    PixelGetColor, cpixel, p[2][1], p[2][2], rgb
-                    r[3]:=splitRGB(cpixel)
-                    PixelGetColor, cpixel, p[3][1], p[3][2], rgb
-                    r[4]:=splitRGB(cpixel)
-                    PixelGetColor, cpixel, p[4][1], p[4][2], rgb
-                    r[5]:=splitRGB(cpixel)
+                    r[3]:=getPixelRGB(p[2])
+                    r[4]:=getPixelRGB(p[3])
+                    r[5]:=getPixelRGB(p[4])
                 }
                 ; [黄分解条件，蓝分解条件，白/灰分解条件]
                 for i, _c in [r[5][1]>50, r[4][3]>65, r[3][1]>65]
@@ -917,7 +918,15 @@ oldsandHelper(){
             ; 一键升级
                 if extraUpgradeHelperCkbox
                 {
-                    fn:=Func("oneButtonUpgradeHelper").Bind(D3W, D3H, xpos, ypos)
+                    fn:=Func("oneButtonUpgradeConvertHelper").Bind(D3W, D3H, xpos, ypos)
+                    SetTimer, %fn%, -1
+                    Return
+                }
+            case 3:
+            ; 一键转化
+                if extraConvertHelperCkbox
+                {
+                    fn:=Func("oneButtonUpgradeConvertHelper").Bind(D3W, D3H, xpos, ypos)
                     SetTimer, %fn%, -1
                     Return
                 }
@@ -966,7 +975,7 @@ oneButtonReforgeHelper(D3W, D3H, xpos, ypos){
 }
 
 /*
-负责一键升级稀有
+负责一键升级稀有或转化材料
 参数：
     D3W：int，窗口区域的宽度
     D3H：int，窗口区域的高度
@@ -975,7 +984,7 @@ oneButtonReforgeHelper(D3W, D3H, xpos, ypos){
 返回：
     无
 */
-oneButtonUpgradeHelper(D3W, D3H, xpos, ypos)
+oneButtonUpgradeConvertHelper(D3W, D3H, xpos, ypos)
 {
     local
     Global helperBreak, helperRunning, helperDelay, helperBagZone, mouseDelay, helperKanaiZone
@@ -1017,8 +1026,7 @@ oneButtonUpgradeHelper(D3W, D3H, xpos, ypos)
                 {
                     ; 当前装备可能是占用2个格子的大型装备，提前取出下方格子的中心像素
                     pLargeItem:=True
-                    PixelGetColor, cpixel, m2[1], m2[2], RGB
-                    cd_before:=splitRGB(cpixel)
+                    cd_before:=getPixelRGB(m2)
                 }
                 Sleep, helperDelay*2
                 ; 点击添加材料按钮
@@ -1030,16 +1038,14 @@ oneButtonUpgradeHelper(D3W, D3H, xpos, ypos)
                 Click
                 ; 等待动画显示，然后取色
                 Sleep, 700
-                PixelGetColor, cpixel, point_kanai[1], point_kanai[2], RGB
-                c:=splitRGB(cpixel)
+                c:=getPixelRGB(point_kanai)
                 If (c[1]+c[2]+c[3]>400)
                 {
                     ; 取色点变亮，转化成功
                     if (pLargeItem)
                     {
                         ; 当前装备可能是大型装备，检查下方格子中心像素有没有一起变色
-                        PixelGetColor, cpixel, m2[1], m2[2], RGB
-                        cd_after:=splitRGB(cpixel)
+                        cd_after:=getPixelRGB(m2)
                         if !(abs(cd_before[1]-cd_after[1])<=3 and abs(cd_before[2]-cd_after[2]<=3) and abs(cd_before[3]-cd_after[3])<=3)
                         {
                             ; 如果变色，即当前装备是大型装备，标记下方格子未非装备格
@@ -1089,7 +1095,7 @@ gambleHelper(){
             Break
         }
         Send {RButton}
-        sleep Min(helperDelay*0.5, 100)
+        Sleep, Min(helperDelay*0.5, 100)
     }
     helperRunning:=False
     Return
@@ -1192,12 +1198,9 @@ oneButtonSalvageHelper(D3W, D3H, xpos, ypos){
                 {
                     Sleep, Min(helperDelay*2, 300)  ; 等待边框显示完毕
                     ; 获取三个位于边框上的点颜色
-                    PixelGetColor, cpixel, Round(m[3]-1-10*D3H/1440), m[2], RGB
-                    c1:=splitRGB(cpixel)
-                    PixelGetColor, cpixel, Round(m[3]-10*D3H/1440), m[2], RGB
-                    c2:=splitRGB(cpixel)
-                    PixelGetColor, cpixel, Round(m[3]+1-10*D3H/1440), m[2], RGB
-                    c3:=splitRGB(cpixel)
+                    c1:=getPixelRGB([Round(m[3]-1-10*D3H/1440), m[2]])
+                    c2:=getPixelRGB([Round(m[3]-10*D3H/1440), m[2]])
+                    c3:=getPixelRGB([Round(m[3]+1-10*D3H/1440), m[2]])
                     c:=[Max(c1[1],c2[1],c3[1]),Max(c1[2],c2[2],c3[2]),Max(c1[3],c2[3],c3[3])]
                     if (c[1]>100 or c[3]<20) {
                         ; 装备是太古或者远古
@@ -1660,10 +1663,8 @@ isDialogBoXOnScreen(D3W, D3H){
     ; 2点取色判断
     point1:=[D3W/2-(3440/2-1655)*D3H/1440, 500*D3H/1440]
     point2:=[D3W/2+(3440/2-1800)*D3H/1440, 500*D3H/1440]
-    PixelGetColor, cpixel, Round(point1[1]), Round(point1[2]), rgb
-    c1:=splitRGB(cpixel)
-    PixelGetColor, cpixel, Round(point2[1]), Round(point2[2]), rgb
-    c2:=splitRGB(cpixel)
+    c1:=getPixelRGB(point1)
+    c2:=getPixelRGB(point2)
     if (c1[1]>c1[2] and c1[2]>c1[3] and c1[3]<5 and c1[2]<15 and c1[1]>25 and c2[1]>c2[2] and c2[2]>c2[3] and c2[3]<5 and c2[2]<15 and c2[1]>25)
     {
         Return True
@@ -1700,12 +1701,9 @@ isRedXonScreen(D3W, D3H, position){
             leftPoint:=[Round(D3W-((3440-_centerWhiteR[1]-_XsizeOutside/2)*D3H/1440)), Round(_centerWhiteR[2]*D3H/1440)]
     }
     ; 3点取色判断
-    PixelGetColor, cpixel, centerPoint[1], centerPoint[2], rgb
-    centerrgb:=splitRGB(cpixel)
-    PixelGetColor, cpixel, upPoint[1], upPoint[2], rgb
-    uprgb:=splitRGB(cpixel)
-    PixelGetColor, cpixel, leftPoint[1], leftPoint[2], rgb
-    leftrgb:=splitRGB(cpixel)
+    centerrgb:=getPixelRGB(centerPoint)
+    uprgb:=getPixelRGB(upPoint)
+    leftrgb:=getPixelRGB(leftPoint)
     if (centerrgb[1]+centerrgb[2]>370 and uprgb[3]<5 and uprgb[1]>40 and leftrgb[1]>leftrgb[2] and leftrgb[1]>leftrgb[3])
     {
         Return True
@@ -1760,28 +1758,16 @@ getInventorySpaceXY(D3W, D3H, ID, zone){
     [2, 大拆解按钮边缘坐标rgb, 白色解按钮边缘坐标rgb, 蓝色解按钮边缘坐标rgb, 黄色解按钮边缘坐标rgb]：如果铁匠开启且同时在拆解页面
 */
 isSalvagePageOpen(D3W, D3H){
-    point1:=[Round(321*D3H/1440),Round(86*D3H/1440)]
-    point2:=[Round(351*D3H/1440),Round(107*D3H/1440)]
-    point3:=[Round(388*D3H/1440),Round(86*D3H/1440)]
-    point4:=[Round(673*D3H/1440),Round(1040*D3H/1440)]
-    PixelGetColor, cpixel, point1[1], point1[2], rgb
-    c1:=splitRGB(cpixel)
-    PixelGetColor, cpixel, point2[1], point2[2], rgb
-    c2:=splitRGB(cpixel)
-    PixelGetColor, cpixel, point3[1], point3[2], rgb
-    c3:=splitRGB(cpixel)
-    PixelGetColor, cpixel, point4[1], point4[2], rgb
-    c4:=splitRGB(cpixel)
+    c1:=getPixelRGB([Round(321*D3H/1440),Round(86*D3H/1440)])
+    c2:=getPixelRGB([Round(351*D3H/1440),Round(107*D3H/1440)])
+    c3:=getPixelRGB([Round(388*D3H/1440),Round(86*D3H/1440)])
+    c4:=getPixelRGB([Round(673*D3H/1440),Round(1040*D3H/1440)])
     if (c1[3]>c1[2] and c1[2]>c1[1] and c1[3]>110 and c3[3]>c3[2] and c3[2]>c3[1] and c3[3]>110 and c2[1]+c2[2]>350 and c4[1]>50 and c4[2]<15 and c4[3]<15 and isRedXonScreen(D3W, D3H, "left")){
         p:=getSalvageIconXY(D3W, D3H, "edge")
-        PixelGetColor, cpixel, p[1][1], p[1][2], rgb
-        cLeg:=splitRGB(cpixel)
-        PixelGetColor, cpixel, p[2][1], p[2][2], rgb
-        cWhite:=splitRGB(cpixel)
-        PixelGetColor, cpixel, p[3][1], p[3][2], rgb
-        cBlue:=splitRGB(cpixel)
-        PixelGetColor, cpixel, p[4][1], p[4][2], rgb
-        cRare:=splitRGB(cpixel)
+        cLeg:=getPixelRGB(p[1])
+        cWhite:=getPixelRGB(p[2])
+        cBlue:=getPixelRGB(p[3])
+        cRare:=getPixelRGB(p[4])
         if (cBlue[3]>cBlue[2] and cBlue[2]>cBlue[1] and cRare[3]<20 and cRare[1]>cRare[2] and cRare[2]>cRare[3]) {
             Return [2, cLeg, cWhite, cBlue, cRare]
         } Else {
@@ -1803,43 +1789,34 @@ isSalvagePageOpen(D3W, D3H){
     1：卡奈魔盒开启但页面未知
     2：卡奈魔盒开启，且开启了重铸界面
     3：卡奈魔盒开启，且开启了升级界面
+    4：卡奈魔盒开启，且开启了材料转化界面
 */
 isKanaiCubeOpen(D3W, D3H){
-    point1:=[Round(353*D3H/1440),Round(81*D3H/1440)]
-    point2:=[Round(353*D3H/1440),Round(100*D3H/1440)]
-    point3:=[Round(335*D3H/1440),Round(66*D3H/1440)]
-    point4:=[Round(405*D3H/1440),Round(106*D3H/1440)]
-    PixelGetColor, cpixel, point1[1], point1[2], rgb
-    c1:=splitRGB(cpixel)
-    PixelGetColor, cpixel, point2[1], point2[2], rgb
-    c2:=splitRGB(cpixel)
-    PixelGetColor, cpixel, point3[1], point3[2], rgb
-    c3:=splitRGB(cpixel)
-    PixelGetColor, cpixel, point4[1], point4[2], rgb
-    c4:=splitRGB(cpixel)
+    c1:=getPixelRGB([Round(353*D3H/1440),Round(81*D3H/1440)])
+    c2:=getPixelRGB([Round(353*D3H/1440),Round(100*D3H/1440)])
+    c3:=getPixelRGB([Round(335*D3H/1440),Round(66*D3H/1440)])
+    c4:=getPixelRGB([Round(405*D3H/1440),Round(106*D3H/1440)])
 
     if (c1[1]>c1[2] and c2[1]+c2[2]+c2[3]<20 and c3[1]>c3[3] and c3[1]>c3[2] and c4[3]>c4[2] and c4[2]>c4[1]){
-        p1:=[Round(788*D3H/1440),Round(428*D3H/1440)]
-        p2:=[Round(810*D3H/1440),Round(429*D3H/1440)]
-        PixelGetColor, cpixel, p1[1], p1[2], rgb
-        cc1:=splitRGB(cpixel)
-        PixelGetColor, cpixel, p2[1], p2[2], rgb
-        cc2:=splitRGB(cpixel)
+        cc1:=getPixelRGB([Round(788*D3H/1440),Round(428*D3H/1440)])
+        cc2:=getPixelRGB([Round(810*D3H/1440),Round(429*D3H/1440)])
         if (cc1[3]>230 and cc2[3]>230 and cc1[3]>cc1[2] and cc2[3]>cc2[2] and cc1[2]>cc1[1] and cc2[2]>cc2[1])
         {
             Return 2
         }
         else
         {
-            p1:=[Round(799*D3H/1440),Round(406*D3H/1440)]
-            p2:=[Round(795*D3H/1440),Round(592*D3H/1440)]
-            PixelGetColor, cpixel, p1[1], p1[2], rgb
-            cc1:=splitRGB(cpixel)
-            PixelGetColor, cpixel, p2[1], p2[2], rgb
-            cc2:=splitRGB(cpixel)
+            cc1:=getPixelRGB([Round(799*D3H/1440),Round(406*D3H/1440)])
+            cc2:=getPixelRGB([Round(795*D3H/1440),Round(592*D3H/1440)])
             if (cc1[1]+cc1[2]+cc1[3]>550 and cc1[1]>cc1[3] and cc2[1]+cc2[2]>400 and cc2[1]>cc2[3])
             {
                 Return 3
+            }
+
+            cc3:=getPixelRGB([Round(799*D3H/1440),Round(365*D3H/1440)])
+            if (cc3[1]+cc2[2]+cc3[3]>600 and cc3[1]>cc3[2] and and cc3[2]>cc3[3] and cc3[3]>140)
+            {
+                Return 4
             }
         }
         Return 1
@@ -1885,18 +1862,10 @@ getSalvageIconXY(D3W, D3H, c){
     Bool
 */
 isGambleOpen(D3W, D3H){
-    point1:=[Round(320*D3H/1440),Round(96*D3H/1440)]
-    point2:=[Round(351*D3H/1440),Round(100*D3H/1440)]
-    point4:=[Round(194*D3H/1440),Round(67*D3H/1440)]
-    point5:=[Round(147*D3H/1440),Round(94*D3H/1440)]
-    PixelGetColor, cpixel, point1[1], point1[2], rgb
-    c1:=splitRGB(cpixel)
-    PixelGetColor, cpixel, point2[1], point2[2], rgb
-    c2:=splitRGB(cpixel)
-    PixelGetColor, cpixel, point4[1], point4[2], rgb
-    c4:=splitRGB(cpixel)
-    PixelGetColor, cpixel, point5[1], point5[2], rgb
-    c5:=splitRGB(cpixel)
+    c1:=getPixelRGB([Round(320*D3H/1440),Round(96*D3H/1440)])
+    c2:=getPixelRGB([Round(351*D3H/1440),Round(100*D3H/1440)])
+    c4:=getPixelRGB([Round(194*D3H/1440),Round(67*D3H/1440)])
+    c5:=getPixelRGB([Round(147*D3H/1440),Round(94*D3H/1440)])
     if (c1[3]>c1[1] and c1[1]>c1[2] and c1[3]>130 and c2[1]+c2[2]>330 and c4[1]+c4[2]+c4[3]+c5[1]+c5[2]+c5[3]<10){
         Return True
     }
@@ -1923,8 +1892,7 @@ isInventorySpaceEmpty(D3W, D3H, ID, ckpoints, zone){
     for i, p in ckpoints
     {
         xy:=[Round(m[3]+_spaceSizeInnerW*ckpoints[i][1]*D3H/1440), Round(m[4]+_spaceSizeInnerH*ckpoints[i][2]*D3H/1440)]
-        PixelGetColor, cpixel, xy[1], xy[2], rgb
-        c:=splitRGB(cpixel)
+        c:=getPixelRGB(xy)
         if !(c[1]<22 and c[2]<20 and c[3]<15 and c[1]>c[3] and c[2]>c[3])
         {
             Return False
@@ -1965,6 +1933,18 @@ getKanaiCubeButtonPos(D3W, D3H){
     point1:=[Round(320*D3H/1440),Round(1105*D3H/1440)]
     point2:=[Round(955*D3H/1440),Round(1115*D3H/1440)]
     Return [point1, point2]
+}
+
+/*
+获取指定像素点的RGB值
+参数：
+    point：点坐标
+返回：
+    [R，G，B]
+*/
+getPixelRGB(point){
+    PixelGetColor, cpixel, point[1], point[2], rgb
+    Return splitRGB(cpixel)
 }
 
 /*
