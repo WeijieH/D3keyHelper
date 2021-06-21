@@ -922,7 +922,7 @@ oldsandHelper(){
                     SetTimer, %fn%, -1
                     Return
                 }
-            case 3:
+            case 4:
             ; 一键转化
                 if extraConvertHelperCkbox
                 {
@@ -1814,7 +1814,7 @@ isKanaiCubeOpen(D3W, D3H){
             }
 
             cc3:=getPixelRGB([Round(799*D3H/1440),Round(365*D3H/1440)])
-            if (cc3[1]+cc2[2]+cc3[3]>600 and cc3[1]>cc3[2] and and cc3[2]>cc3[3] and cc3[3]>140)
+            if (cc3[1]+cc3[2]+cc3[3]>600 and cc3[1]>cc3[2] and cc3[2]>cc3[3] and cc3[3]>140 and cc3[3]<180)
             {
                 Return 4
             }
