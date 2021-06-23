@@ -967,6 +967,12 @@ oneButtonReforgeHelper(D3W, D3H, xpos, ypos){
         Sleep, helperDelay
         MouseMove, kanai[1][1], kanai[1][2]
         Click
+        Sleep, helperDelay
+        MouseMove, kanai[3][1], kanai[3][2]
+        Click
+        Sleep, helperDelay
+        MouseMove, kanai[4][1], kanai[4][2]
+        Click
         ; 鼠标回到原位置
         MouseMove, xpos, ypos
     }
@@ -1927,12 +1933,14 @@ getGameResulution(ByRef D3W, ByRef D3H){
     D3W：分辨率宽
     D3H：分辨率高
 返回：
-    [[转化按钮x，转化按钮y]，[放入材料按钮x，放入材料按钮y]]
+    [转化按钮xy，放入材料按钮xy，上一页xy，下一页xy]
 */
 getKanaiCubeButtonPos(D3W, D3H){
     point1:=[Round(320*D3H/1440),Round(1105*D3H/1440)]
     point2:=[Round(955*D3H/1440),Round(1115*D3H/1440)]
-    Return [point1, point2]
+    point3:=[Round(777*D3H/1440),Round(1117*D3H/1440)]
+    point4:=[Round(1135*D3H/1440),Round(1117*D3H/1440)]
+    Return [point1, point2, point3, point4]
 }
 
 /*
