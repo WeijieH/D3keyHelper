@@ -29,7 +29,7 @@ VERSION:=210625
 TITLE:=Format("暗黑3技能连点器 v1.3.{:d}   by Oldsand", VERSION)
 MainWindowW:=900
 MainWindowH:=550
-CompactWindowW:=550
+CompactWindowW:=551
 TitleBarHight:=25
 ;@Ahk2Exe-Obey U_Y, U_Y := A_YYYY
 ;@Ahk2Exe-Obey U_M, U_M := A_MM
@@ -240,24 +240,25 @@ GuiCreate(){
     Gui Add, DropDownList, % "x+0 yp-3 w75 vhelperKeybindingdropdown gSetHelperKeybinding AltSubmit Choose" generals.oldsandhelpermethod, 无||鼠标中键||滚轮向上||滚轮向下||侧键1||侧键2||键盘按键
     Gui Add, Hotkey, x+5 w70 vhelperKeybindingHK gSetHelperKeybinding, %oldsandhelperhk%
 
-    Gui Add, Text, xs+20 yp+40, 助手宏动画速度：
+    Gui Add, Text, xs+20 yp+40 hwndhelperSpeedTextID gdummyFunction, 助手宏动画速度：
+    AddToolTip(helperSpeedTextID, "当网络延迟较高时，适当降低动画速度可以减少宏出错的概率")
     Gui Add, DropDownList, % "x+5 yp-3 w90 vhelperAnimationSpeedDropdown AltSubmit Choose" generals.helperspeed, 非常快||快速||中等||慢速
-    Gui Add, Text, x+20 yp+3 w80 hwndhelperSafeZoneTextID vhelperSafeZoneText gdummyFunction
-    AddToolTip(helperSafeZoneTextID, "修改配置文件中Generals区块下的safezone值来设置安全格")
+    Gui Add, Text, x+20 yp+4 w80 hwndhelperSafeZoneTextID vhelperSafeZoneText gdummyFunction
+    AddToolTip(helperSafeZoneTextID, "修改配置文件中Generals区块下的safezone值来设置安全格`n格式为英文逗号连接的格子编号`n左上角格子编号为1，右上角为10，左下角为51，右下角为60")
 
     Gui Add, CheckBox, % "xs+20 yp+35 hwndextraGambleHelperCKboxID vextraGambleHelperCKbox gSetGambleHelper Checked" generals.enablegamblehelper, 血岩赌博助手：
     AddToolTip(extraGambleHelperCKboxID, "赌博时按下助手快捷键可以自动点击右键")
     Gui Add, Text, vextraGambleHelperText x+5 yp, 发送右键次数
-    Gui Add, Edit, vextraGambleHelperEdit x+10 yp-3 w60 Number
+    Gui Add, Edit, vextraGambleHelperEdit x+10 yp-4 w60 Number
     Gui Add, Updown, vextraGambleHelperUpdown Range2-60, % generals.gamblehelpertimes
 
-    Gui Add, CheckBox, % "xs+20 yp+37 hwndextraLootHelperCkboxID vextraLootHelperCkbox gSetLootHelper Checked" generals.enableloothelper, 快速拾取助手：
+    Gui Add, CheckBox, % "xs+20 yp+40 hwndextraLootHelperCkboxID vextraLootHelperCkbox gSetLootHelper Checked" generals.enableloothelper, 快速拾取助手：
     AddToolTip(extraLootHelperCkboxID, "拾取装备时按下助手快捷键可以自动点击左键")
     Gui Add, Text, vextraLootHelperText x+5 yp, 发送左键次数
     Gui Add, Edit, vextraLootHelperEdit x+10 yp-4 w60 Number
     Gui Add, Updown, vextraLootHelperUpdown Range2-99, % generals.loothelpertimes
 
-    Gui Add, CheckBox, % "xs+20 yp+37 hwndextraSalvageHelperCkboxID vextraSalvageHelperCkbox gSetSalvageHelper Checked" generals.enablesalvagehelper, 铁匠分解助手：
+    Gui Add, CheckBox, % "xs+20 yp+40 hwndextraSalvageHelperCkboxID vextraSalvageHelperCkbox gSetSalvageHelper Checked" generals.enablesalvagehelper, 铁匠分解助手：
     Gui Add, DropDownList, % "x+5 yp-4 w180 AltSubmit hwndextraSalvageHelperDropdownID vextraSalvageHelperDropdown gSetSalvageHelper Choose" generals.salvagehelpermethod, 快速分解||一键分解||智能分解||智能分解（留无形，太古）||智能分解（只留太古）
     AddToolTip(extraSalvageHelperCkboxID, "分解装备时按下助手快捷键可以自动执行所选择的策略")
     AddToolTip(extraSalvageHelperDropdownID, "快速分解：按下快捷键即等同于点击鼠标左键+回车`n一键分解：一键分解背包内所有非安全格的装备`n智能分解：同一键分解，但会跳过远古，无形，太古`n智能分解（留无形，太古）：只保留无形，太古装备`n智能分解（只留太古）：只保留太古装备")
@@ -267,13 +268,13 @@ GuiCreate(){
     Gui Add, CheckBox, % "x+5 yp+0 hwndextraReforgeHelperInventoryOnlyID vextraReforgeHelperInventoryOnlyCkbox Checked" generals.reforgehelperinventoryonly, 仅限背包内区域
     AddToolTip(extraReforgeHelperInventoryOnlyID, "勾选后重铸助手只会在鼠标指针位于背包栏内时有效")
 
-    Gui Add, CheckBox, % "xs+20 yp+37 hwndextraUpgradeHelperCkboxID vextraUpgradeHelperCkbox Checked" generals.enableupgradehelper, 魔盒升级助手
+    Gui Add, CheckBox, % "xs+20 yp+40 hwndextraUpgradeHelperCkboxID vextraUpgradeHelperCkbox Checked" generals.enableupgradehelper, 魔盒升级助手
     AddToolTip(extraUpgradeHelperCkboxID, "当魔盒打开且在升级页面时，按下助手快捷键即自动升级所有非安全格内的稀有（黄色）装备")
     Gui Add, CheckBox, % "x+40 yp+0 hwndextraConvertHelperCkboxID vextraConvertHelperCkbox Checked" generals.enableconverthelper, 魔盒转化助手
     AddToolTip(extraConvertHelperCkboxID, "当魔盒打开且在转化材料页面时，按下助手快捷键即自动使用所有非安全格内的装备进行材料转化")
 
 
-    Gui Add, CheckBox, % "xs+20 yp+70 vextraSoundonProfileSwitch Checked" generals.enablesoundplay, 使用快捷键切换配置成功时播放声音
+    Gui Add, CheckBox, % "xs+20 yp+65 vextraSoundonProfileSwitch Checked" generals.enablesoundplay, 使用快捷键切换配置成功时播放声音
     Gui Add, CheckBox, % "xs+20 yp+35 hwndextraSmartPauseID vextraSmartPause Checked" generals.enablesmartpause, 智能暂停
     AddToolTip(extraSmartPauseID, "开启后，游戏中按tab键可以暂停宏`n回车键，M键，T键会停止宏")
 
@@ -298,7 +299,8 @@ GuiCreate(){
     Gui Add, Text, xp-95 ys hwndSendmodeTextID gdummyFunction, 按键发送模式：
     AddToolTip(SendmodeTextID, "修改配置文件General区块下的sendmode值来设置按键发送模式")
     AddToolTip(CurrentmodeTextID, "Event：默认模式，最佳兼容性`nInput：推荐模式，最佳速度但可能会被一些杀毒防护软件屏蔽干扰")
-    Gui Add, Link, x570 ys, 本项目开源在：<a href="https://github.com/WeijieH/D3keyHelper">https://github.com/WeijieH/D3keyHelper</a>
+    Gui Add, Link, x570 ys hwndAboutLinkID, 本项目开源在：<a href="https://github.com/WeijieH/D3keyHelper">https://github.com/WeijieH/D3keyHelper</a>
+    AddToolTip(AboutLinkID, "别忘了给我一个star哟~ ╰(*°▽°*)╯")
     Return
 }
 
