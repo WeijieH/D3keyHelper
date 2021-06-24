@@ -963,16 +963,16 @@ oneButtonReforgeHelper(D3W, D3H, xpos, ypos){
         SetDefaultMouseSpeed, mouseDelay
         kanai:=getKanaiCubeButtonPos(D3W, D3H)
         Click, Right
-        Sleep, helperDelay
+        Sleep, helperDelay//2
         MouseMove, kanai[2][1], kanai[2][2]
         Click
-        Sleep, helperDelay
+        Sleep, helperDelay//2
         MouseMove, kanai[1][1], kanai[1][2]
         Click
-        Sleep, helperDelay
+        Sleep, helperDelay//2
         MouseMove, kanai[3][1], kanai[3][2]
         Click
-        Sleep, helperDelay
+        Sleep, helperDelay//2
         MouseMove, kanai[4][1], kanai[4][2]
         Click
         ; 鼠标回到原位置
@@ -1201,10 +1201,14 @@ oneButtonSalvageHelper(D3W, D3H, xpos, ypos){
             ; 当前格子有装备
                 m:=getInventorySpaceXY(D3W, D3H, i, "bag")
                 MouseMove, m[1], m[2]
+                md:=getInventorySpaceXY(D3W, D3H, i+10, "bag")
                 ; 智能分解判断
                 if (extraSalvageHelperDropdown > 2)
                 {
-                    Sleep, Min(helperDelay*2, 300)  ; 等待边框显示完毕
+                    if (helperDelay>=100)
+                    {
+                        Sleep, helperDelay//3
+                    }
                     ; 获取三个位于边框上的点颜色
                     c1:=getPixelRGB([Round(m[3]-1-10*D3H/1440), m[2]])
                     c2:=getPixelRGB([Round(m[3]-10*D3H/1440), m[2]])
@@ -1228,15 +1232,18 @@ oneButtonSalvageHelper(D3W, D3H, xpos, ypos){
                 }
                 ; 开始分解
                 Click
-                Sleep, 50+helperDelay  ; 等待对话框显示完毕
+                ; 在按下确认分解前取色
+                c_b:=getPixelRGB(md)
+                Sleep, helperDelay//2  ; 等待对话框显示完毕
                 if isDialogBoXOnScreen(D3W, D3H)
                 {
                     Send {Enter}
                     if (i<=50 and helperBagZone[i+10]=10)
                     {
-                        ; 如果不是最后一行，且下方格子有装备，判断下方格子是否变为空格
-                        Sleep, Min(Round(helperDelay*3), 300) ; 等待装备消失动画显示完毕
-                        if (isInventorySpaceEmpty(D3W, D3H, i+10, [[0.65625,0.714285714], [0.375,0.365079365]], "bag")){
+                        ; 如果不是最后一行，且下方格子有装备，判断下方格子的颜色是否改变
+                        Sleep, helperDelay//2
+                        c_a:=getPixelRGB(md)
+                        if !(abs(c_b[1]-c_a[1])<=3 and abs(c_b[2]-c_a[2]<=3) and abs(c_b[3]-c_a[3])<=3){
                             helperBagZone[i+10]:=1
                         }
                     }
