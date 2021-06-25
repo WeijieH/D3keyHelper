@@ -879,14 +879,14 @@ oldsandHelper(){
                 }
                 ; 点击分解按钮
                 MouseMove, salvageIconXY[1][1], salvageIconXY[1][2]
-                Sleep, helperDelay*0.5
+                Sleep, helperDelay//2
                 Click
                 if helperBreak
                 {
                     helperRunning:=False
                     Return
                 }
-                Sleep, helperDelay*0.5
+                Sleep, helperDelay//2
                 ; 执行一键分解
                 fn:=Func("oneButtonSalvageHelper").Bind(D3W, D3H, xpos, ypos)
                 SetTimer, %fn%, -1
@@ -963,16 +963,16 @@ oneButtonReforgeHelper(D3W, D3H, xpos, ypos){
         SetDefaultMouseSpeed, mouseDelay
         kanai:=getKanaiCubeButtonPos(D3W, D3H)
         Click, Right
-        Sleep, helperDelay//2
+        Sleep, helperDelay//4
         MouseMove, kanai[2][1], kanai[2][2]
         Click
-        Sleep, helperDelay//2
+        Sleep, helperDelay//4
         MouseMove, kanai[1][1], kanai[1][2]
         Click
-        Sleep, helperDelay//2
+        Sleep, helperDelay//4
         MouseMove, kanai[3][1], kanai[3][2]
         Click
-        Sleep, helperDelay//2
+        Sleep, helperDelay//4
         MouseMove, kanai[4][1], kanai[4][2]
         Click
         ; 鼠标回到原位置
@@ -1036,11 +1036,11 @@ oneButtonUpgradeConvertHelper(D3W, D3H, xpos, ypos)
                     pLargeItem:=True
                     cd_before:=getPixelRGB(m2)
                 }
-                Sleep, helperDelay*2
+                Sleep, helperDelay
                 ; 点击添加材料按钮
                 MouseMove, k[2][1], k[2][2]
                 Click
-                Sleep, 50+helperDelay*2
+                Sleep, helperDelay*2
                 ; 点击转化按钮
                 MouseMove, k[1][1], k[1][2]
                 Click
@@ -1061,7 +1061,7 @@ oneButtonUpgradeConvertHelper(D3W, D3H, xpos, ypos)
                         }
                     }
                     ; 等待转化动画显示完毕
-                    Sleep, 1600 + helperDelay*4
+                    Sleep, 1300 + helperDelay*4
                     ; 点击完成按钮
                     MouseMove, k[1][1], k[1][2]
                     Click
@@ -1103,7 +1103,7 @@ gambleHelper(){
             Break
         }
         Send {RButton}
-        Sleep, Min(helperDelay*0.5, 100)
+        Sleep, helperDelay//4
     }
     helperRunning:=False
     Return
@@ -1123,7 +1123,7 @@ lootHelper(D3W, D3H, helperDelay){
     Global helperBreak, helperRunning
     MouseGetPos, xpos, ypos
     ; 如果鼠标在人物周围，连点左键
-    if (Abs(xpos - D3W/2)<180*1440/D3H and Abs(ypos - D3H/2)<100*1440/D3H)
+    if (Abs(xpos - D3W/2)<220*1440/D3H and Abs(ypos - D3H/2)<140*1440/D3H)
     {
         GuiControlGet, extraLootHelperEdit
         Loop, %extraLootHelperEdit%
@@ -1231,7 +1231,7 @@ oneButtonSalvageHelper(D3W, D3H, xpos, ypos){
                 ; 在按下确认分解前取色
                 md:=getInventorySpaceXY(D3W, D3H, i+10, "bag")
                 c_b:=getPixelRGB(md)
-                Sleep, helperDelay//2  ; 等待对话框显示完毕
+                Sleep, helperDelay//3  ; 等待对话框显示完毕
                 if isDialogBoXOnScreen(D3W, D3H)
                 {
                     Send {Enter}
@@ -1328,7 +1328,7 @@ cleanKanaiCube(D3W, D3H){
             case 0:
                 m:=getInventorySpaceXY(D3W, D3H, i, "kanai")
                 MouseMove, m[1], m[2]
-                Sleep, helperDelay
+                Sleep, helperDelay//3
                 Click, Right
                 i++
             Default:
