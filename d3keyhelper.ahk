@@ -25,7 +25,7 @@ CoordMode, Pixel, Client
 CoordMode, Mouse, Client
 Process, Priority, , High
 
-VERSION:=210625
+VERSION:=210626
 TITLE:=Format("暗黑3技能连点器 v1.3.{:d}   by Oldsand", VERSION)
 MainWindowW:=900
 MainWindowH:=550
@@ -60,7 +60,7 @@ buffpercent:=(generals.buffpercent>=0 and generals.buffpercent<=1)? generals.buf
 GuiCreate()
 SetTrayMenu()
 StartUp()
-showMainWindow(isCompact? CompactWindowW:MainWindowW, MainWindowH, False)
+showMainWindow(isCompact? CompactWindowW:MainWindowW, MainWindowH)
 
 OnExit("OnUnload")
 Return
@@ -153,7 +153,7 @@ GuiCreate(){
     ; SS_BITMAP:=0x40
     ; SS_REALSIZECONTROL:=0x0E
     ; 0x4E=SS_BITMAP|SS_REALSIZECONTROL
-    Gui, Add, Picture, % "x1 y1 w" MainWindowW-2 " h" TitleBarHight " +0x4E hwndTitlebarID"
+    Gui, Add, Picture, % "x1 y1 w" MainWindowW-2 " h" TitleBarHight " +0x4E hwndTitlebarID vTitlebar"
     Gui, Add, Picture, % "x1 y+0 w" MainWindowW-2 " h1 +0x4E hwndTitlebarLineID"
     Gui, Add, Picture, % "x0 y0 w" MainWindowW " h1 +0x4E hwndBorderTopID vBorderTop"
     Gui, Add, Picture, % "x0 y" MainWindowH-1 " w" MainWindowW " h1 +0x4E hwndBorderBottomID vBorderBottom"
@@ -1231,14 +1231,14 @@ oneButtonSalvageHelper(D3W, D3H, xpos, ypos){
                 ; 在按下确认分解前取色
                 md:=getInventorySpaceXY(D3W, D3H, i+10, "bag")
                 c_b:=getPixelRGB(md)
-                Sleep, helperDelay//3  ; 等待对话框显示完毕
+                Sleep, helperDelay//2  ; 等待对话框显示完毕
                 if isDialogBoXOnScreen(D3W, D3H)
                 {
                     Send {Enter}
                     if (i<=50 and (helperBagZone[i+10]=10 or helperBagZone[i+10]=-1))
                     {
                         ; 如果不是最后一行，且下方格子有装备，判断下方格子的颜色是否改变
-                        Sleep, helperDelay//3
+                        Sleep, helperDelay//2
                         c_a:=getPixelRGB(md)
                         if !(abs(c_b[1]-c_a[1])<=3 and abs(c_b[2]-c_a[2]<=3) and abs(c_b[3]-c_a[3])<=3){
                             helperBagZone[i+10]:=1
@@ -1279,6 +1279,9 @@ scanInventorySpace(D3W, D3H){
         }
         Else
         {
+            if (helperBagZone[A_Index]!=-1){
+                continue
+            }
             helperBagZone[A_Index]:=(isInventorySpaceEmpty(D3W, D3H, A_Index, _e, "bag")) ? 1:10
         }
     }
@@ -1688,45 +1691,6 @@ isDialogBoXOnScreen(D3W, D3H){
 }
 
 /*
-判断屏幕左侧或者右侧是否有关闭按钮（红X）
-参数：
-    D3W：int，窗口区域的宽度
-    D3H：int，窗口区域的高度B
-    position：string，“left”或者“right”
-返回：
-    Bool
-*/
-isRedXonScreen(D3W, D3H, position){
-    static _centerWhiteL:=[680, 24]
-    static _centerWhiteR:=[3417, 24]
-    static _XsizeInside:=29
-    static _XsizeOutside:=35
-    switch position
-    {
-        case "left":
-            centerPoint:=[Round(_centerWhiteL[1]*D3H/1440), Round(_centerWhiteL[2]*D3H/1440)]
-            upPoint:=[Round(_centerWhiteL[1]*D3H/1440), Round((_centerWhiteL[2]-_XsizeInside/3)*D3H/1440)]
-            leftPoint:=[Round((_centerWhiteL[1]-_XsizeOutside/2)*D3H/1440), Round(_centerWhiteL[2]*D3H/1440)]
-        case "right":
-            centerPoint:=[Round(D3W-((3440-_centerWhiteR[1])*D3H/1440)), Round(_centerWhiteR[2]*D3H/1440)]
-            upPoint:=[Round(D3W-((3440-_centerWhiteR[1])*D3H/1440)), Round((_centerWhiteR[2]-_XsizeInside/3)*D3H/1440)]
-            leftPoint:=[Round(D3W-((3440-_centerWhiteR[1]-_XsizeOutside/2)*D3H/1440)), Round(_centerWhiteR[2]*D3H/1440)]
-    }
-    ; 3点取色判断
-    centerrgb:=getPixelRGB(centerPoint)
-    uprgb:=getPixelRGB(upPoint)
-    leftrgb:=getPixelRGB(leftPoint)
-    if (centerrgb[1]+centerrgb[2]>370 and uprgb[3]<5 and uprgb[1]>40 and leftrgb[1]>leftrgb[2] and leftrgb[1]>leftrgb[3])
-    {
-        Return True
-    }
-    Else
-    {
-        Return False
-    }
-}
-
-/*
 获取背包格子的坐标
 参数：
     D3W：int，窗口区域的宽度
@@ -1774,7 +1738,7 @@ isSalvagePageOpen(D3W, D3H){
     c2:=getPixelRGB([Round(351*D3H/1440),Round(107*D3H/1440)])
     c3:=getPixelRGB([Round(388*D3H/1440),Round(86*D3H/1440)])
     c4:=getPixelRGB([Round(673*D3H/1440),Round(1040*D3H/1440)])
-    if (c1[3]>c1[2] and c1[2]>c1[1] and c1[3]>110 and c3[3]>c3[2] and c3[2]>c3[1] and c3[3]>110 and c2[1]+c2[2]>350 and c4[1]>50 and c4[2]<15 and c4[3]<15 and isRedXonScreen(D3W, D3H, "left")){
+    if (c1[3]>c1[2] and c1[2]>c1[1] and c1[3]>110 and c3[3]>c3[2] and c3[2]>c3[1] and c3[3]>110 and c2[1]+c2[2]>350 and c4[1]>50 and c4[2]<15 and c4[3]<15){
         p:=getSalvageIconXY(D3W, D3H, "edge")
         cLeg:=getPixelRGB(p[1])
         cWhite:=getPixelRGB(p[2])
@@ -1804,12 +1768,11 @@ isSalvagePageOpen(D3W, D3H){
     4：卡奈魔盒开启，且开启了材料转化界面
 */
 isKanaiCubeOpen(D3W, D3H){
-    c1:=getPixelRGB([Round(353*D3H/1440),Round(81*D3H/1440)])
-    c2:=getPixelRGB([Round(353*D3H/1440),Round(100*D3H/1440)])
-    c3:=getPixelRGB([Round(335*D3H/1440),Round(66*D3H/1440)])
-    c4:=getPixelRGB([Round(405*D3H/1440),Round(106*D3H/1440)])
+    c1:=getPixelRGB([Round(353*D3H/1440),Round(85*D3H/1440)])
+    c2:=getPixelRGB([Round(278*D3H/1440),Round(147*D3H/1440)])
+    c3:=getPixelRGB([Round(330*D3H/1440),Round(140*D3H/1440)])
 
-    if (c1[1]>c1[2] and c2[1]+c2[2]+c2[3]<20 and c3[1]>c3[3] and c3[1]>c3[2] and c4[3]>c4[2] and c4[2]>c4[1]){
+    if (c1[1]<30 and c1[2]<20 and c1[3]<15 and c2[1]>100 and c2[2]<30 and c2[3]<30 and abs(c3[3]-c3[2])<=5 and c3[1]<40){
         cc1:=getPixelRGB([Round(788*D3H/1440),Round(428*D3H/1440)])
         cc2:=getPixelRGB([Round(810*D3H/1440),Round(429*D3H/1440)])
         if (cc1[3]>230 and cc2[3]>230 and cc1[3]>cc1[2] and cc2[3]>cc2[2] and cc1[2]>cc1[1] and cc2[2]>cc2[1])
@@ -1826,7 +1789,7 @@ isKanaiCubeOpen(D3W, D3H){
             }
 
             cc3:=getPixelRGB([Round(799*D3H/1440),Round(365*D3H/1440)])
-            if (cc3[1]+cc3[2]+cc3[3]>600 and cc3[1]>cc3[2] and cc3[2]>cc3[3] and cc3[3]>140 and cc3[3]<180)
+            if (cc3[1]+cc3[2]+cc3[3]>600 and cc3[1]>cc3[2] and cc3[2]>cc3[3] and cc3[3]>110 and cc3[3]<200)
             {
                 Return 4
             }
@@ -2278,7 +2241,7 @@ MouseMove(nCode, wParam, lParam)
                             SetTimer, GuiExit, -1
                         }
                     case UILeftButtonID:
-                        showMainWindow(isCompact? MainWindowW:CompactWindowW, MainWindowH, True)
+                        showMainWindow(isCompact? MainWindowW:CompactWindowW, MainWindowH)
                         isCompact:=!isCompact
                         hBMPButtonLeft_Normal := isCompact? hBMPButtonExpand_Normal:hBMPButtonBack_Normal
                         hBMPButtonLeft_Hover := isCompact? hBMPButtonExpand_Hover:hBMPButtonBack_Hover
@@ -2314,18 +2277,17 @@ MouseMove(nCode, wParam, lParam)
 返回：
     无
 */
-showMainWindow(windowSizeW, windowSizeH, _redraw){
+showMainWindow(windowSizeW, windowSizeH){
     global
     Gui Show, w%windowSizeW% h%windowSizeH%
+    GuiControl, Move, TitleBar, % "w" windowSizeW-2
     GuiControl, Move, UIRightButton, % "x" windowSizeW-30-1
     GuiControl, Move, TitleBarText, % "x" (windowSizeW-TitleBarSizeW)/2
     GuiControl, Move, BorderTop, % "w" windowSizeW
     GuiControl, Move, BorderBottom, % "y" windowSizeH-1 " w" windowSizeW
     GuiControl, Move, BorderLeft, % "h" windowSizeH-2
     GuiControl, Move, BorderRight, % "x" windowSizeW-1 " h" windowSizeH-2
-    if _redraw {
-        WinSet, Redraw,, A
-    }
+    WinSet, Redraw,, A
     Return
 }
 ; =====================================Subroutines===================================
