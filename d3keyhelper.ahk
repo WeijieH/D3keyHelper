@@ -25,7 +25,7 @@ CoordMode, Pixel, Client
 CoordMode, Mouse, Client
 Process, Priority, , High
 
-VERSION:=210626
+VERSION:=210627
 TITLE:=Format("暗黑3技能连点器 v1.3.{:d}   by Oldsand", VERSION)
 MainWindowW:=900
 MainWindowH:=550
@@ -216,9 +216,9 @@ GuiCreate(){
         Gui Add, DropDownList, % "x+5 yp-3 w90 AltSubmit Choose" others[currentTab].lazymode " hwndprofileStartModeDropdown" currentTab "ID vskillset" currentTab "profilestartmodedropdown gSetStartMode", 懒人模式||仅按下时||仅按一次
         AddToolTip(profileStartModeDropdown%currentTab%ID, "懒人模式：按下战斗宏快捷键时开启宏，再按一下关闭宏`n仅按下时：仅在战斗宏快捷键被压下时启动宏`n仅按一次：按下战斗宏快捷键即按下所有“按住不放”的技能键一次")
         Gui Add, Checkbox, % "x+20 yp+3 Checked" others[currentTab].useskillqueue " hwnduseskillqueueckbox" currentTab "ID vskillset" currentTab "useskillqueueckbox gSetSkillQueue", 使用单线程按键队列（毫秒）：
-        AddToolTip(useskillqueueckbox%currentTab%ID, "开启后按键不会被立刻按下而是存储至一个按键队列中`n连点会使技能加入队列头部，保持buff会使技能加入队列尾部")
+        AddToolTip(useskillqueueckbox%currentTab%ID, "开启后按键不会被立刻按下而是存储至一个按键队列中`n连点会使技能加入队列头部，保持buff会使技能加入队列尾部`n并且连点时会自动按下强制站立")
         Gui Add, Edit, vskillset%currentTab%useskillqueueedit hwnduseskillqueueedit%currentTab%ID x+0 yp-3 w50 Number
-        Gui Add, Updown, vskillset%currentTab%useskillqueueupdown Range30-1000, % others[currentTab].useskillqueueinterval
+        Gui Add, Updown, vskillset%currentTab%useskillqueueupdown Range50-1000, % others[currentTab].useskillqueueinterval
         AddToolTip(useskillqueueedit%currentTab%ID, "按键队列中的连点按键会以此间隔一一发送至游戏窗口")
 
         Gui Add, Checkbox, % "xs+20 yp+40 Checked" others[currentTab].enablequickpause " vskillset" currentTab "clickpauseckbox gSetQuickPause", 快速暂停：
@@ -678,8 +678,8 @@ skillKey(currentProfile, nskill, D3W, D3H, forceStandingKey, useSkillQueue){
             {
                 if useSkillQueue
                 {
-                    ; 当技能列表大于100时什么都不做，防止占用过多内存
-                    if (skillQueue.Count() < 100){
+                    ; 当技能列表大于1000时什么都不做，防止占用过多内存
+                    if (skillQueue.Count() < 1000){
                         ; 按键加入技能列表头部
                         ; [k, 3] k是具体按键，3代表因为连点加入
                         skillQueue.InsertAt(1, [k, 3])
@@ -704,7 +704,7 @@ skillKey(currentProfile, nskill, D3W, D3H, forceStandingKey, useSkillQueue){
                         ; 判断按键是否是左键
                         if useSkillQueue
                         {
-                            if (skillQueue.Count() < 100){
+                            if (skillQueue.Count() < 1000){
                                 ; 4代表因为补buff加入
                                 skillQueue.Push([k, 4])
                             }
@@ -725,7 +725,7 @@ skillKey(currentProfile, nskill, D3W, D3H, forceStandingKey, useSkillQueue){
                     Default:
                         if useSkillQueue
                         {
-                            if (skillQueue.Count() < 100){
+                            if (skillQueue.Count() < 1000){
                                 skillQueue.Push([k, 4])
                             }
                         }
@@ -1132,7 +1132,7 @@ lootHelper(D3W, D3H, helperDelay){
                 Break
             }
             Click
-            sleep helperDelay*0.5
+            Sleep, helperDelay//2
         }
     }
     Else    ; 否则就点一次左键
@@ -1210,7 +1210,7 @@ oneButtonSalvageHelper(D3W, D3H, xpos, ypos){
                     c2:=getPixelRGB([Round(m[3]-10*D3H/1440), m[2]])
                     c3:=getPixelRGB([Round(m[3]+1-10*D3H/1440), m[2]])
                     c:=[Max(c1[1],c2[1],c3[1]),Max(c1[2],c2[2],c3[2]),Max(c1[3],c2[3],c3[3])]
-                    if (c[1]>100 or c[3]<20) {
+                    if (c[1]>=70 or c[3]<=20) {
                         ; 装备是太古或者远古
                         q:=(c[2]<35) ? 5:3
                     } else if (c[1]<50 and c[2]>c[3] and c[3]>c[1]) {
@@ -1632,35 +1632,36 @@ spamSkillQueue(inv){
         ; 取出排在第一的按键
         _k:=skillQueue.RemoveAt(1)
         k:=_k[1]
-        switch _k[1]
-        {
-            case "LButton":
-                switch _k[2]
-                {
-                    case 4:
-                        ; 如果是左键保持buff
-                        if GetKeyState(forceStandingKey)
-                        {
-                            Send {Blind}{%k%}
-                        }
-                        Else
-                        {
-                            Send {Blind}{%forceStandingKey% down}{%k% down}
-                            Send {Blind}{%k% up}{%forceStandingKey% up}
-                        }
-                    Default:
-                        Send {Blind}{%k%}
+        ; 如果是连点，按键前后停止一段时间，并且放开所有按住不放的按键
+        if (_k[2]=3){
+            for key, value in keysOnHold{
+                if GetKeyState(key){
+                    Send {%key% up}
                 }
-            Default:
-                ; 如果是连点，按键前后停止一段时间
-                if (_k[2] = 3){
-                    sleep inv//2
+            }
+            Sleep, inv//4
+        }
+
+        if (!GetKeyState(forceStandingKey) and (_k[2]=3 or k="LButton")){
+            Send {Blind}{%forceStandingKey% down}{%k% down}
+            if (_k[2]=3){
+                Sleep, inv//4
+            }
+            Send {Blind}{%k% up}{%forceStandingKey% up}
+        }
+        Else{
+            Send {%k%}
+        }
+
+        if (_k[2]=3){
+            Sleep, inv//4
+            ; 恢复之前所有应该被按下的按键
+            for key, value in keysOnHold{
+                if !GetKeyState(key){
+                    Send {%key% down}
                 }
-                Send {Blind}{%k%}
-                if (_k[2] = 3){
-                    sleep inv//2
-                    Break
-                }
+            }
+            Break
         }
     }
     Return
@@ -1772,7 +1773,7 @@ isKanaiCubeOpen(D3W, D3H){
     c2:=getPixelRGB([Round(278*D3H/1440),Round(147*D3H/1440)])
     c3:=getPixelRGB([Round(330*D3H/1440),Round(140*D3H/1440)])
 
-    if (c1[1]<30 and c1[2]<20 and c1[3]<15 and c2[1]>100 and c2[2]<30 and c2[3]<30 and abs(c3[3]-c3[2])<=5 and c3[1]<40){
+    if (c1[1]<30 and c1[2]<20 and c1[3]<15 and c2[1]>100 and c2[2]<30 and c2[3]<30 and abs(c3[3]-c3[2])<=8 and c3[1]<=55 and c3[1]<c3[2] and c3[1]<c3[3]){
         cc1:=getPixelRGB([Round(788*D3H/1440),Round(428*D3H/1440)])
         cc2:=getPixelRGB([Round(810*D3H/1440),Round(429*D3H/1440)])
         if (cc1[3]>230 and cc2[3]>230 and cc1[3]>cc1[2] and cc2[3]>cc2[2] and cc1[2]>cc1[1] and cc2[2]>cc2[1])
@@ -1781,14 +1782,18 @@ isKanaiCubeOpen(D3W, D3H){
         }
         else
         {
-            cc1:=getPixelRGB([Round(799*D3H/1440),Round(406*D3H/1440)])
-            cc2:=getPixelRGB([Round(795*D3H/1440),Round(592*D3H/1440)])
+            ; 检测是否是非英文客户端，设置Y轴位置偏移
+            WinGetTitle, gameWindowTitle, ahk_class D3 Main Window Class
+            upgradeYOffset:=(gameWindowTitle="Diablo III")? 0:-22
+            cc1:=getPixelRGB([Round(799*D3H/1440),Round((406+upgradeYOffset)*D3H/1440)])
+            cc2:=getPixelRGB([Round(795*D3H/1440),Round((592+upgradeYOffset)*D3H/1440)])
             if (cc1[1]+cc1[2]+cc1[3]>550 and cc1[1]>cc1[3] and cc2[1]+cc2[2]>400 and cc2[1]>cc2[3])
             {
                 Return 3
             }
 
-            cc3:=getPixelRGB([Round(799*D3H/1440),Round(365*D3H/1440)])
+            convertYOffset:=(gameWindowTitle="Diablo III")? 0:-43
+            cc3:=getPixelRGB([Round(799*D3H/1440),Round((365+convertYOffset)*D3H/1440)])
             if (cc3[1]+cc3[2]+cc3[3]>600 and cc3[1]>cc3[2] and cc3[2]>cc3[3] and cc3[3]>110 and cc3[3]<200)
             {
                 Return 4
