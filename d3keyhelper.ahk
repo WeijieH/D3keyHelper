@@ -1632,49 +1632,36 @@ spamSkillQueue(inv){
         ; 取出排在第一的按键
         _k:=skillQueue.RemoveAt(1)
         k:=_k[1]
-        switch _k[1]
-        {
-            case "LButton":
-                switch _k[2]
-                {
-                    case 4:
-                        ; 如果是左键保持buff
-                        if GetKeyState(forceStandingKey)
-                        {
-                            Send {Blind}{%k%}
-                        }
-                        Else
-                        {
-                            Send {Blind}{%forceStandingKey% down}{%k%}{%forceStandingKey% up}
-                        }
-                    Default:
-                        Send {Blind}{%k%}
+        ; 如果是连点，按键前后停止一段时间，并且放开所有按住不放的按键
+        if (_k[2]=3){
+            for key, value in keysOnHold{
+                if GetKeyState(key){
+                    Send {%key% up}
                 }
-            Default:
-                ; 如果是连点，按键前后停止一段时间，并且放开所有按住不放的按键
-                if (_k[2] = 3){
-                    for key, value in keysOnHold{
-                        if GetKeyState(key){
-                            Send {%key% up}
-                        }
-                    }
-                    Sleep, inv//3
-                    ; 按下强制站立键
-                    Send {Blind}{%forceStandingKey% down}
+            }
+            Sleep, inv//4
+        }
+
+        if (!GetKeyState(forceStandingKey) and (_k[2]=3 or k="LButton")){
+            Send {Blind}{%forceStandingKey% down}{%k% down}
+            if (_k[2]=3){
+                Sleep, inv//4
+            }
+            Send {Blind}{%k% up}{%forceStandingKey% up}
+        }
+        Else{
+            Send {%k%}
+        }
+
+        if (_k[2]=3){
+            Sleep, inv//4
+            ; 恢复之前所有应该被按下的按键
+            for key, value in keysOnHold{
+                if !GetKeyState(key){
+                    Send {%key% down}
                 }
-                Send {Blind}{%k%}
-                if (_k[2] = 3){
-                    ; 松开强制站立键
-                    Send {Blind}{%forceStandingKey% up}
-                    Sleep, inv//3
-                    ; 恢复之前所有应该被按下的按键
-                    for key, value in keysOnHold{
-                        if !GetKeyState(key){
-                            Send {%key% down}
-                        }
-                    }
-                    Break
-                }
+            }
+            Break
         }
     }
     Return
