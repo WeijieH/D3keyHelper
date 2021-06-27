@@ -809,8 +809,8 @@ oldsandHelper(){
         case 3:
             mouseDelay:=2
             helperDelay:=150
-        case 4:
-            mouseDelay:=5
+        Default:
+            mouseDelay:=3
             helperDelay:=200
     }
     SetDefaultMouseSpeed, mouseDelay
@@ -900,7 +900,7 @@ oldsandHelper(){
         }
     }
     ; 卡奈魔盒助手
-    if (extraReforgeHelperCkbox or extraUpgradeHelperCkbox)
+    if (extraReforgeHelperCkbox or extraUpgradeHelperCkbox or extraConvertHelperCkbox)
     {
         switch isKanaiCubeOpen(D3W, D3H)
         {
