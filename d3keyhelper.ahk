@@ -804,13 +804,13 @@ oldsandHelper(){
             mouseDelay:=0
             helperDelay:=50
         case 2:
-            mouseDelay:=2
+            mouseDelay:=1
             helperDelay:=100
         case 3:
-            mouseDelay:=5
+            mouseDelay:=2
             helperDelay:=150
         case 4:
-            mouseDelay:=10
+            mouseDelay:=5
             helperDelay:=200
     }
     SetDefaultMouseSpeed, mouseDelay
@@ -902,8 +902,7 @@ oldsandHelper(){
     ; 卡奈魔盒助手
     if (extraReforgeHelperCkbox or extraUpgradeHelperCkbox)
     {
-        r:=isKanaiCubeOpen(D3W, D3H)
-        switch r
+        switch isKanaiCubeOpen(D3W, D3H)
         {
             case 1:
                 helperRunning:=False
@@ -1269,7 +1268,7 @@ oneButtonSalvageHelper(D3W, D3H, xpos, ypos){
 */
 scanInventorySpace(D3W, D3H){
     local
-    static _e:=[[0.65625,0.71429], [0.375,0.36508]]
+    static _e:=[[0.65625,0.71429], [0.375,0.36508], [0.725,0.251]]
     Global safezone, helperBagZone
     Loop, 60
     {
@@ -1298,7 +1297,7 @@ scanInventorySpace(D3W, D3H){
 */
 scanInventorySpaceKanai(D3W, D3H){
     local
-    static _e:=[[0.65625,0.71429], [0.375,0.36508]]
+    static _e:=[[0.65625,0.71429], [0.375,0.36508], [0.725,0.251]]
     Global helperKanaiZone
     Loop, 9
     {
@@ -2584,15 +2583,15 @@ RunMarco:
         GuiControlGet, skillset%currentProfile%s%A_Index%hotkey
         Switch skillset%currentProfile%s%A_Index%dropdown
         {
-        Case 2:
-            k:=skillset%currentProfile%s%A_Index%hotkey
-            Send {%k% Down}
-            keysOnHold[k]:=1
-        Case 3, 4:
-            GuiControlGet, skillset%currentProfile%s%A_Index%updown
-            SetTimer, spamSkillKey%A_Index%, % skillset%currentProfile%s%A_Index%updown
-        Default:
-            SetTimer, spamSkillKey%A_Index%, off
+            Case 2:
+                k:=skillset%currentProfile%s%A_Index%hotkey
+                Send {%k% Down}
+                keysOnHold[k]:=1
+            Case 3, 4:
+                GuiControlGet, skillset%currentProfile%s%A_Index%updown
+                SetTimer, spamSkillKey%A_Index%, % skillset%currentProfile%s%A_Index%updown
+            Default:
+                SetTimer, spamSkillKey%A_Index%, off
         }
         if (A_Index <=4)
         {
@@ -2638,10 +2637,7 @@ StopMarco:
             si:=A_Index
             Loop, %tabslen%
             {
-                Loop, 4
-                {
-                    GuiControl, Enable, skillset%A_Index%s%si%hotkey
-                }
+                GuiControl, Enable, skillset%A_Index%s%si%hotkey
             }
         }
     }
