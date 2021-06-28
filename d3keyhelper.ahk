@@ -25,7 +25,7 @@ CoordMode, Pixel, Client
 CoordMode, Mouse, Client
 Process, Priority, , High
 
-VERSION:=210627
+VERSION:=210628
 TITLE:=Format("暗黑3技能连点器 v1.3.{:d}   by Oldsand", VERSION)
 MainWindowW:=900
 MainWindowH:=550
@@ -1734,11 +1734,11 @@ getInventorySpaceXY(D3W, D3H, ID, zone){
     [2, 大拆解按钮边缘坐标rgb, 白色解按钮边缘坐标rgb, 蓝色解按钮边缘坐标rgb, 黄色解按钮边缘坐标rgb]：如果铁匠开启且同时在拆解页面
 */
 isSalvagePageOpen(D3W, D3H){
-    c1:=getPixelRGB([Round(321*D3H/1440),Round(86*D3H/1440)])
+    c1:=getPixelRGB([Round(339*D3H/1440),Round(80*D3H/1440)])
     c2:=getPixelRGB([Round(351*D3H/1440),Round(107*D3H/1440)])
     c3:=getPixelRGB([Round(388*D3H/1440),Round(86*D3H/1440)])
     c4:=getPixelRGB([Round(673*D3H/1440),Round(1040*D3H/1440)])
-    if (c1[3]>c1[2] and c1[2]>c1[1] and c1[3]>110 and c3[3]>c3[2] and c3[2]>c3[1] and c3[3]>110 and c2[1]+c2[2]>350 and c4[1]>50 and c4[2]<15 and c4[3]<15){
+    if (c1[3]>c1[2] and c1[2]>c1[1] and c1[3]>180 and c1[3]-c1[1]>90 and c3[3]>c3[2] and c3[2]>c3[1] and c3[3]>110 and c2[1]+c2[2]>350 and c4[1]>50 and c4[2]<15 and c4[3]<15){
         p:=getSalvageIconXY(D3W, D3H, "edge")
         cLeg:=getPixelRGB(p[1])
         cWhite:=getPixelRGB(p[2])
