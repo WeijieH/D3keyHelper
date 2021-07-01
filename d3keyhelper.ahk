@@ -25,7 +25,7 @@ CoordMode, Pixel, Client
 CoordMode, Mouse, Client
 Process, Priority, , High
 
-VERSION:=210628
+VERSION:=210701
 TITLE:=Format("暗黑3技能连点器 v1.3.{:d}   by Oldsand", VERSION)
 MainWindowW:=900
 MainWindowH:=550
@@ -694,7 +694,7 @@ skillKey(currentProfile, nskill, D3W, D3H, forceStandingKey, useSkillQueue){
         case 4:
             ; 获得对应按键buff条最左侧坐标
             magicXY:=getSkillButtonBuffPos(D3W, D3H, nskill, buffpercent)
-            crgb:=getPixelRGB(magicXY)
+            crgb:=getPixelsRGB(magicXY[1], magicXY[2]-1, 1, 3, "Max")
             ; 具体判断是否需要补buff
             If (!vPausing and crgb[1]+crgb[2]+crgb[3] < 210)
             {
@@ -1000,7 +1000,7 @@ oneButtonUpgradeConvertHelper(D3W, D3H, xpos, ypos)
     helperBagZone:=make1DArray(60, -1)
     k:=getKanaiCubeButtonPos(D3W, D3H)
     ; 开启一单独线程查找空格子
-    fn1:=Func("scanInventorySpace").Bind(D3W, D3H)
+    fn1:=Func("scanInventorySpaceGDIP").Bind(D3W, D3H)
     SetTimer, %fn1%, -1
 
     SetDefaultMouseSpeed, mouseDelay
@@ -1172,10 +1172,12 @@ quickSalvageHelper(D3W, D3H, helperDelay){
 */
 oneButtonSalvageHelper(D3W, D3H, xpos, ypos){
     local
-    Global helperBreak, helperRunning, helperDelay, helperBagZone, mouseDelay
+    static _spaceSizeInnerH:=63
+    static _spaceSizeInnerW:=64
+    Global helperBreak, helperRunning, helperDelay, helperBagZone, mouseDelay, cInventorySpace
     helperBagZone:=make1DArray(60, -1)
     ; 开启一单独线程查找空格子
-    fn1:=Func("scanInventorySpace").Bind(D3W, D3H)
+    fn1:=Func("scanInventorySpaceGDIP").Bind(D3W, D3H)
     SetTimer, %fn1%, -1
 
     q:=0    ; 当前格子装备品质，2：普通传奇，3：远古传奇，4：无形装备，5：太古传奇
@@ -1203,45 +1205,78 @@ oneButtonSalvageHelper(D3W, D3H, xpos, ypos){
                 ; 智能分解判断
                 if (extraSalvageHelperDropdown > 2)
                 {
-                    Sleep, helperDelay//4
-                    ; 获取三个位于边框上的点颜色
-                    c1:=getPixelRGB([Round(m[3]-1-10*D3H/1440), m[2]])
-                    c2:=getPixelRGB([Round(m[3]-10*D3H/1440), m[2]])
-                    c3:=getPixelRGB([Round(m[3]+1-10*D3H/1440), m[2]])
-                    c:=[Max(c1[1],c2[1],c3[1]),Max(c1[2],c2[2],c3[2]),Max(c1[3],c2[3],c3[3])]
-                    if (c[1]>=70 or c[3]<=20) {
+                    c_t:=[-255,-255,-255]
+                    StartTime1:=A_TickCount
+                    while (A_TickCount-StartTime1<=helperDelay)
+                    {
+                        ; 获取三个位于边框上的点颜色
+                        c1:=getPixelRGB([Round(m[3]-1-10*D3H/1440), m[2]])
+                        c2:=getPixelRGB([Round(m[3]-10*D3H/1440), m[2]])
+                        c3:=getPixelRGB([Round(m[3]+1-10*D3H/1440), m[2]])
+                        c:=[Max(c1[1],c2[1],c3[1]),Max(c1[2],c2[2],c3[2]),Max(c1[3],c2[3],c3[3])]
+                        if (c_t[1]=c[1] and c_t[2]=c[2] and c_t[3]=c[3]){
+                            ; 当取色点颜色停止变化，动画显示完毕
+                            Break
+                        }
+                        c_t:=c
+                    }
+                    if ((c[1]>=70 or c[3]<=20) and Max(Abs(c[1]-c[2]), Abs(c[1]-c[3]), Abs(c[3]-c[2]))>20) {
                         ; 装备是太古或者远古
                         q:=(c[2]<35) ? 5:3
-                    } else if (c[1]<50 and c[2]>c[3] and c[3]>c[1]) {
+                    } else if (c[1]<40 and c[2]>c[3] and c[3]>c[1]) {
                         ; 装备是无形武器
                         q:=4
                     } else {
                         ; 装备是普通传奇
                         q:=2
                     }
-                    if (q>=extraSalvageHelperDropdown) {
-                        ; 如果品质达标，跳过当前格子
-                        i++
-                        Continue
+                }
+                if (i<=50 and (helperBagZone[i+10]=10 or helperBagZone[i+10]=-1))
+                {
+                    ; 如果不是最后一行，且下方格子有装备，判断下方格子边缘的颜色是否改变
+                    md:=getInventorySpaceXY(D3W, D3H, i+10, "bag")
+                    c_b:=cInventorySpace[i+10]
+                    c_t:=[-255,-255,-255]
+                    StartTime1:=A_TickCount
+                    while (A_TickCount-StartTime1<=helperDelay)
+                    {
+                        c_a:=getPixelRGB([Round(md[3]+_spaceSizeInnerW*0.08*D3H/1440), Round(md[4]+_spaceSizeInnerH*0.7*D3H/1440)])
+                        if (c_t[1]=c_a[1] and c_t[2]=c_a[2] and c_t[3]=c_a[3]){
+                            ; 当取色点颜色停止变化，动画显示完毕
+                            Break
+                        }
+                        c_t:=c_a
                     }
+                    if !(c_b[1]=c_a[1] and c_b[2]=c_a[2] and c_b[3]=c_a[3]){
+                        ; 若改变，则当前格子装备为占用2个格子的大型装备，标记下方格子为非装备格子
+                        helperBagZone[i+10]:=5
+                    }
+                }
+                if (q>=extraSalvageHelperDropdown) {
+                    ; 如果品质达标，跳过当前格子
+                    i++
+                    Continue
                 }
                 ; 开始分解
                 Click
-                ; 在按下确认分解前取色
-                md:=getInventorySpaceXY(D3W, D3H, i+10, "bag")
-                c_b:=getPixelRGB(md)
-                Sleep, helperDelay//2  ; 等待对话框显示完毕
-                if isDialogBoXOnScreen(D3W, D3H)
+                StartTime1:=A_TickCount
+                ; 循环检测是否弹出确认对话框
+                while (A_TickCount-StartTime1<=helperDelay)
                 {
-                    Send {Enter}
-                    if (i<=50 and (helperBagZone[i+10]=10 or helperBagZone[i+10]=-1))
+                    if isDialogBoXOnScreen(D3W, D3H)
                     {
-                        ; 如果不是最后一行，且下方格子有装备，判断下方格子的颜色是否改变
-                        Sleep, helperDelay//2
-                        c_a:=getPixelRGB(md)
-                        if !(abs(c_b[1]-c_a[1])<=3 and abs(c_b[2]-c_a[2]<=3) and abs(c_b[3]-c_a[3])<=3){
-                            helperBagZone[i+10]:=1
+                        Send {Enter}
+                        StartTime2:=A_TickCount
+                        ; 循环检测当前格子的装备有没有消失
+                        while (A_TickCount-StartTime2<=helperDelay)
+                        {
+                            if isInventorySpaceEmpty(D3W, D3H, i, [[0.65625,0.71429], [0.375,0.36508], [0.725,0.251], [0.5,0.5]], "bag")
+                            {
+                                Sleep, helperDelay//2
+                                Break
+                            }
                         }
+                        Break
                     }
                 }
                 i++
@@ -1266,12 +1301,22 @@ oneButtonSalvageHelper(D3W, D3H, xpos, ypos){
 返回：
     无
 */
-scanInventorySpace(D3W, D3H){
+scanInventorySpaceGDIP(D3W, D3H){
     local
+    static _spaceSizeInnerW:=64
+    static _spaceSizeInnerH:=63
+    ; 使用GDI+库抓取当前屏幕
+    sxy:=getGameXYonScreen(0, 0)
+    pInventoryBitmap:=Gdip_BitmapFromScreen(Format("{}|{}|{}|{}", sxy[1], sxy[2], D3W, D3H))
+    Gdip_LockBits(pInventoryBitmap, 0, 0, Gdip_GetImageWidth(pInventoryBitmap), Gdip_GetImageHeight(pInventoryBitmap), Stride, Scan0, BitmapData)
     static _e:=[[0.65625,0.71429], [0.375,0.36508], [0.725,0.251]]
-    Global safezone, helperBagZone
+    Global safezone, helperBagZone, cInventorySpace
+    cInventorySpace:={}
     Loop, 60
     {
+        m:=getInventorySpaceXY(D3W, D3H, A_Index, "bag")
+        ; 保存当前格子左下角的颜色信息
+        cInventorySpace[A_Index]:=splitRGB(Gdip_GetLockBitPixel(Scan0, Round(m[3]+_spaceSizeInnerW*0.08*D3H/1440), Round(m[4]+_spaceSizeInnerH*0.7*D3H/1440), Stride))
         if safezone.HasKey(A_Index)
         {
             helperBagZone[A_Index]:=0
@@ -1281,9 +1326,22 @@ scanInventorySpace(D3W, D3H){
             if (helperBagZone[A_Index]!=-1){
                 continue
             }
-            helperBagZone[A_Index]:=(isInventorySpaceEmpty(D3W, D3H, A_Index, _e, "bag")) ? 1:10
+            r:=1
+            for i, p in _e
+            {
+                xy:=[Round(m[3]+_spaceSizeInnerW*_e[i][1]*D3H/1440), Round(m[4]+_spaceSizeInnerH*_e[i][2]*D3H/1440)]
+                c:=splitRGB(Gdip_GetLockBitPixel(Scan0, xy[1], xy[2], Stride))
+                if !(c[1]<22 and c[2]<20 and c[3]<15 and c[1]>c[3] and c[2]>c[3])
+                {
+                    r:=10
+                    Break
+                }
+            }
+            helperBagZone[A_Index]:=r
         }
     }
+    Gdip_UnlockBits(pInventoryBitmap, BitmapData)
+    Gdip_DisposeImage(pInventoryBitmap)
     Return
 }
 
@@ -1881,6 +1939,22 @@ isInventorySpaceEmpty(D3W, D3H, ID, ckpoints, zone){
 }
 
 /*
+把游戏内画面坐标转化为屏幕坐标
+参数：
+    GameX：X坐标
+    GameY：Y坐标
+返回：
+    如果成功，返回对应的屏幕坐标
+*/
+getGameXYonScreen(GameX, GameY){
+    static _POINT:=VarSetCapacity(POINT, 8)
+    NumPut(GameX, &POINT, 0, "Int")
+    NumPut(GameY, &POINT, 4, "Int")
+    DllCall("ClientToScreen", "ptr", WinExist("ahk_class D3 Main Window Class"), "ptr", &POINT)
+    Return [NumGet(&POINT, 0, "Int"), NumGet(&POINT, 4, "Int")]
+}
+
+/*
 获取游戏的当前分辨率
 参数：
     ByRef D3W：分辨率宽
@@ -1926,6 +2000,41 @@ getKanaiCubeButtonPos(D3W, D3H){
 getPixelRGB(point){
     PixelGetColor, cpixel, point[1], point[2], rgb
     Return splitRGB(cpixel)
+}
+
+
+/*
+获取多个像素点聚合后的RGB值
+参数：
+    pointX, pointY：起始点坐标
+    w：宽度
+    h：高度
+    agg_func：用于聚合的函数名字
+返回：
+    [R，G，B]
+*/
+getPixelsRGB(pointX, pointY, w, h, agg_func){
+    pScreen:=getGameXYonScreen(pointX, pointY)
+    pBitmap:=Gdip_BitmapFromScreen(Format("{}|{}|{}|{}", pScreen[1], pScreen[2], w, h))
+    Gdip_LockBits(pBitmap, 0, 0, Gdip_GetImageWidth(pBitmap), Gdip_GetImageHeight(pBitmap), Stride, Scan0, BitmapData)
+    cpixelR:=[]
+    cpixelG:=[]
+    cpixelB:=[]
+    Loop, %w%
+    {
+        _x:=A_Index-1
+        Loop, %h%
+        {
+            _y:=A_Index-1
+            t:=splitRGB(Gdip_GetLockBitPixel(Scan0, _x, _y, Stride))
+            cpixelR.Push(t[1])
+            cpixelG.Push(t[2])
+            cpixelB.Push(t[3])
+        }
+    }
+    Gdip_UnlockBits(pBitmap, BitmapData)
+    Gdip_DisposeImage(pBitmap)
+    Return [Func(agg_func).Call(cpixelR*), Func(agg_func).Call(cpixelG*), Func(agg_func).Call(cpixelB*)]
 }
 
 /*
@@ -2742,4 +2851,234 @@ GuiExit(){
     Gui, Submit
     SaveCfgFile("d3oldsand.ini", tabs, currentProfile, safezone, VERSION)
     ExitApp
+}
+
+
+; =================================GDIP库文件===============================
+; https://github.com/mmikeww/AHKv2-Gdip
+; 为了保持单一文件所以把需要的函数搬了过来
+; =========================================================================
+Gdip_BitmapFromScreen(Screen:=0, Raster:="")
+{
+    hhdc := 0
+    Ptr := A_PtrSize ? "UPtr" : "UInt"
+    if (Screen = 0)
+    {
+        _x := DllCall( "GetSystemMetrics", "Int", 76 )
+        _y := DllCall( "GetSystemMetrics", "Int", 77 )
+        _w := DllCall( "GetSystemMetrics", "Int", 78 )
+        _h := DllCall( "GetSystemMetrics", "Int", 79 )
+    }
+    else if (SubStr(Screen, 1, 5) = "hwnd:")
+    {
+        Screen := SubStr(Screen, 6)
+        if !WinExist("ahk_id " Screen)
+            return -2
+        WinGetRect(Screen,,, _w, _h)
+        _x := _y := 0
+        hhdc := GetDCEx(Screen, 3)
+    }
+    else if IsInteger(Screen)
+    {
+        M := GetMonitorInfo(Screen)
+        _x := M.Left, _y := M.Top, _w := M.Right-M.Left, _h := M.Bottom-M.Top
+    }
+    else
+    {
+        S := StrSplit(Screen, "|")
+        _x := S[1], _y := S[2], _w := S[3], _h := S[4]
+    }
+
+    if (_x = "") || (_y = "") || (_w = "") || (_h = "")
+        return -1
+
+    chdc := CreateCompatibleDC(), hbm := CreateDIBSection(_w, _h, chdc), obm := SelectObject(chdc, hbm), hhdc := hhdc ? hhdc : GetDC()
+    BitBlt(chdc, 0, 0, _w, _h, hhdc, _x, _y, Raster)
+    ReleaseDC(hhdc)
+
+    pBitmap := Gdip_CreateBitmapFromHBITMAP(hbm)
+    SelectObject(chdc, obm), DeleteObject(hbm), DeleteDC(hhdc), DeleteDC(chdc)
+    return pBitmap
+}
+
+Gdip_LockBits(pBitmap, x, y, w, h, ByRef Stride, ByRef Scan0, ByRef BitmapData, LockMode := 3, PixelFormat := 0x26200a)
+{
+    Ptr := A_PtrSize ? "UPtr" : "UInt"
+
+    CreateRect(_Rect, x, y, w, h)
+    VarSetCapacity(BitmapData, 16+2*(A_PtrSize ? A_PtrSize : 4), 0)
+    _E := DllCall("Gdiplus\GdipBitmapLockBits", Ptr, pBitmap, Ptr, &_Rect, "uint", LockMode, "int", PixelFormat, Ptr, &BitmapData)
+    Stride := NumGet(BitmapData, 8, "Int")
+    Scan0 := NumGet(BitmapData, 16, Ptr)
+    return _E
+}
+
+Gdip_GetLockBitPixel(Scan0, x, y, Stride)
+{
+    return NumGet(Scan0+0, (x*4)+(y*Stride), "UInt")
+}
+
+Gdip_UnlockBits(pBitmap, ByRef BitmapData)
+{
+    Ptr := A_PtrSize ? "UPtr" : "UInt"
+
+    return DllCall("Gdiplus\GdipBitmapUnlockBits", Ptr, pBitmap, Ptr, &BitmapData)
+}
+
+Gdip_DisposeImage(pBitmap)
+{
+    return DllCall("gdiplus\GdipDisposeImage", A_PtrSize ? "UPtr" : "UInt", pBitmap)
+}
+
+Gdip_GetImageWidth(pBitmap)
+{
+    Width := 0
+    DllCall("gdiplus\GdipGetImageWidth", A_PtrSize ? "UPtr" : "UInt", pBitmap, "uint*", Width)
+    return Width
+}
+
+Gdip_GetImageHeight(pBitmap)
+{
+    Height := 0
+    DllCall("gdiplus\GdipGetImageHeight", A_PtrSize ? "UPtr" : "UInt", pBitmap, "uint*", Height)
+    return Height
+}
+
+CreateCompatibleDC(hdc:=0)
+{
+    return DllCall("CreateCompatibleDC", A_PtrSize ? "UPtr" : "UInt", hdc)
+}
+
+CreateDIBSection(w, h, hdc:="", bpp:=32, ByRef ppvBits:=0)
+{
+    Ptr := A_PtrSize ? "UPtr" : "UInt"
+
+    hdc2 := hdc ? hdc : GetDC()
+    VarSetCapacity(bi, 40, 0)
+
+    NumPut(w, bi, 4, "uint")
+    , NumPut(h, bi, 8, "uint")
+    , NumPut(40, bi, 0, "uint")
+    , NumPut(1, bi, 12, "ushort")
+    , NumPut(0, bi, 16, "uInt")
+    , NumPut(bpp, bi, 14, "ushort")
+
+    hbm := DllCall("CreateDIBSection"
+                    , Ptr, hdc2
+                    , Ptr, &bi
+                    , "uint", 0
+                    , A_PtrSize ? "UPtr*" : "uint*", ppvBits
+                    , Ptr, 0
+                    , "uint", 0, Ptr)
+
+    if !hdc
+        ReleaseDC(hdc2)
+    return hbm
+}
+
+SelectObject(hdc, hgdiobj)
+{
+    Ptr := A_PtrSize ? "UPtr" : "UInt"
+
+    return DllCall("SelectObject", Ptr, hdc, Ptr, hgdiobj)
+}
+
+GetDC(hwnd:=0)
+{
+    return DllCall("GetDC", A_PtrSize ? "UPtr" : "UInt", hwnd)
+}
+
+BitBlt(ddc, dx, dy, dw, dh, sdc, sx, sy, Raster:="")
+{
+    Ptr := A_PtrSize ? "UPtr" : "UInt"
+
+    return DllCall("gdi32\BitBlt"
+                    , Ptr, dDC
+                    , "int", dx
+                    , "int", dy
+                    , "int", dw
+                    , "int", dh
+                    , Ptr, sDC
+                    , "int", sx
+                    , "int", sy
+                    , "uint", Raster ? Raster : 0x00CC0020)
+}
+
+ReleaseDC(hdc, hwnd:=0)
+{
+    Ptr := A_PtrSize ? "UPtr" : "UInt"
+
+    return DllCall("ReleaseDC", Ptr, hwnd, Ptr, hdc)
+}
+
+Gdip_CreateBitmapFromHBITMAP(hBitmap, Palette:=0)
+{
+    Ptr := A_PtrSize ? "UPtr" : "UInt"
+    pBitmap := 0
+
+    DllCall("gdiplus\GdipCreateBitmapFromHBITMAP", Ptr, hBitmap, Ptr, Palette, A_PtrSize ? "UPtr*" : "uint*", pBitmap)
+    return pBitmap
+}
+
+DeleteObject(hObject)
+{
+    return DllCall("DeleteObject", A_PtrSize ? "UPtr" : "UInt", hObject)
+}
+
+DeleteDC(hdc)
+{
+    return DllCall("DeleteDC", A_PtrSize ? "UPtr" : "UInt", hdc)
+}
+
+WinGetRect( hwnd, ByRef x:="", ByRef y:="", ByRef w:="", ByRef h:="" ) {
+    Ptr := A_PtrSize ? "UPtr" : "UInt"
+    CreateRect(winRect, 0, 0, 0, 0) ;is 16 on both 32 and 64
+    ;VarSetCapacity( winRect, 16, 0 )	; Alternative of above two lines
+    DllCall( "GetWindowRect", Ptr, hwnd, Ptr, &winRect )
+    x := NumGet(winRect,  0, "UInt")
+    y := NumGet(winRect,  4, "UInt")
+    w := NumGet(winRect,  8, "UInt") - x
+    h := NumGet(winRect, 12, "UInt") - y
+}
+
+GetDCEx(hwnd, flags:=0, hrgnClip:=0)
+{
+    Ptr := A_PtrSize ? "UPtr" : "UInt"
+
+    return DllCall("GetDCEx", Ptr, hwnd, Ptr, hrgnClip, "int", flags)
+}
+
+IsInteger(Var) {
+    Static Integer := "Integer"
+    If Var Is Integer
+        Return True
+    Return False
+}
+
+GetMonitorInfo(MonitorNum)
+{
+    Monitors := MDMF_Enum()
+    for k,v in Monitors
+        if (v.Num = MonitorNum)
+            return v
+}
+
+CreateRect(ByRef Rect, x, y, w, h)
+{
+    VarSetCapacity(Rect, 16)
+    NumPut(x, Rect, 0, "uint"), NumPut(y, Rect, 4, "uint"), NumPut(w, Rect, 8, "uint"), NumPut(h, Rect, 12, "uint")
+}
+
+MDMF_Enum(HMON := "") {
+    Static CallbackFunc := Func(A_AhkVersion < "2" ? "RegisterCallback" : "CallbackCreate")
+    Static EnumProc := CallbackFunc.Call("MDMF_EnumProc")
+    Static Obj := (A_AhkVersion < "2") ? "Object" : "Map"
+    Static Monitors := {}
+    If (HMON = "") ; new enumeration
+    {
+        Monitors := %Obj%("TotalCount", 0)
+        If !DllCall("User32.dll\EnumDisplayMonitors", "Ptr", 0, "Ptr", 0, "Ptr", EnumProc, "Ptr", &Monitors, "Int")
+            Return False
+    }
+    Return (HMON = "") ? Monitors : Monitors.HasKey(HMON) ? Monitors[HMON] : False
 }
