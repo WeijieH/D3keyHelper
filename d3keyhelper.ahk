@@ -25,7 +25,7 @@ CoordMode, Pixel, Client
 CoordMode, Mouse, Client
 Process, Priority, , High
 
-VERSION:=210630
+VERSION:=210701
 TITLE:=Format("暗黑3技能连点器 v1.3.{:d}   by Oldsand", VERSION)
 MainWindowW:=900
 MainWindowH:=550
@@ -694,7 +694,7 @@ skillKey(currentProfile, nskill, D3W, D3H, forceStandingKey, useSkillQueue){
         case 4:
             ; 获得对应按键buff条最左侧坐标
             magicXY:=getSkillButtonBuffPos(D3W, D3H, nskill, buffpercent)
-            crgb:=getPixelRGB(magicXY)
+            crgb:=getPixelsRGB(magicXY[1], magicXY[2]-1, 1, 3, "Max")
             ; 具体判断是否需要补buff
             If (!vPausing and crgb[1]+crgb[2]+crgb[3] < 210)
             {
@@ -1205,16 +1205,25 @@ oneButtonSalvageHelper(D3W, D3H, xpos, ypos){
                 ; 智能分解判断
                 if (extraSalvageHelperDropdown > 2)
                 {
-                    Sleep, helperDelay//4
-                    ; 获取三个位于边框上的点颜色
-                    c1:=getPixelRGB([Round(m[3]-1-10*D3H/1440), m[2]])
-                    c2:=getPixelRGB([Round(m[3]-10*D3H/1440), m[2]])
-                    c3:=getPixelRGB([Round(m[3]+1-10*D3H/1440), m[2]])
-                    c:=[Max(c1[1],c2[1],c3[1]),Max(c1[2],c2[2],c3[2]),Max(c1[3],c2[3],c3[3])]
-                    if (c[1]>=70 or c[3]<=20) {
+                    c_t:=[-255,-255,-255]
+                    StartTime1:=A_TickCount
+                    while (A_TickCount-StartTime1<=helperDelay)
+                    {
+                        ; 获取三个位于边框上的点颜色
+                        c1:=getPixelRGB([Round(m[3]-1-10*D3H/1440), m[2]])
+                        c2:=getPixelRGB([Round(m[3]-10*D3H/1440), m[2]])
+                        c3:=getPixelRGB([Round(m[3]+1-10*D3H/1440), m[2]])
+                        c:=[Max(c1[1],c2[1],c3[1]),Max(c1[2],c2[2],c3[2]),Max(c1[3],c2[3],c3[3])]
+                        if (c_t[1]=c[1] and c_t[2]=c[2] and c_t[3]=c[3]){
+                            ; 当取色点颜色停止变化，动画显示完毕
+                            Break
+                        }
+                        c_t:=c
+                    }
+                    if ((c[1]>=70 or c[3]<=20) and Max(Abs(c[1]-c[2]), Abs(c[1]-c[3]), Abs(c[3]-c[2]))>20) {
                         ; 装备是太古或者远古
                         q:=(c[2]<35) ? 5:3
-                    } else if (c[1]<50 and c[2]>c[3] and c[3]>c[1]) {
+                    } else if (c[1]<40 and c[2]>c[3] and c[3]>c[1]) {
                         ; 装备是无形武器
                         q:=4
                     } else {
@@ -1227,8 +1236,17 @@ oneButtonSalvageHelper(D3W, D3H, xpos, ypos){
                     ; 如果不是最后一行，且下方格子有装备，判断下方格子边缘的颜色是否改变
                     md:=getInventorySpaceXY(D3W, D3H, i+10, "bag")
                     c_b:=cInventorySpace[i+10]
-                    Sleep, helperDelay//2
-                    c_a:=getPixelRGB([Round(md[3]+_spaceSizeInnerW*0.08*D3H/1440), Round(md[4]+_spaceSizeInnerH*0.7*D3H/1440)])
+                    c_t:=[-255,-255,-255]
+                    StartTime1:=A_TickCount
+                    while (A_TickCount-StartTime1<=helperDelay)
+                    {
+                        c_a:=getPixelRGB([Round(md[3]+_spaceSizeInnerW*0.08*D3H/1440), Round(md[4]+_spaceSizeInnerH*0.7*D3H/1440)])
+                        if (c_t[1]=c_a[1] and c_t[2]=c_a[2] and c_t[3]=c_a[3]){
+                            ; 当取色点颜色停止变化，动画显示完毕
+                            Break
+                        }
+                        c_t:=c_a
+                    }
                     if !(c_b[1]=c_a[1] and c_b[2]=c_a[2] and c_b[3]=c_a[3]){
                         ; 若改变，则当前格子装备为占用2个格子的大型装备，标记下方格子为非装备格子
                         helperBagZone[i+10]:=5
@@ -1243,17 +1261,18 @@ oneButtonSalvageHelper(D3W, D3H, xpos, ypos){
                 Click
                 StartTime1:=A_TickCount
                 ; 循环检测是否弹出确认对话框
-                while (A_TickCount-StartTime1<helperDelay)
+                while (A_TickCount-StartTime1<=helperDelay)
                 {
                     if isDialogBoXOnScreen(D3W, D3H)
                     {
                         Send {Enter}
                         StartTime2:=A_TickCount
                         ; 循环检测当前格子的装备有没有消失
-                        while (A_TickCount-StartTime2<helperDelay)
+                        while (A_TickCount-StartTime2<=helperDelay)
                         {
                             if isInventorySpaceEmpty(D3W, D3H, i, [[0.65625,0.71429], [0.375,0.36508], [0.725,0.251], [0.5,0.5]], "bag")
                             {
+                                Sleep, helperDelay//2
                                 Break
                             }
                         }
@@ -1981,6 +2000,41 @@ getKanaiCubeButtonPos(D3W, D3H){
 getPixelRGB(point){
     PixelGetColor, cpixel, point[1], point[2], rgb
     Return splitRGB(cpixel)
+}
+
+
+/*
+获取多个像素点聚合后的RGB值
+参数：
+    pointX, pointY：起始点坐标
+    w：宽度
+    h：高度
+    agg_func：用于聚合的函数名字
+返回：
+    [R，G，B]
+*/
+getPixelsRGB(pointX, pointY, w, h, agg_func){
+    pScreen:=getGameXYonScreen(pointX, pointY)
+    pBitmap:=Gdip_BitmapFromScreen(Format("{}|{}|{}|{}", pScreen[1], pScreen[2], w, h))
+    Gdip_LockBits(pBitmap, 0, 0, Gdip_GetImageWidth(pBitmap), Gdip_GetImageHeight(pBitmap), Stride, Scan0, BitmapData)
+    cpixelR:=[]
+    cpixelG:=[]
+    cpixelB:=[]
+    Loop, %w%
+    {
+        _x:=A_Index-1
+        Loop, %h%
+        {
+            _y:=A_Index-1
+            t:=splitRGB(Gdip_GetLockBitPixel(Scan0, _x, _y, Stride))
+            cpixelR.Push(t[1])
+            cpixelG.Push(t[2])
+            cpixelB.Push(t[3])
+        }
+    }
+    Gdip_UnlockBits(pBitmap, BitmapData)
+    Gdip_DisposeImage(pBitmap)
+    Return [Func(agg_func).Call(cpixelR*), Func(agg_func).Call(cpixelG*), Func(agg_func).Call(cpixelB*)]
 }
 
 /*
