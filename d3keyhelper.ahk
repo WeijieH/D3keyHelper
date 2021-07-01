@@ -25,7 +25,7 @@ CoordMode, Pixel, Client
 CoordMode, Mouse, Client
 Process, Priority, , High
 
-VERSION:=210701
+VERSION:=210702
 TITLE:=Format("暗黑3技能连点器 v1.3.{:d}   by Oldsand", VERSION)
 MainWindowW:=900
 MainWindowH:=550
@@ -1043,36 +1043,26 @@ oneButtonUpgradeConvertHelper(D3W, D3H, xpos, ypos)
                 ; 点击转化按钮
                 MouseMove, k[1][1], k[1][2]
                 Click
-                ; 等待动画显示，然后取色
-                Sleep, 700
-                c:=getPixelRGB(point_kanai)
-                If (c[1]+c[2]+c[3]>400)
+                Sleep, helperDelay*2
+                ; 清空魔盒
+                MouseMove, k[4][1], k[4][2]
+                Click
+                Sleep, helperDelay*2
+                MouseMove, k[3][1], k[3][2]
+                Click
+                Sleep, helperDelay*2
+                
+                if (pLargeItem)
                 {
-                    ; 取色点变亮，转化成功
-                    if (pLargeItem)
+                    ; 当前装备可能是大型装备，检查下方格子中心像素有没有一起变色
+                    cd_after:=getPixelRGB(m2)
+                    if !(abs(cd_before[1]-cd_after[1])<=3 and abs(cd_before[2]-cd_after[2]<=3) and abs(cd_before[3]-cd_after[3])<=3)
                     {
-                        ; 当前装备可能是大型装备，检查下方格子中心像素有没有一起变色
-                        cd_after:=getPixelRGB(m2)
-                        if !(abs(cd_before[1]-cd_after[1])<=3 and abs(cd_before[2]-cd_after[2]<=3) and abs(cd_before[3]-cd_after[3])<=3)
-                        {
-                            ; 如果变色，即当前装备是大型装备，标记下方格子未非装备格
-                            helperBagZone[i+10]:=5
-                        }
+                        ; 如果变色，即当前装备是大型装备，标记下方格子未非装备格
+                        helperBagZone[i+10]:=5
                     }
-                    ; 等待转化动画显示完毕
-                    Sleep, 1300 + helperDelay*4
-                    ; 点击完成按钮
-                    MouseMove, k[1][1], k[1][2]
-                    Click
                 }
-                Else
-                {
-                    ; 取色点没有变亮，转化不成功
-                    helperKanaiZone:=make1DArray(9, -1)
-                    ; 清理卡奈魔盒
-                    cleanKanaiCube(D3W, D3H)
-                    Sleep, helperDelay*3
-                }
+                    
                 i++
             Default:
                 ; 跳过无装备，或者非装备格
