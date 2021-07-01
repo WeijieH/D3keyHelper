@@ -1201,18 +1201,7 @@ oneButtonSalvageHelper(D3W, D3H, xpos, ypos){
             case 10:
                 ; 当前格子有装备
                 m:=getInventorySpaceXY(D3W, D3H, i, "bag")
-                md:=getInventorySpaceXY(D3W, D3H, i+10, "bag")
                 MouseMove, m[1], m[2]
-                c_a:=getPixelRGB([Round(md[3]+_spaceSizeInnerW*0.08*D3H/1440), Round(md[4]+_spaceSizeInnerH*0.7*D3H/1440)])
-                if (i<=50 and (helperBagZone[i+10]=10 or helperBagZone[i+10]=-1))
-                {
-                    ; 如果不是最后一行，且下方格子有装备，判断下方格子边缘的颜色是否改变
-                    c_b:=cInventorySpace[i+10]
-                    if !(c_b[1]=c_a[1] and c_b[2]=c_a[2] and c_b[3]=c_a[3]){
-                        ; 若改变，则当前格子装备为占用2个格子的大型装备，标记下方格子为非装备格子
-                        helperBagZone[i+10]:=5
-                    }
-                }
                 ; 智能分解判断
                 if (extraSalvageHelperDropdown > 2)
                 {
@@ -1232,11 +1221,23 @@ oneButtonSalvageHelper(D3W, D3H, xpos, ypos){
                         ; 装备是普通传奇
                         q:=2
                     }
-                    if (q>=extraSalvageHelperDropdown) {
-                        ; 如果品质达标，跳过当前格子
-                        i++
-                        Continue
+                }
+                if (i<=50 and (helperBagZone[i+10]=10 or helperBagZone[i+10]=-1))
+                {
+                    ; 如果不是最后一行，且下方格子有装备，判断下方格子边缘的颜色是否改变
+                    md:=getInventorySpaceXY(D3W, D3H, i+10, "bag")
+                    c_b:=cInventorySpace[i+10]
+                    Sleep, helperDelay//2
+                    c_a:=getPixelRGB([Round(md[3]+_spaceSizeInnerW*0.08*D3H/1440), Round(md[4]+_spaceSizeInnerH*0.7*D3H/1440)])
+                    if !(c_b[1]=c_a[1] and c_b[2]=c_a[2] and c_b[3]=c_a[3]){
+                        ; 若改变，则当前格子装备为占用2个格子的大型装备，标记下方格子为非装备格子
+                        helperBagZone[i+10]:=5
                     }
+                }
+                if (q>=extraSalvageHelperDropdown) {
+                    ; 如果品质达标，跳过当前格子
+                    i++
+                    Continue
                 }
                 ; 开始分解
                 Click
