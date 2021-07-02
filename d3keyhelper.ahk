@@ -694,7 +694,7 @@ skillKey(currentProfile, nskill, D3W, D3H, forceStandingKey, useSkillQueue){
         case 4:
             ; 获得对应按键buff条最左侧坐标
             magicXY:=getSkillButtonBuffPos(D3W, D3H, nskill, buffpercent)
-            crgb:=getPixelsRGB(magicXY[1], magicXY[2]-1, 1, 3, "Max")
+            crgb:=getPixelsRGB(magicXY[1], magicXY[2]-2, 1, 3, "Max")
             ; 具体判断是否需要补buff
             If (!vPausing and crgb[1]+crgb[2]+crgb[3] < 210)
             {
@@ -862,6 +862,7 @@ oldsandHelper(){
                     r[5]:=getPixelRGB(p[4])
                 }
                 ; [黄分解条件，蓝分解条件，白/灰分解条件]
+                _wait:=-1
                 for i, _c in [r[5][1]>50, r[4][3]>65, r[3][1]>65]
                 {
                     if _c
@@ -871,6 +872,8 @@ oldsandHelper(){
                             helperRunning:=False
                             Return
                         }
+                        ; 启动一键分解前等待装备消失
+                        _wait:=-helperDelay
                         MouseMove, salvageIconXY[5-i][1], salvageIconXY[5-i][2]
                         Click
                         Sleep, helperDelay
@@ -889,7 +892,7 @@ oldsandHelper(){
                 Sleep, helperDelay//2
                 ; 执行一键分解
                 fn:=Func("oneButtonSalvageHelper").Bind(D3W, D3H, xpos, ypos)
-                SetTimer, %fn%, -1
+                SetTimer, %fn%, %_wait%
                 Return
             case 1:
                 ; 铁匠页面打开但是不在分解页面
@@ -1039,19 +1042,19 @@ oneButtonUpgradeConvertHelper(D3W, D3H, xpos, ypos)
                 ; 点击添加材料按钮
                 MouseMove, k[2][1], k[2][2]
                 Click
-                Sleep, helperDelay*2
+                Sleep, helperDelay+50
                 ; 点击转化按钮
                 MouseMove, k[1][1], k[1][2]
                 Click
-                Sleep, helperDelay*2
+                Sleep, helperDelay+50
                 ; 清空魔盒
                 MouseMove, k[4][1], k[4][2]
                 Click
-                Sleep, helperDelay*2
+                Sleep, helperDelay+50
                 MouseMove, k[3][1], k[3][2]
                 Click
-                Sleep, helperDelay*2
-                
+                Sleep, helperDelay+50
+
                 if (pLargeItem)
                 {
                     ; 当前装备可能是大型装备，检查下方格子中心像素有没有一起变色
@@ -1062,7 +1065,7 @@ oneButtonUpgradeConvertHelper(D3W, D3H, xpos, ypos)
                         helperBagZone[i+10]:=5
                     }
                 }
-                    
+
                 i++
             Default:
                 ; 跳过无装备，或者非装备格
@@ -1258,11 +1261,10 @@ oneButtonSalvageHelper(D3W, D3H, xpos, ypos){
                         Send {Enter}
                         StartTime2:=A_TickCount
                         ; 循环检测当前格子的装备有没有消失
-                        while (A_TickCount-StartTime2<=helperDelay)
+                        while (A_TickCount-StartTime2<=2*helperDelay)
                         {
                             if isInventorySpaceEmpty(D3W, D3H, i, [[0.65625,0.71429], [0.375,0.36508], [0.725,0.251], [0.5,0.5]], "bag")
                             {
-                                Sleep, helperDelay//2
                                 Break
                             }
                         }
@@ -1332,59 +1334,6 @@ scanInventorySpaceGDIP(D3W, D3H){
     }
     Gdip_UnlockBits(pInventoryBitmap, BitmapData)
     Gdip_DisposeImage(pInventoryBitmap)
-    Return
-}
-
-/*
-扫描所有卡奈魔盒格子。未扫描-1，没东西1，有东西0
-参数：
-    D3W：int，窗口区域的宽度
-    D3H：int，窗口区域的高度
-返回：
-    无
-*/
-scanInventorySpaceKanai(D3W, D3H){
-    local
-    static _e:=[[0.65625,0.71429], [0.375,0.36508], [0.725,0.251]]
-    Global helperKanaiZone
-    Loop, 9
-    {
-        helperKanaiZone[A_Index]:=isInventorySpaceEmpty(D3W, D3H, A_Index, _e, "kanai")
-    }
-    Return
-}
-
-/*
-移除卡奈魔盒中的所有物品
-参数：
-    D3W：int，窗口区域的宽度
-    D3H：int，窗口区域的高度
-返回：
-    无
-*/
-cleanKanaiCube(D3W, D3H){
-    local
-    Global helperKanaiZone, helperDelay
-    ; 开启一单独线程查找空格子
-    fn1:=Func("scanInventorySpaceKanai").Bind(D3W, D3H)
-    SetTimer, %fn1%, -1
-    i:=1
-    while (i<=9)
-    {
-        switch helperKanaiZone[i]
-        {
-            case -1:
-                Sleep, 20
-            case 0:
-                m:=getInventorySpaceXY(D3W, D3H, i, "kanai")
-                MouseMove, m[1], m[2]
-                Sleep, helperDelay//3
-                Click, Right
-                i++
-            Default:
-                i++
-        }
-    }
     Return
 }
 
