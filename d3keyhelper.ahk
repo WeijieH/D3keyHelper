@@ -25,7 +25,7 @@ CoordMode, Pixel, Client
 CoordMode, Mouse, Client
 Process, Priority, , High
 
-VERSION:=210702
+VERSION:=210703
 TITLE:=Format("暗黑3技能连点器 v1.3.{:d}   by Oldsand", VERSION)
 MainWindowW:=900
 MainWindowH:=550
@@ -694,7 +694,7 @@ skillKey(currentProfile, nskill, D3W, D3H, forceStandingKey, useSkillQueue){
         case 4:
             ; 获得对应按键buff条最左侧坐标
             magicXY:=getSkillButtonBuffPos(D3W, D3H, nskill, buffpercent)
-            crgb:=getPixelsRGB(magicXY[1], magicXY[2]-2, 1, 3, "Max")
+            crgb:=getPixelsRGB(magicXY[1], magicXY[2]-2, 1, 3, "Max", True)
             ; 具体判断是否需要补buff
             If (!vPausing and crgb[1]+crgb[2]+crgb[3] < 210)
             {
@@ -997,9 +997,7 @@ oneButtonReforgeHelper(D3W, D3H, xpos, ypos){
 oneButtonUpgradeConvertHelper(D3W, D3H, xpos, ypos)
 {
     local
-    Global helperBreak, helperRunning, helperDelay, helperBagZone, mouseDelay, helperKanaiZone
-    ; 魔盒动画检查点
-    point_kanai:=[Round(172*D3H/1440),Round(740*D3H/1440)]
+    Global helperBreak, helperRunning, helperDelay, helperBagZone, mouseDelay
     helperBagZone:=make1DArray(60, -1)
     k:=getKanaiCubeButtonPos(D3W, D3H)
     ; 开启一单独线程查找空格子
@@ -1054,7 +1052,6 @@ oneButtonUpgradeConvertHelper(D3W, D3H, xpos, ypos)
                 MouseMove, k[3][1], k[3][2]
                 Click
                 Sleep, helperDelay+50
-
                 if (pLargeItem)
                 {
                     ; 当前装备可能是大型装备，检查下方格子中心像素有没有一起变色
@@ -1065,7 +1062,6 @@ oneButtonUpgradeConvertHelper(D3W, D3H, xpos, ypos)
                         helperBagZone[i+10]:=5
                     }
                 }
-
                 i++
             Default:
                 ; 跳过无装备，或者非装备格
@@ -1886,11 +1882,11 @@ isInventorySpaceEmpty(D3W, D3H, ID, ckpoints, zone){
     如果成功，返回对应的屏幕坐标
 */
 getGameXYonScreen(GameX, GameY){
-    static _POINT:=VarSetCapacity(POINT, 8)
-    NumPut(GameX, &POINT, 0, "Int")
-    NumPut(GameY, &POINT, 4, "Int")
+    VarSetCapacity(POINT, 8)
+    NumPut(GameX, POINT, 0, "Int")
+    NumPut(GameY, POINT, 4, "Int")
     DllCall("ClientToScreen", "ptr", WinExist("ahk_class D3 Main Window Class"), "ptr", &POINT)
-    Return [NumGet(&POINT, 0, "Int"), NumGet(&POINT, 4, "Int")]
+    Return [NumGet(POINT, 0, "Int"), NumGet(POINT, 4, "Int")]
 }
 
 /*
@@ -1902,10 +1898,10 @@ getGameXYonScreen(GameX, GameY){
     获取分辨率是否成功
 */
 getGameResulution(ByRef D3W, ByRef D3H){
-    static _rect:=VarSetCapacity(rect, 16)
+    VarSetCapacity(rect, 16)
     DllCall("GetClientRect", "ptr", WinExist("ahk_class D3 Main Window Class"), "ptr", &rect)
-    D3W:=NumGet(rect, 8, "int")
-    D3H:=NumGet(rect, 12, "int")
+    D3W:=NumGet(rect, 8, "Int")
+    D3H:=NumGet(rect, 12, "Int")
     if (D3W*D3H=0){
         MsgBox, % Format("无法获取到你的游戏分辨率，错误代码：0x{:X}，请尝试切换至窗口模式运行游戏。", A_LastError)
         Return False
@@ -1949,30 +1945,49 @@ getPixelRGB(point){
     w：宽度
     h：高度
     agg_func：用于聚合的函数名字
+    gdip：是否用GDI+库获取像素颜色
 返回：
     [R，G，B]
 */
-getPixelsRGB(pointX, pointY, w, h, agg_func){
-    pScreen:=getGameXYonScreen(pointX, pointY)
-    pBitmap:=Gdip_BitmapFromScreen(Format("{}|{}|{}|{}", pScreen[1], pScreen[2], w, h))
-    Gdip_LockBits(pBitmap, 0, 0, Gdip_GetImageWidth(pBitmap), Gdip_GetImageHeight(pBitmap), Stride, Scan0, BitmapData)
+getPixelsRGB(pointX, pointY, w, h, agg_func, gdip=False){
     cpixelR:=[]
     cpixelG:=[]
     cpixelB:=[]
-    Loop, %w%
+    if gdip
     {
-        _x:=A_Index-1
-        Loop, %h%
+        pScreen:=getGameXYonScreen(pointX, pointY)
+        pBitmap:=Gdip_BitmapFromScreen(Format("{}|{}|{}|{}", pScreen[1], pScreen[2], w, h))
+        Gdip_LockBits(pBitmap, 0, 0, Gdip_GetImageWidth(pBitmap), Gdip_GetImageHeight(pBitmap), Stride, Scan0, BitmapData)
+        Loop, %w%
         {
-            _y:=A_Index-1
-            t:=splitRGB(Gdip_GetLockBitPixel(Scan0, _x, _y, Stride))
-            cpixelR.Push(t[1])
-            cpixelG.Push(t[2])
-            cpixelB.Push(t[3])
+            _x:=A_Index-1
+            Loop, %h%
+            {
+                _y:=A_Index-1
+                t:=splitRGB(Gdip_GetLockBitPixel(Scan0, _x, _y, Stride))
+                cpixelR.Push(t[1])
+                cpixelG.Push(t[2])
+                cpixelB.Push(t[3])
+            }
+        }
+        Gdip_UnlockBits(pBitmap, BitmapData)
+        Gdip_DisposeImage(pBitmap)
+    }
+    Else
+    {
+        Loop, %w%
+        {
+            _x:=A_Index-1
+            Loop, %h%
+            {
+                _y:=A_Index-1
+                t:=getPixelRGB([_x+pointX, _y+pointY])
+                cpixelR.Push(t[1])
+                cpixelG.Push(t[2])
+                cpixelB.Push(t[3])
+            }
         }
     }
-    Gdip_UnlockBits(pBitmap, BitmapData)
-    Gdip_DisposeImage(pBitmap)
     Return [Func(agg_func).Call(cpixelR*), Func(agg_func).Call(cpixelG*), Func(agg_func).Call(cpixelB*)]
 }
 
