@@ -698,7 +698,7 @@ skillKey(currentProfile, nskill, D3W, D3H, forceStandingKey, useSkillQueue){
             magicXY:=getSkillButtonBuffPos(D3W, D3H, nskill, buffpercent)
             crgb:=getPixelsRGB(magicXY[1], magicXY[2]-2, 1, 3, "Max", True)
             ; 具体判断是否需要补buff
-            If (!vPausing and crgb[1]+crgb[2]+crgb[3] < 210)
+            If (!vPausing and crgb[1]+crgb[2]+crgb[3] < 300)
             {
                 switch nskill
                 {
@@ -1201,15 +1201,13 @@ oneButtonSalvageHelper(D3W, D3H, xpos, ypos){
                     while (A_TickCount-StartTime1<=helperDelay)
                     {
                         ; 获取三个位于边框上的点颜色
-                        c1:=getPixelRGB([Round(m[3]-1-10*D3H/1440), m[2]])
-                        c2:=getPixelRGB([Round(m[3]-10*D3H/1440), m[2]])
-                        c3:=getPixelRGB([Round(m[3]+1-10*D3H/1440), m[2]])
-                        c:=[Max(c1[1],c2[1],c3[1]),Max(c1[2],c2[2],c3[2]),Max(c1[3],c2[3],c3[3])]
+                        c:=getPixelsRGB(Round(m[3]-1-10*D3H/1440), m[2], 3, 1, "Max", False)
                         if (c_t[1]=c[1] and c_t[2]=c[2] and c_t[3]=c[3]){
                             ; 当取色点颜色停止变化，动画显示完毕
                             Break
                         }
                         c_t:=c
+                        Sleep, 20
                     }
                     if ((c[1]>=70 or c[3]<=20) and Max(Abs(c[1]-c[2]), Abs(c[1]-c[3]), Abs(c[3]-c[2]))>20) {
                         ; 装备是太古或者远古
