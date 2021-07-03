@@ -194,7 +194,7 @@ GuiCreate(){
             }
             Gui Add, DropDownList, x+10 w100 AltSubmit Choose%ac% gSetSkillsetDropdown vskillset%currentTab%s%A_Index%dropdown, 禁用||按住不放||连点||保持Buff
             Gui Add, Edit, vskillset%currentTab%s%A_Index%edit x+25 w90 Number
-            Gui Add, Updown, vskillset%currentTab%s%A_Index%updown Range20-30000, % intervals[currentTab][A_Index]
+            Gui Add, Updown, vskillset%currentTab%s%A_Index%updown gSetSkillQueueWarning Range20-30000, % intervals[currentTab][A_Index]
             Gui Add, Edit, vskillset%currentTab%s%A_Index%delayedit hwndskillset%currentTab%s%A_Index%delayeditID x+40 w70 Number
             Gui Add, Updown, vskillset%currentTab%s%A_Index%delayupdown Range0-3000, % ivdelays[currentTab][A_Index]
             AddToolTip(skillset%currentTab%s%A_Index%delayeditID, "这里填入随机延迟的最大值，设为0可以关闭随即延迟")
@@ -218,10 +218,12 @@ GuiCreate(){
         Gui Add, Checkbox, % "x+20 yp+3 Checked" others[currentTab].useskillqueue " hwnduseskillqueueckbox" currentTab "ID vskillset" currentTab "useskillqueueckbox gSetSkillQueue", 使用单线程按键队列（毫秒）：
         AddToolTip(useskillqueueckbox%currentTab%ID, "开启后按键不会被立刻按下而是存储至一个按键队列中`n连点会使技能加入队列头部，保持buff会使技能加入队列尾部`n并且连点时会自动按下强制站立")
         Gui Add, Edit, vskillset%currentTab%useskillqueueedit hwnduseskillqueueedit%currentTab%ID x+0 yp-3 w50 Number
-        Gui Add, Updown, vskillset%currentTab%useskillqueueupdown Range50-1000, % others[currentTab].useskillqueueinterval
+        Gui Add, Updown, vskillset%currentTab%useskillqueueupdown gSetSkillQueueWarning Range50-1000, % others[currentTab].useskillqueueinterval
         AddToolTip(useskillqueueedit%currentTab%ID, "按键队列中的连点按键会以此间隔一一发送至游戏窗口")
+        Gui Add, Text, x+8  yp+3 vskillset%currentTab%skillqueuewarningtext hwndskillset%currentTab%skillqueuewarningtextID gdummyFunction +cRed +Hidden, % "注意！"
+        AddToolTip(skillset%currentTab%skillqueuewarningtextID, "按键队列功能设置有误")
 
-        Gui Add, Checkbox, % "xs+20 yp+40 Checked" others[currentTab].enablequickpause " vskillset" currentTab "clickpauseckbox gSetQuickPause", 快速暂停：
+        Gui Add, Checkbox, % "xs+20 yp+37 Checked" others[currentTab].enablequickpause " vskillset" currentTab "clickpauseckbox gSetQuickPause", 快速暂停：
         Gui Add, DropDownList, % "x+0 yp-3 w50 AltSubmit Choose" others[currentTab].quickpausemethod1 " vskillset" currentTab "clickpausedropdown1 gSetQuickPause", 双击||单击
         Gui Add, DropDownList, % "x+5 yp w100 AltSubmit Choose" others[currentTab].quickpausemethod2 " vskillset" currentTab "clickpausedropdown2 gSetQuickPause", 鼠标左键||鼠标右键||鼠标中键||侧键1||侧键2
         Gui Add, Text, x+5 yp+3 vskillset%currentTab%clickpausetext1, 则暂停压键
@@ -1417,6 +1419,50 @@ SetStartMode(){
 }
 
 /*
+设置按键队列警告和提示消息
+参数：
+    无
+返回：
+    无
+*/
+SetSkillQueueWarning(){
+    local
+    Global currentProfile
+    GuiControlGet, skillset%currentProfile%useskillqueueckbox
+    if skillset%currentProfile%useskillqueueckbox
+    {
+        GuiControlGet, skillset%currentProfile%useskillqueueupdown
+        _out:=1000/skillset%currentProfile%useskillqueueupdown
+        _in:=0
+        Loop, 6
+        {
+            GuiControlGet, skillset%currentProfile%s%A_Index%dropdown
+            if (skillset%currentProfile%s%A_Index%dropdown==3)
+            {
+                GuiControlGet, skillset%currentProfile%s%A_Index%updown
+                _in+=1000/skillset%currentProfile%s%A_Index%updown
+            }
+        }
+        if (_in>_out)
+        {
+            GuiControl, Show, skillset%currentProfile%skillqueuewarningtext
+            _s:=Format("当前按键配置每秒向队列中填入{:.2f}个“连点”技能，但却只取出{:.2f}个", _in, _out)
+            GuiControlGet, _hwnd, Hwnd, skillset%currentProfile%skillqueuewarningtext
+            AddToolTip(_hwnd, _s "`n你应当把buff类技能设置为“保持buff”而不是“连点”`n或者你需要增加”连点“的执行间隔，再或者减少按键队列的发送间隔", 30000, True)
+        }
+        Else
+        {
+            GuiControl, Hide, skillset%currentProfile%skillqueuewarningtext
+        }
+    }
+    Else
+    {
+        GuiControl, Hide, skillset%currentProfile%skillqueuewarningtext
+    }
+    Return
+}
+
+/*
 设置自定义强制站立按键相关的控件动画
 参数：
     无
@@ -1606,6 +1652,7 @@ SetSkillQueue(){
             GuiControl, Disable, skillset%A_Index%useskillqueueedit
         }
     }
+    SetSkillQueueWarning()
     Return
 }
 
@@ -2587,6 +2634,7 @@ SetSkillsetDropdown:
             }
         }
     }
+    SetSkillQueueWarning()
 Return
 
 ; 处理战斗宏的执行逻辑
