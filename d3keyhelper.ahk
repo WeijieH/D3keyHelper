@@ -2697,6 +2697,7 @@ RunMarco:
                 Send {%k% Down}
                 keysOnHold[k]:=1
             Case 3, 4:
+                Gosub, spamSkillKey%A_Index%
                 GuiControlGet, skillset%currentProfile%s%A_Index%updown
                 SetTimer, spamSkillKey%A_Index%, % skillset%currentProfile%s%A_Index%updown
             Default:
@@ -2718,6 +2719,7 @@ RunMarco:
             Send {%extraCustomMovingHK% Down}
             keysOnHold[extraCustomMovingHK]:=1
         case 4:
+            Send {%extraCustomMovingHK%}
             GuiControlGet, skillset%currentProfile%movingedit
             SetTimer, forceMoving, % skillset%currentProfile%movingedit
 
@@ -2725,6 +2727,7 @@ RunMarco:
     ; 处理按键队列
     if skillset%currentProfile%useskillqueueckbox{
         GuiControlGet, skillset%currentProfile%useskillqueueupdown
+        spamSkillQueue(skillset%currentProfile%useskillqueueupdown)
         sqfunc:=Func("spamSkillQueue").Bind(skillset%currentProfile%useskillqueueupdown)
         SetTimer, %sqfunc%, % skillset%currentProfile%useskillqueueupdown
     }
