@@ -25,7 +25,7 @@ CoordMode, Pixel, Client
 CoordMode, Mouse, Client
 Process, Priority, , High
 
-VERSION:=210701
+VERSION:=210705
 TITLE:=Format("暗黑3技能连点器 v1.3.{:d}   by Oldsand", VERSION)
 MainWindowW:=900
 MainWindowH:=550
@@ -194,7 +194,7 @@ GuiCreate(){
             }
             Gui Add, DropDownList, x+10 w100 AltSubmit Choose%ac% gSetSkillsetDropdown vskillset%currentTab%s%A_Index%dropdown, 禁用||按住不放||连点||保持Buff
             Gui Add, Edit, vskillset%currentTab%s%A_Index%edit x+25 w90 Number
-            Gui Add, Updown, vskillset%currentTab%s%A_Index%updown Range20-30000, % intervals[currentTab][A_Index]
+            Gui Add, Updown, vskillset%currentTab%s%A_Index%updown gSetSkillQueueWarning Range20-30000, % intervals[currentTab][A_Index]
             Gui Add, Edit, vskillset%currentTab%s%A_Index%delayedit hwndskillset%currentTab%s%A_Index%delayeditID x+40 w70 Number
             Gui Add, Updown, vskillset%currentTab%s%A_Index%delayupdown Range0-3000, % ivdelays[currentTab][A_Index]
             AddToolTip(skillset%currentTab%s%A_Index%delayeditID, "这里填入随机延迟的最大值，设为0可以关闭随即延迟")
@@ -218,10 +218,12 @@ GuiCreate(){
         Gui Add, Checkbox, % "x+20 yp+3 Checked" others[currentTab].useskillqueue " hwnduseskillqueueckbox" currentTab "ID vskillset" currentTab "useskillqueueckbox gSetSkillQueue", 使用单线程按键队列（毫秒）：
         AddToolTip(useskillqueueckbox%currentTab%ID, "开启后按键不会被立刻按下而是存储至一个按键队列中`n连点会使技能加入队列头部，保持buff会使技能加入队列尾部`n并且连点时会自动按下强制站立")
         Gui Add, Edit, vskillset%currentTab%useskillqueueedit hwnduseskillqueueedit%currentTab%ID x+0 yp-3 w50 Number
-        Gui Add, Updown, vskillset%currentTab%useskillqueueupdown Range50-1000, % others[currentTab].useskillqueueinterval
+        Gui Add, Updown, vskillset%currentTab%useskillqueueupdown gSetSkillQueueWarning Range50-1000, % others[currentTab].useskillqueueinterval
         AddToolTip(useskillqueueedit%currentTab%ID, "按键队列中的连点按键会以此间隔一一发送至游戏窗口")
+        Gui Add, Text, x+8  yp+3 vskillset%currentTab%skillqueuewarningtext hwndskillset%currentTab%skillqueuewarningtextID gdummyFunction +cRed +Hidden, % "注意！"
+        AddToolTip(skillset%currentTab%skillqueuewarningtextID, "按键队列功能设置有误")
 
-        Gui Add, Checkbox, % "xs+20 yp+40 Checked" others[currentTab].enablequickpause " vskillset" currentTab "clickpauseckbox gSetQuickPause", 快速暂停：
+        Gui Add, Checkbox, % "xs+20 yp+37 Checked" others[currentTab].enablequickpause " vskillset" currentTab "clickpauseckbox gSetQuickPause", 快速暂停：
         Gui Add, DropDownList, % "x+0 yp-3 w50 AltSubmit Choose" others[currentTab].quickpausemethod1 " vskillset" currentTab "clickpausedropdown1 gSetQuickPause", 双击||单击
         Gui Add, DropDownList, % "x+5 yp w100 AltSubmit Choose" others[currentTab].quickpausemethod2 " vskillset" currentTab "clickpausedropdown2 gSetQuickPause", 鼠标左键||鼠标右键||鼠标中键||侧键1||侧键2
         Gui Add, Text, x+5 yp+3 vskillset%currentTab%clickpausetext1, 则暂停压键
@@ -694,9 +696,9 @@ skillKey(currentProfile, nskill, D3W, D3H, forceStandingKey, useSkillQueue){
         case 4:
             ; 获得对应按键buff条最左侧坐标
             magicXY:=getSkillButtonBuffPos(D3W, D3H, nskill, buffpercent)
-            crgb:=getPixelsRGB(magicXY[1], magicXY[2]-1, 1, 3, "Max")
+            crgb:=getPixelsRGB(magicXY[1], magicXY[2]-2, 1, 3, "Max", True)
             ; 具体判断是否需要补buff
-            If (!vPausing and crgb[1]+crgb[2]+crgb[3] < 210)
+            If (!vPausing and crgb[1]+crgb[2]+crgb[3] < 300)
             {
                 switch nskill
                 {
@@ -862,6 +864,7 @@ oldsandHelper(){
                     r[5]:=getPixelRGB(p[4])
                 }
                 ; [黄分解条件，蓝分解条件，白/灰分解条件]
+                _wait:=-1
                 for i, _c in [r[5][1]>50, r[4][3]>65, r[3][1]>65]
                 {
                     if _c
@@ -871,6 +874,8 @@ oldsandHelper(){
                             helperRunning:=False
                             Return
                         }
+                        ; 启动一键分解前等待装备消失
+                        _wait:=-helperDelay
                         MouseMove, salvageIconXY[5-i][1], salvageIconXY[5-i][2]
                         Click
                         Sleep, helperDelay
@@ -889,7 +894,7 @@ oldsandHelper(){
                 Sleep, helperDelay//2
                 ; 执行一键分解
                 fn:=Func("oneButtonSalvageHelper").Bind(D3W, D3H, xpos, ypos)
-                SetTimer, %fn%, -1
+                SetTimer, %fn%, %_wait%
                 Return
             case 1:
                 ; 铁匠页面打开但是不在分解页面
@@ -994,9 +999,7 @@ oneButtonReforgeHelper(D3W, D3H, xpos, ypos){
 oneButtonUpgradeConvertHelper(D3W, D3H, xpos, ypos)
 {
     local
-    Global helperBreak, helperRunning, helperDelay, helperBagZone, mouseDelay, helperKanaiZone
-    ; 魔盒动画检查点
-    point_kanai:=[Round(172*D3H/1440),Round(740*D3H/1440)]
+    Global helperBreak, helperRunning, helperDelay, helperBagZone, mouseDelay
     helperBagZone:=make1DArray(60, -1)
     k:=getKanaiCubeButtonPos(D3W, D3H)
     ; 开启一单独线程查找空格子
@@ -1039,39 +1042,27 @@ oneButtonUpgradeConvertHelper(D3W, D3H, xpos, ypos)
                 ; 点击添加材料按钮
                 MouseMove, k[2][1], k[2][2]
                 Click
-                Sleep, helperDelay*2
+                Sleep, helperDelay+50
                 ; 点击转化按钮
                 MouseMove, k[1][1], k[1][2]
                 Click
-                ; 等待动画显示，然后取色
-                Sleep, 700
-                c:=getPixelRGB(point_kanai)
-                If (c[1]+c[2]+c[3]>400)
+                Sleep, helperDelay+50
+                ; 清空魔盒
+                MouseMove, k[4][1], k[4][2]
+                Click
+                Sleep, helperDelay+50
+                MouseMove, k[3][1], k[3][2]
+                Click
+                Sleep, helperDelay+50
+                if (pLargeItem)
                 {
-                    ; 取色点变亮，转化成功
-                    if (pLargeItem)
+                    ; 当前装备可能是大型装备，检查下方格子中心像素有没有一起变色
+                    cd_after:=getPixelRGB(m2)
+                    if !(abs(cd_before[1]-cd_after[1])<=3 and abs(cd_before[2]-cd_after[2]<=3) and abs(cd_before[3]-cd_after[3])<=3)
                     {
-                        ; 当前装备可能是大型装备，检查下方格子中心像素有没有一起变色
-                        cd_after:=getPixelRGB(m2)
-                        if !(abs(cd_before[1]-cd_after[1])<=3 and abs(cd_before[2]-cd_after[2]<=3) and abs(cd_before[3]-cd_after[3])<=3)
-                        {
-                            ; 如果变色，即当前装备是大型装备，标记下方格子未非装备格
-                            helperBagZone[i+10]:=5
-                        }
+                        ; 如果变色，即当前装备是大型装备，标记下方格子未非装备格
+                        helperBagZone[i+10]:=5
                     }
-                    ; 等待转化动画显示完毕
-                    Sleep, 1300 + helperDelay*4
-                    ; 点击完成按钮
-                    MouseMove, k[1][1], k[1][2]
-                    Click
-                }
-                Else
-                {
-                    ; 取色点没有变亮，转化不成功
-                    helperKanaiZone:=make1DArray(9, -1)
-                    ; 清理卡奈魔盒
-                    cleanKanaiCube(D3W, D3H)
-                    Sleep, helperDelay*3
                 }
                 i++
             Default:
@@ -1210,15 +1201,13 @@ oneButtonSalvageHelper(D3W, D3H, xpos, ypos){
                     while (A_TickCount-StartTime1<=helperDelay)
                     {
                         ; 获取三个位于边框上的点颜色
-                        c1:=getPixelRGB([Round(m[3]-1-10*D3H/1440), m[2]])
-                        c2:=getPixelRGB([Round(m[3]-10*D3H/1440), m[2]])
-                        c3:=getPixelRGB([Round(m[3]+1-10*D3H/1440), m[2]])
-                        c:=[Max(c1[1],c2[1],c3[1]),Max(c1[2],c2[2],c3[2]),Max(c1[3],c2[3],c3[3])]
+                        c:=getPixelsRGB(Round(m[3]-1-10*D3H/1440), m[2], 3, 1, "Max", False)
                         if (c_t[1]=c[1] and c_t[2]=c[2] and c_t[3]=c[3]){
                             ; 当取色点颜色停止变化，动画显示完毕
                             Break
                         }
                         c_t:=c
+                        Sleep, 20
                     }
                     if ((c[1]>=70 or c[3]<=20) and Max(Abs(c[1]-c[2]), Abs(c[1]-c[3]), Abs(c[3]-c[2]))>20) {
                         ; 装备是太古或者远古
@@ -1268,11 +1257,10 @@ oneButtonSalvageHelper(D3W, D3H, xpos, ypos){
                         Send {Enter}
                         StartTime2:=A_TickCount
                         ; 循环检测当前格子的装备有没有消失
-                        while (A_TickCount-StartTime2<=helperDelay)
+                        while (A_TickCount-StartTime2<=2*helperDelay)
                         {
                             if isInventorySpaceEmpty(D3W, D3H, i, [[0.65625,0.71429], [0.375,0.36508], [0.725,0.251], [0.5,0.5]], "bag")
                             {
-                                Sleep, helperDelay//2
                                 Break
                             }
                         }
@@ -1342,59 +1330,6 @@ scanInventorySpaceGDIP(D3W, D3H){
     }
     Gdip_UnlockBits(pInventoryBitmap, BitmapData)
     Gdip_DisposeImage(pInventoryBitmap)
-    Return
-}
-
-/*
-扫描所有卡奈魔盒格子。未扫描-1，没东西1，有东西0
-参数：
-    D3W：int，窗口区域的宽度
-    D3H：int，窗口区域的高度
-返回：
-    无
-*/
-scanInventorySpaceKanai(D3W, D3H){
-    local
-    static _e:=[[0.65625,0.71429], [0.375,0.36508], [0.725,0.251]]
-    Global helperKanaiZone
-    Loop, 9
-    {
-        helperKanaiZone[A_Index]:=isInventorySpaceEmpty(D3W, D3H, A_Index, _e, "kanai")
-    }
-    Return
-}
-
-/*
-移除卡奈魔盒中的所有物品
-参数：
-    D3W：int，窗口区域的宽度
-    D3H：int，窗口区域的高度
-返回：
-    无
-*/
-cleanKanaiCube(D3W, D3H){
-    local
-    Global helperKanaiZone, helperDelay
-    ; 开启一单独线程查找空格子
-    fn1:=Func("scanInventorySpaceKanai").Bind(D3W, D3H)
-    SetTimer, %fn1%, -1
-    i:=1
-    while (i<=9)
-    {
-        switch helperKanaiZone[i]
-        {
-            case -1:
-                Sleep, 20
-            case 0:
-                m:=getInventorySpaceXY(D3W, D3H, i, "kanai")
-                MouseMove, m[1], m[2]
-                Sleep, helperDelay//3
-                Click, Right
-                i++
-            Default:
-                i++
-        }
-    }
     Return
 }
 
@@ -1478,6 +1413,50 @@ SetStartMode(){
     }
     Gosub, SetQuickPause
     Gosub, SetMovingHelper
+    Return
+}
+
+/*
+设置按键队列警告和提示消息
+参数：
+    无
+返回：
+    无
+*/
+SetSkillQueueWarning(){
+    local
+    Global currentProfile
+    GuiControlGet, skillset%currentProfile%useskillqueueckbox
+    if skillset%currentProfile%useskillqueueckbox
+    {
+        GuiControlGet, skillset%currentProfile%useskillqueueupdown
+        _out:=1000/skillset%currentProfile%useskillqueueupdown
+        _in:=0
+        Loop, 6
+        {
+            GuiControlGet, skillset%currentProfile%s%A_Index%dropdown
+            if (skillset%currentProfile%s%A_Index%dropdown==3)
+            {
+                GuiControlGet, skillset%currentProfile%s%A_Index%updown
+                _in+=1000/skillset%currentProfile%s%A_Index%updown
+            }
+        }
+        if (_in>_out)
+        {
+            GuiControl, Show, skillset%currentProfile%skillqueuewarningtext
+            _s:=Format("当前按键配置每秒向队列中填入{:.2f}个“连点”技能，但却只取出{:.2f}个", _in, _out)
+            GuiControlGet, _hwnd, Hwnd, skillset%currentProfile%skillqueuewarningtext
+            AddToolTip(_hwnd, _s "`n你应当把buff类技能设置为“保持buff”而不是“连点”`n或者你需要增加”连点“的执行间隔，再或者减少按键队列的发送间隔", 30000, True)
+        }
+        Else
+        {
+            GuiControl, Hide, skillset%currentProfile%skillqueuewarningtext
+        }
+    }
+    Else
+    {
+        GuiControl, Hide, skillset%currentProfile%skillqueuewarningtext
+    }
     Return
 }
 
@@ -1671,6 +1650,7 @@ SetSkillQueue(){
             GuiControl, Disable, skillset%A_Index%useskillqueueedit
         }
     }
+    SetSkillQueueWarning()
     Return
 }
 
@@ -1947,11 +1927,11 @@ isInventorySpaceEmpty(D3W, D3H, ID, ckpoints, zone){
     如果成功，返回对应的屏幕坐标
 */
 getGameXYonScreen(GameX, GameY){
-    static _POINT:=VarSetCapacity(POINT, 8)
-    NumPut(GameX, &POINT, 0, "Int")
-    NumPut(GameY, &POINT, 4, "Int")
+    VarSetCapacity(POINT, 8)
+    NumPut(GameX, POINT, 0, "Int")
+    NumPut(GameY, POINT, 4, "Int")
     DllCall("ClientToScreen", "ptr", WinExist("ahk_class D3 Main Window Class"), "ptr", &POINT)
-    Return [NumGet(&POINT, 0, "Int"), NumGet(&POINT, 4, "Int")]
+    Return [NumGet(POINT, 0, "Int"), NumGet(POINT, 4, "Int")]
 }
 
 /*
@@ -1963,10 +1943,10 @@ getGameXYonScreen(GameX, GameY){
     获取分辨率是否成功
 */
 getGameResulution(ByRef D3W, ByRef D3H){
-    static _rect:=VarSetCapacity(rect, 16)
+    VarSetCapacity(rect, 16)
     DllCall("GetClientRect", "ptr", WinExist("ahk_class D3 Main Window Class"), "ptr", &rect)
-    D3W:=NumGet(rect, 8, "int")
-    D3H:=NumGet(rect, 12, "int")
+    D3W:=NumGet(rect, 8, "Int")
+    D3H:=NumGet(rect, 12, "Int")
     if (D3W*D3H=0){
         MsgBox, % Format("无法获取到你的游戏分辨率，错误代码：0x{:X}，请尝试切换至窗口模式运行游戏。", A_LastError)
         Return False
@@ -2010,30 +1990,49 @@ getPixelRGB(point){
     w：宽度
     h：高度
     agg_func：用于聚合的函数名字
+    gdip：是否用GDI+库获取像素颜色
 返回：
     [R，G，B]
 */
-getPixelsRGB(pointX, pointY, w, h, agg_func){
-    pScreen:=getGameXYonScreen(pointX, pointY)
-    pBitmap:=Gdip_BitmapFromScreen(Format("{}|{}|{}|{}", pScreen[1], pScreen[2], w, h))
-    Gdip_LockBits(pBitmap, 0, 0, Gdip_GetImageWidth(pBitmap), Gdip_GetImageHeight(pBitmap), Stride, Scan0, BitmapData)
+getPixelsRGB(pointX, pointY, w, h, agg_func, gdip=False){
     cpixelR:=[]
     cpixelG:=[]
     cpixelB:=[]
-    Loop, %w%
+    if gdip
     {
-        _x:=A_Index-1
-        Loop, %h%
+        pScreen:=getGameXYonScreen(pointX, pointY)
+        pBitmap:=Gdip_BitmapFromScreen(Format("{}|{}|{}|{}", pScreen[1], pScreen[2], w, h))
+        Gdip_LockBits(pBitmap, 0, 0, Gdip_GetImageWidth(pBitmap), Gdip_GetImageHeight(pBitmap), Stride, Scan0, BitmapData)
+        Loop, %w%
         {
-            _y:=A_Index-1
-            t:=splitRGB(Gdip_GetLockBitPixel(Scan0, _x, _y, Stride))
-            cpixelR.Push(t[1])
-            cpixelG.Push(t[2])
-            cpixelB.Push(t[3])
+            _x:=A_Index-1
+            Loop, %h%
+            {
+                _y:=A_Index-1
+                t:=splitRGB(Gdip_GetLockBitPixel(Scan0, _x, _y, Stride))
+                cpixelR.Push(t[1])
+                cpixelG.Push(t[2])
+                cpixelB.Push(t[3])
+            }
+        }
+        Gdip_UnlockBits(pBitmap, BitmapData)
+        Gdip_DisposeImage(pBitmap)
+    }
+    Else
+    {
+        Loop, %w%
+        {
+            _x:=A_Index-1
+            Loop, %h%
+            {
+                _y:=A_Index-1
+                t:=getPixelRGB([_x+pointX, _y+pointY])
+                cpixelR.Push(t[1])
+                cpixelG.Push(t[2])
+                cpixelB.Push(t[3])
+            }
         }
     }
-    Gdip_UnlockBits(pBitmap, BitmapData)
-    Gdip_DisposeImage(pBitmap)
     Return [Func(agg_func).Call(cpixelR*), Func(agg_func).Call(cpixelG*), Func(agg_func).Call(cpixelB*)]
 }
 
@@ -2633,6 +2632,7 @@ SetSkillsetDropdown:
             }
         }
     }
+    SetSkillQueueWarning()
 Return
 
 ; 处理战斗宏的执行逻辑
