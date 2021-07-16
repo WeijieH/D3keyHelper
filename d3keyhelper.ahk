@@ -25,7 +25,7 @@ CoordMode, Pixel, Client
 CoordMode, Mouse, Client
 Process, Priority, , High
 
-VERSION:=210705
+VERSION:=210716
 TITLE:=Format("暗黑3技能连点器 v1.3.{:d}   by Oldsand", VERSION)
 MainWindowW:=900
 MainWindowH:=550
