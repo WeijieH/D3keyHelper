@@ -1261,6 +1261,11 @@ oneButtonSalvageHelper(D3W, D3H, xpos, ypos){
                         {
                             if isInventorySpaceEmpty(D3W, D3H, i, [[0.65625,0.71429], [0.375,0.36508], [0.725,0.251], [0.5,0.5]], "bag")
                             {
+                                ; 再次检查下方格子有没有变为空格子
+                                if ((helperBagZone[i+10]=10 or helperBagZone[i+10]=-1) and isInventorySpaceEmpty(D3W, D3H, i+10, [[0.65625,0.71429], [0.375,0.36508], [0.725,0.251], [0.5,0.5]], "bag"))
+                                {
+                                    helperBagZone[i+10]:=5
+                                }
                                 Break
                             }
                         }
