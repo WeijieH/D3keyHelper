@@ -275,6 +275,8 @@ GuiCreate(){
     Gui Add, CheckBox, % "x+40 yp+0 hwndextraConvertHelperCkboxID vextraConvertHelperCkbox Checked" generals.enableconverthelper, 魔盒转化助手
     AddToolTip(extraConvertHelperCkboxID, "当魔盒打开且在转化材料页面时，按下助手快捷键即自动使用所有非安全格内的装备进行材料转化")
 
+    Gui Add, CheckBox, % "xs+20 yp+20 hwndextraAbandonHelperCkboxID vextraAbandonHelperCkbox Checked" generals.enableabandonhelper, 丢装备助手
+    AddToolTip(extraAbandonHelperCkboxID, "")
 
     Gui Add, CheckBox, % "xs+20 yp+65 vextraSoundonProfileSwitch Checked" generals.enablesoundplay, 使用快捷键切换配置成功时播放声音
     Gui Add, CheckBox, % "xs+20 yp+35 hwndextraSmartPauseID vextraSmartPause Checked" generals.enablesmartpause, 智能暂停
@@ -391,6 +393,7 @@ ReadCfgFile(cfgFileName, ByRef tabs, ByRef hotkeys, ByRef actions, ByRef interva
         IniRead, enableupgradehelper, %cfgFileName%, General, enableupgradehelper, 0
         IniRead, enablesmartpause, %cfgFileName%, General, enablesmartpause, 0
         IniRead, enablesoundplay, %cfgFileName%, General, enablesoundplay, 1
+        IniRead, enableabandonhelper, %cfgFileName%, General, enableabandonhelper, 0
         IniRead, startmethod, %cfgFileName%, General, startmethod, 7
         IniRead, starthotkey, %cfgFileName%, General, starthotkey, F2
         IniRead, custommoving, %cfgFileName%, General, custommoving, 0
@@ -410,7 +413,7 @@ ReadCfgFile(cfgFileName, ByRef tabs, ByRef hotkeys, ByRef actions, ByRef interva
         , "enablereforgehelper":enablereforgehelper, "reforgehelperinventoryonly":reforgehelperinventoryonly
         , "enablegamblehelper":enablegamblehelper, "gamblehelpertimes":gamblehelpertimes
         , "startmethod":startmethod, "starthotkey":starthotkey, "enableupgradehelper":enableupgradehelper
-        , "enablesmartpause":enablesmartpause, "enablesoundplay":enablesoundplay, "enableconverthelper":enableconverthelper
+        , "enablesmartpause":enablesmartpause, "enablesoundplay":enablesoundplay, "enableconverthelper":enableconverthelper, "enableabandonhelper":enableabandonhelper
         , "custommoving":custommoving, "custommovinghk":custommovinghk, "customstanding":customstanding, "customstandinghk":customstandinghk
         , "safezone":safezone, "helperspeed":helperspeed, "gamegamma":gamegamma, "sendmode":sendmode, "buffpercent":buffpercent
         , "enableloothelper":enableloothelper, "loothelpertimes":loothelpertimes, "compactmode":compactmode}
@@ -486,7 +489,7 @@ ReadCfgFile(cfgFileName, ByRef tabs, ByRef hotkeys, ByRef actions, ByRef interva
         generals:={"enablegamblehelper":1 ,"gamblehelpertimes":15, "oldsandhelperhk":"F5"
         , "startmethod":7, "starthotkey":"F2", "enablesmartpause":1, "salvagehelpermethod":1
         , "oldsandhelpermethod":7, "enablesalvagehelper":0, "enablesoundplay":1, "enableconverthelper":0
-        , "enablereforgehelper":0, "reforgehelperinventoryonly":1, "enableupgradehelper":0
+        , "enablereforgehelper":0, "reforgehelperinventoryonly":1, "enableupgradehelper":0, "enableabandonhelper":0
         , "custommoving":0, "custommovinghk":"e", "customstanding":0, "customstandinghk":"LShift"
         , "safezone":"61,62,63", "helperspeed":3, "gamegamma":1.000000, "sendmode":"Event"
         , "buffpercent":0.050000, "enableloothelper":0, "loothelpertimes":30, "compactmode":0}
@@ -522,6 +525,7 @@ SaveCfgFile(cfgFileName, tabs, currentProfile, safezone, VERSION){
     GuiControlGet, extraReforgeHelperInventoryOnlyCkbox
     GuiControlGet, extraUpgradeHelperCkbox
     GuiControlGet, extraSoundonProfileSwitch
+    GuiControlGet, extraAbandonHelperCkbox
     GuiControlGet, extraCustomMoving
     GuiControlGet, extraCustomMovingHK
     GuiControlGet, extraCustomStanding
@@ -539,6 +543,7 @@ SaveCfgFile(cfgFileName, tabs, currentProfile, safezone, VERSION){
     IniWrite, %extraReforgeHelperInventoryOnlyCkbox%, %cfgFileName%, General, reforgehelperinventoryonly
     IniWrite, %extraUpgradeHelperCkbox%, %cfgFileName%, General, enableupgradehelper
     IniWrite, %extraConvertHelperCkbox%, %cfgFileName%, General, enableconverthelper
+    IniWrite, %extraAbandonHelperCkbox%, %cfgFileName%, General, enableabandonhelper
     IniWrite, %extraLootHelperCkbox%, %cfgFileName%, General, enableloothelper
     IniWrite, %extraLootHelperUpdown%, %cfgFileName%, General, loothelpertimes
     IniWrite, %extraSoundonProfileSwitch%, %cfgFileName%, General, enablesoundplay
@@ -796,6 +801,7 @@ oldsandHelper(){
     GuiControlGet, extraReforgeHelperCkbox
     GuiControlGet, extraUpgradeHelperCkbox
     GuiControlGet, extraConvertHelperCkbox
+    GuiControlGet, extraAbandonHelperCkbox
     GuiControlGet, extraSalvageHelperDropdown
     GuiControlGet, helperAnimationSpeedDropdown
     MouseGetPos, xpos, ypos ; 当前鼠标位置，用于宏结束后返回
@@ -939,6 +945,13 @@ oldsandHelper(){
             Default:
                 ; 卡奈魔盒未打开
         }
+    }
+    ; 丢装备
+    if (extraAbandonHelperCkbox)
+    {
+        fn:=Func("abandonHelper").Bind(D3W, D3H, xpos, ypos)
+        SetTimer, %fn%, -1
+        Return
     }
     ; 一键拾取
     if (extraLootHelperCkbox)
@@ -1281,6 +1294,68 @@ oneButtonSalvageHelper(D3W, D3H, xpos, ypos){
     helperRunning:=False
     ; 右键取消分解状态
     Click, Right
+    ; 鼠标回到原位置
+    MouseMove, xpos, ypos
+    Return
+}
+
+/*
+负责一键丢装备
+参数：
+*/
+abandonHelper(D3W, D3H, xpos, ypos){
+    local
+    static _spaceSizeInnerH:=63
+    static _spaceSizeInnerW:=64
+    Global helperBreak, helperRunning, helperDelay, helperBagZone, mouseDelay, cInventorySpace
+    helperBagZone:=make1DArray(60, -1)
+    ; 开启一单独线程查找空格子
+    fn1:=Func("scanInventorySpaceGDIP").Bind(D3W, D3H)
+    SetTimer, %fn1%, -1
+    SetDefaultMouseSpeed, mouseDelay
+    while (i<=60)
+    {
+        ; 防卡死
+        w++
+        if (helperBreak or w>200) {
+            Break
+        }
+        ; 当前格子情况
+        switch helperBagZone[i]
+        {
+            case -1:
+                ; 当前格子还未探开
+                Sleep, 20
+            case 10:
+                ; 当前格子有装备
+                m:=getInventorySpaceXY(D3W, D3H, i, "bag")
+                MouseMove, m[1], m[2]
+               
+                ; 开始丢弃
+                Click
+                Sleep, helperDelay
+                MouseMove, D3W/4, D3H/2
+                Click
+                Sleep, helperDelay
+                ; 循环检测下方格子的装备有没有消失
+                 if (i<=50 and (helperBagZone[i+10]=10 or helperBagZone[i+10]=-1))
+                {
+                    StartTime2:=A_TickCount
+                    while (A_TickCount-StartTime2<=helperDelay)
+                     {
+                         if isInventorySpaceEmpty(D3W, D3H, i+10, [[0.65625,0.71429], [0.375,0.36508], [0.725,0.251], [0.5,0.5]], "bag")
+                         {
+                             helperBagZone[i+10]:=5
+                         }
+                     }
+                }
+                i++
+            Default:
+            ; 当前格子是安全格或空格子
+                i++
+        }
+    }
+    helperRunning:=False
     ; 鼠标回到原位置
     MouseMove, xpos, ypos
     Return
@@ -1960,7 +2035,7 @@ getGameResulution(ByRef D3W, ByRef D3H){
 }
 
 /*
-获取卡奈魔盒转化和放入材料按钮位置
+获取卡奈和放入材料按钮位置
 参数：
     D3W：分辨率宽
     D3H：分辨率高
