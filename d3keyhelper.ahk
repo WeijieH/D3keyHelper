@@ -25,7 +25,7 @@ CoordMode, Pixel, Client
 CoordMode, Mouse, Client
 Process, Priority, , High
 
-VERSION:=210716
+VERSION:=210725
 TITLE:=Format("暗黑3技能连点器 v1.3.{:d}   by Oldsand", VERSION)
 MainWindowW:=900
 MainWindowH:=550
@@ -662,7 +662,7 @@ splitRGB(vthiscolor){
 */
 skillKey(currentProfile, nskill, D3W, D3H, forceStandingKey, useSkillQueue){
     local
-    Global vPausing, skillQueue, buffpercent
+    Global vPausing, skillQueue, buffpercent, gameX, gameY
     GuiControlGet, skillset%currentProfile%s%nskill%hotkey
     GuiControlGet, skillset%currentProfile%s%nskill%dropdown
     GuiControlGet, skillset%currentProfile%s%nskill%delayupdown
@@ -696,7 +696,7 @@ skillKey(currentProfile, nskill, D3W, D3H, forceStandingKey, useSkillQueue){
         case 4:
             ; 获得对应按键buff条最左侧坐标
             magicXY:=getSkillButtonBuffPos(D3W, D3H, nskill, buffpercent)
-            crgb:=getPixelsRGB(magicXY[1], magicXY[2]-2, 1, 3, "Max", True)
+            crgb:=getPixelsRGB(magicXY[1], magicXY[2]-2, 1, 3, "Max", True, gameX, gameY)
             ; 具体判断是否需要补buff
             If (!vPausing and crgb[1]+crgb[2]+crgb[3] < 300)
             {
@@ -1996,17 +1996,17 @@ getPixelRGB(point){
     h：高度
     agg_func：用于聚合的函数名字
     gdip：是否用GDI+库获取像素颜色
+    gameX，gameY：游戏窗口0，0点对应的屏幕坐标
 返回：
     [R，G，B]
 */
-getPixelsRGB(pointX, pointY, w, h, agg_func, gdip=False){
+getPixelsRGB(pointX, pointY, w, h, agg_func, gdip=False, gameX=0, gameY=0){
     cpixelR:=[]
     cpixelG:=[]
     cpixelB:=[]
     if gdip
     {
-        pScreen:=getGameXYonScreen(pointX, pointY)
-        pBitmap:=Gdip_BitmapFromScreen(Format("{}|{}|{}|{}", pScreen[1], pScreen[2], w, h))
+        pBitmap:=Gdip_BitmapFromScreen(Format("{}|{}|{}|{}", pointX+gameX, pointY+gameY, w, h))
         Gdip_LockBits(pBitmap, 0, 0, Gdip_GetImageWidth(pBitmap), Gdip_GetImageHeight(pBitmap), Stride, Scan0, BitmapData)
         Loop, %w%
         {
@@ -2690,6 +2690,9 @@ RunMarco:
     {
         Return
     }
+    gameXY:=getGameXYonScreen(0,0)
+    gameX:=gameXY[1]
+    gameY:=gameXY[2]
     ; 处理技能按键
     Loop, 6
     {
