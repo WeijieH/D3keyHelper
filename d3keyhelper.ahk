@@ -25,7 +25,7 @@ CoordMode, Pixel, Client
 CoordMode, Mouse, Client
 Process, Priority, , High
 
-VERSION:=210725
+VERSION:=210726
 TITLE:=Format("暗黑3技能连点器 v1.3.{:d}   by Oldsand", VERSION)
 MainWindowW:=900
 MainWindowH:=550
@@ -1126,7 +1126,7 @@ lootHelper(D3W, D3H, helperDelay){
     Global helperBreak, helperRunning
     MouseGetPos, xpos, ypos
     ; 如果鼠标在人物周围，连点左键
-    if (Abs(xpos - D3W/2)<220*1440/D3H and Abs(ypos - D3H/2)<140*1440/D3H)
+    if (Abs(xpos - D3W/2)<500*1440/D3H and Abs(ypos - D3H/2)<300*1440/D3H)
     {
         GuiControlGet, extraLootHelperEdit
         Loop, %extraLootHelperEdit%
