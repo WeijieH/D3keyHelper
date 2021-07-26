@@ -276,7 +276,7 @@ GuiCreate(){
     AddToolTip(extraConvertHelperCkboxID, "当魔盒打开且在转化材料页面时，按下助手快捷键即自动使用所有非安全格内的装备进行材料转化")
 
     Gui Add, CheckBox, % "xs+20 yp+20 hwndextraAbandonHelperCkboxID vextraAbandonHelperCkbox Checked" generals.enableabandonhelper, 丢装备助手
-    AddToolTip(extraAbandonHelperCkboxID, "")
+    AddToolTip(extraAbandonHelperCkboxID, "当物品栏打开，且鼠标指针位于背包栏内时有效，不丢传奇、帝国宝石")
 
     Gui Add, CheckBox, % "xs+20 yp+65 vextraSoundonProfileSwitch Checked" generals.enablesoundplay, 使用快捷键切换配置成功时播放声音
     Gui Add, CheckBox, % "xs+20 yp+35 hwndextraSmartPauseID vextraSmartPause Checked" generals.enablesmartpause, 智能暂停
@@ -947,7 +947,7 @@ oldsandHelper(){
         }
     }
     ; 丢装备
-    if (extraAbandonHelperCkbox)
+    if (isInventoryOpen(D3W, D3H) && (xpos>D3W-(3440-2740)*D3H/1440 and ypos>730*D3H/1440 and ypos<1150*D3H/1440) && extraAbandonHelperCkbox)
     {
         fn:=Func("abandonHelper").Bind(D3W, D3H, xpos, ypos)
         SetTimer, %fn%, -1
@@ -1307,10 +1307,12 @@ abandonHelper(D3W, D3H, xpos, ypos){
     local
     static _spaceSizeInnerH:=63
     static _spaceSizeInnerW:=64
+    forceStandingKey:=extraCustomStanding? extraCustomStandingHK:"LShift"
     Global helperBreak, helperRunning, helperDelay, helperBagZone, mouseDelay, cInventorySpace
     helperBagZone:=make1DArray(60, -1)
+    MouseMove, D3W, D3H/2
     ; 开启一单独线程查找空格子
-    fn1:=Func("scanInventorySpaceGDIP").Bind(D3W, D3H)
+    fn1:=Func("scanInventorySpaceForGemGDIP").Bind(D3W, D3H)
     SetTimer, %fn1%, -1
     SetDefaultMouseSpeed, mouseDelay
     while (i<=60)
@@ -1330,24 +1332,25 @@ abandonHelper(D3W, D3H, xpos, ypos){
                 ; 当前格子有装备
                 m:=getInventorySpaceXY(D3W, D3H, i, "bag")
                 MouseMove, m[1], m[2]
-               
                 ; 开始丢弃
                 Click
                 Sleep, helperDelay
-                MouseMove, D3W/4, D3H/2
+                MouseMove, D3W/2, D3H/2
+                Send {Blind}{%forceStandingKey% down}
                 Click
+                Send {Blind}{%forceStandingKey% up}
                 Sleep, helperDelay
                 ; 循环检测下方格子的装备有没有消失
-                 if (i<=50 and (helperBagZone[i+10]=10 or helperBagZone[i+10]=-1))
+                    if (i<=50 and (helperBagZone[i+10]=10 or helperBagZone[i+10]=-1))
                 {
                     StartTime2:=A_TickCount
                     while (A_TickCount-StartTime2<=helperDelay)
-                     {
-                         if isInventorySpaceEmpty(D3W, D3H, i+10, [[0.65625,0.71429], [0.375,0.36508], [0.725,0.251], [0.5,0.5]], "bag")
-                         {
-                             helperBagZone[i+10]:=5
-                         }
-                     }
+                        {
+                            if isInventorySpaceEmpty(D3W, D3H, i+10, [[0.65625,0.71429], [0.375,0.36508], [0.725,0.251], [0.5,0.5]], "bag")
+                            {
+                                helperBagZone[i+10]:=5
+                            }
+                        }
                 }
                 i++
             Default:
@@ -1972,6 +1975,27 @@ isGambleOpen(D3W, D3H){
 }
 
 /*
+判断物品栏页面是否开启
+参数：
+    D3W：int，窗口区域的宽度
+    D3H：int，窗口区域的高度
+返回：
+    Bool
+*/
+isInventoryOpen(D3W, D3H){
+    c1:=getPixelRGB([Round(1675*D3W/1920),Round(62*D3H/1080)])
+    c2:=getPixelRGB([Round(1655*D3W/1920),Round(82*D3H/1080)])
+    c4:=getPixelRGB([Round(1895*D3W/1920),Round(82*D3H/1080)])
+    c5:=getPixelRGB([Round(1416*D3W/1920),Round(73*D3H/1080)])
+    if (c1[3]>c1[1] and c1[3]>c1[2] and c1[3]>170 and c2[1]+c2[2]>330 and c4[1]+c4[2]+c4[3]+c5[1]+c5[2]+c5[3]<10){
+        Return True
+    }
+    Else{
+        Return False
+    }
+}
+
+/*
 判断格子是否为空
 参数：
     D3W：int，窗口区域的宽度
@@ -1996,6 +2020,74 @@ isInventorySpaceEmpty(D3W, D3H, ID, ckpoints, zone){
         }
     }
     Return True
+}
+
+/*
+扫描所有背包格子。未扫描-1，安全格0，没东西1，贵族帝国宝石9，其他10
+参数：
+    D3W：int，窗口区域的宽度
+    D3H：int，窗口区域的高度
+返回：
+    无
+*/
+scanInventorySpaceForGemGDIP(D3W, D3H){
+    local
+    static _spaceSizeInnerW:=64
+    static _spaceSizeInnerH:=63
+    ; 使用GDI+库抓取当前屏幕
+    sxy:=getGameXYonScreen(0, 0)
+    pInventoryBitmap:=Gdip_BitmapFromScreen(Format("{}|{}|{}|{}", sxy[1], sxy[2], D3W, D3H))
+    Gdip_LockBits(pInventoryBitmap, 0, 0, Gdip_GetImageWidth(pInventoryBitmap), Gdip_GetImageHeight(pInventoryBitmap), Stride, Scan0, BitmapData)
+    static _e:=[[0.65625,0.71429], [0.375,0.36508], [0.725,0.251]]
+    static ckpoints_gem:=[[0.66667,0.12195], [0.78571,0.26829]]
+    
+    Global safezone, helperBagZone, cInventorySpace
+    cInventorySpace:={}
+    Loop, 60
+    {
+        m:=getInventorySpaceXY(D3W, D3H, A_Index, "bag")
+        ; 保存当前格子左下角的颜色信息
+        cInventorySpace[A_Index]:=splitRGB(Gdip_GetLockBitPixel(Scan0, Round(m[3]+_spaceSizeInnerW*0.08*D3H/1440), Round(m[4]+_spaceSizeInnerH*0.7*D3H/1440), Stride))
+        if safezone.HasKey(A_Index)
+        {
+            helperBagZone[A_Index]:=0
+        }
+        Else
+        {
+            if (helperBagZone[A_Index]!=-1){
+                continue
+            }
+            r:=1
+
+            for i, p in ckpoints_gem
+            {
+                xy:=[Round(m[3]+_spaceSizeInnerW*ckpoints_gem[i][1]*D3H/1440), Round(m[4]+_spaceSizeInnerH*ckpoints_gem[i][2]*D3H/1440)]
+                c:=getPixelRGB(xy)
+                if ((c[1]>250 and c[2]>250 and c[3]>250) or (abs(c[1]-233)<3 and abs(c[2]-192)<3 and abs(c[3]-255)<3))
+                {
+                    r:=9
+                    Break
+                }
+            }
+
+            if(r==1){
+                for i, p in _e
+                {
+                    xy:=[Round(m[3]+_spaceSizeInnerW*_e[i][1]*D3H/1440), Round(m[4]+_spaceSizeInnerH*_e[i][2]*D3H/1440)]
+                    c:=splitRGB(Gdip_GetLockBitPixel(Scan0, xy[1], xy[2], Stride))
+                    if !(c[1]<22 and c[2]<20 and c[3]<15 and c[1]>c[3] and c[2]>c[3])
+                    {
+                        r:=10
+                        Break
+                    }
+                }
+            }
+            helperBagZone[A_Index]:=r
+        }
+    }
+    Gdip_UnlockBits(pInventoryBitmap, BitmapData)
+    Gdip_DisposeImage(pInventoryBitmap)
+    Return
 }
 
 /*
