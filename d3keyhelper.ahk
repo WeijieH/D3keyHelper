@@ -276,7 +276,7 @@ GuiCreate(){
     AddToolTip(extraConvertHelperCkboxID, "当魔盒打开且在转化材料页面时，按下助手快捷键即自动使用所有非安全格内的装备进行材料转化")
 
     Gui Add, CheckBox, % "x+25 yp+0 hwndextraAbandonHelperCkboxID vextraAbandonHelperCkbox Checked" generals.enableabandonhelper, 一键丢装助手
-    AddToolTip(extraAbandonHelperCkboxID, "当物品栏打开且鼠标指针位于背包栏内时，按下助手快捷键即自动丢弃非安全格的所有物品")
+    AddToolTip(extraAbandonHelperCkboxID, "当物品栏打开且鼠标指针位于背包栏内时，按下助手快捷键即自动丢弃非安全格的所有物品`n若储物箱（银行）打开且鼠标位于银行格子内时，宏会存储非安全格内的所有物品至储物箱")
 
     Gui Add, CheckBox, % "xs+20 yp+65 vextraSoundonProfileSwitch Checked" generals.enablesoundplay, 使用快捷键切换配置成功时播放声音
     Gui Add, CheckBox, % "xs+20 yp+35 hwndextraSmartPauseID vextraSmartPause Checked" generals.enablesmartpause, 智能暂停
@@ -908,6 +908,16 @@ oldsandHelper(){
                 ; 铁匠页面未打卡 
         }
     }
+    ; 鼠标位置。1：位于背包栏。2：位于储物栏（银行）。-1：其他
+    mousePosition:=-1
+    if (xpos>D3W-(3440-2740)*D3H/1440 and ypos>730*D3H/1440 and ypos<1150*D3H/1440)
+    {
+        mousePosition:=1
+    }
+    else if (xpos>65*D3H/1440 and xpos<640*D3H/1440 and ypos>275*D3H/1440 and ypos<1150*D3H/1440)
+    {
+        mousePosition:=2
+    }
     ; 卡奈魔盒助手
     if (extraReforgeHelperCkbox or extraUpgradeHelperCkbox or extraConvertHelperCkbox)
     {
@@ -918,7 +928,7 @@ oldsandHelper(){
                 Return
             case 2:
             ; 一键重铸
-                if extraReforgeHelperCkbox
+                if (extraReforgeHelperCkbox and mousePosition=1)
                 {
                     fn:=Func("oneButtonReforgeHelper").Bind(D3W, D3H, xpos, ypos)
                     SetTimer, %fn%, -1
@@ -945,9 +955,9 @@ oldsandHelper(){
         }
     }
     ; 丢装备
-    if (extraAbandonHelperCkbox and (xpos>D3W-(3440-2740)*D3H/1440 and ypos>730*D3H/1440 and ypos<1150*D3H/1440) and isInventoryOpen(D3W, D3H))
+    if (extraAbandonHelperCkbox and mousePosition>0 and isInventoryOpen(D3W, D3H))
     {
-        fn:=Func("abandonHelper").Bind(D3W, D3H, xpos, ypos)
+        fn:=Func("oneButtonAbandonHelper").Bind(D3W, D3H, xpos, ypos, mousePosition)
         SetTimer, %fn%, -1
         Return
     }
@@ -973,26 +983,23 @@ oldsandHelper(){
 oneButtonReforgeHelper(D3W, D3H, xpos, ypos){
     local
     Global helperRunning, helperDelay, mouseDelay
-    if (xpos>D3W-(3440-2740)*D3H/1440 and ypos>730*D3H/1440 and ypos<1150*D3H/1440)
-    {
-        SetDefaultMouseSpeed, mouseDelay
-        kanai:=getKanaiCubeButtonPos(D3W, D3H)
-        Click, Right
-        Sleep, helperDelay//4
-        MouseMove, kanai[2][1], kanai[2][2]
-        Click
-        Sleep, helperDelay//4
-        MouseMove, kanai[1][1], kanai[1][2]
-        Click
-        Sleep, helperDelay//4
-        MouseMove, kanai[3][1], kanai[3][2]
-        Click
-        Sleep, helperDelay//4
-        MouseMove, kanai[4][1], kanai[4][2]
-        Click
-        ; 鼠标回到原位置
-        MouseMove, xpos, ypos
-    }
+    SetDefaultMouseSpeed, mouseDelay
+    kanai:=getKanaiCubeButtonPos(D3W, D3H)
+    Click, Right
+    Sleep, helperDelay//4
+    MouseMove, kanai[2][1], kanai[2][2]
+    Click
+    Sleep, helperDelay//4
+    MouseMove, kanai[1][1], kanai[1][2]
+    Click
+    Sleep, helperDelay//4
+    MouseMove, kanai[3][1], kanai[3][2]
+    Click
+    Sleep, helperDelay//4
+    MouseMove, kanai[4][1], kanai[4][2]
+    Click
+    ; 鼠标回到原位置
+    MouseMove, xpos, ypos
     helperRunning:=False
     Return
 }
@@ -1304,8 +1311,9 @@ oneButtonSalvageHelper(D3W, D3H, xpos, ypos){
     D3H：int，窗口区域的高度
     xpos：之前鼠标x坐标
     ypos：之前鼠标y坐标
+    mousePosition：鼠标位置标记。1：背包栏，2：银行。
 */
-abandonHelper(D3W, D3H, xpos, ypos){
+oneButtonAbandonHelper(D3W, D3H, xpos, ypos, mousePosition){
     local
     Global helperBreak, helperRunning, helperDelay, helperBagZone, mouseDelay
     helperBagZone:=make1DArray(60, -1)
@@ -1313,6 +1321,7 @@ abandonHelper(D3W, D3H, xpos, ypos){
     fn1:=Func("scanInventorySpaceGDIP").Bind(D3W, D3H)
     SetTimer, %fn1%, -1
     SetDefaultMouseSpeed, mouseDelay
+    stashOpen:=-1
     while (i<=60)
     {
         ; 防卡死
@@ -1330,11 +1339,30 @@ abandonHelper(D3W, D3H, xpos, ypos){
                 ; 当前格子有装备
                 m:=getInventorySpaceXY(D3W, D3H, i, "bag")
                 MouseMove, m[1], m[2]
-                ; 开始丢弃
-                Click
-                Sleep, helperDelay//2
-                MouseMove, D3W//2, D3H//2
-                Click
+                if (stashOpen=-1)
+                {
+                    Sleep, helperDelay//2
+                    stashOpen:=isStashOpen(D3W, D3H)
+                    if (stashOpen=0 and mousePosition!=1)
+                    {
+                        ; 如果银行未打开且鼠标不在背包栏内，则退出
+                        Break
+                    }
+                }
+                if (mousePosition=1)
+                {
+                    ; 开始丢弃
+                    Click
+                    Sleep, helperDelay//2
+                    MouseMove, D3W//2, D3H//2
+                    Click
+                }
+                Else
+                {
+                    ; 存银行
+                    Click, Right
+                    Sleep, helperDelay//2
+                }
                 ; 循环检测下方格子的装备有没有消失
                 if (i<=50 and (helperBagZone[i+10]=10 or helperBagZone[i+10]=-1))
                 {
@@ -1970,6 +1998,27 @@ isInventoryOpen(D3W, D3H){
     Else
     {
         Return False
+    }
+}
+
+/*
+判断储物箱页面是否开启
+参数：
+    D3W：int，窗口区域的宽度
+    D3H：int，窗口区域的高度
+返回：
+    Bool
+*/
+isStashOpen(D3W, D3H){
+    c1:=getPixelRGB([Round(282*D3H/1440),Round(147*D3H/1440)])
+    c2:=getPixelRGB([Round(382*D3H/1440),Round(77*D3H/1440)])
+    c3:=getPixelRGB([Round(299*D3H/1440),Round(82*D3H/1440)])
+    if (c1[1]>100 and c1[1]>c1[2]+80 and abs(c1[2]-c1[3])<10 and c2[2]>c2[3] and c2[3]>c2[1] and c2[2]-c2[1]>80 and c3[1]>c3[2] and c3[2]>c3[3] and c3[3]<40){
+        Return 1
+    }
+    Else
+    {
+        Return 0
     }
 }
 
