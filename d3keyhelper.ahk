@@ -701,7 +701,7 @@ skillKey(currentProfile, nskill, D3W, D3H, forceStandingKey, useSkillQueue){
         case 4:
             ; 获得对应按键buff条最左侧坐标
             magicXY:=getSkillButtonBuffPos(D3W, D3H, nskill, buffpercent)
-            crgb:=getPixelsRGB(magicXY[1], magicXY[2]-1, 1, 2, "Max", True, gameX, gameY)
+            crgb:=getPixelsRGB(magicXY[1], magicXY[2]-1, 1, 2, "Max", False, gameX, gameY)
             ; 具体判断是否需要补buff
             If (!vPausing and crgb[1]+crgb[2]+crgb[3] < 240)
             {
@@ -1826,15 +1826,16 @@ getInventorySpaceXY(D3W, D3H, ID, zone){
     static _spaceSizeInnerH:=63
     static _spaceSizeW:=67
     static _spaceSizeH:=66
+    static _spaceBagX:=[2753,2820,2887,2954,3021,3089,3156,3223,3290,3357]
+    static _spaceBagY:=[747,813,880,946,1013,1079]
 
     switch zone
     {
         case "bag":
-            _firstSpaceUL:=[2753, 747]
-            targetColumn:=Mod(ID-1,10)
-            targetRow:=Floor((ID-1)/10)
-            Return [Round(D3W-((3440-_firstSpaceUL[1]-_spaceSizeW*targetColumn-_spaceSizeInnerW/2)*D3H/1440)), Round((_firstSpaceUL[2]+targetRow*_spaceSizeH+_spaceSizeInnerH/2)*D3H/1440)
-            , Round(D3W-((3440-_firstSpaceUL[1]-_spaceSizeW*targetColumn)*D3H/1440)), Round((_firstSpaceUL[2]+targetRow*_spaceSizeH)*D3H/1440)]
+            targetColumn:=(Mod(ID,10)=0)?10:Mod(ID,10)
+            targetRow:=Floor((ID-1)/10)+1
+            Return [Round(D3W-((3440-_spaceBagX[targetColumn]-_spaceSizeInnerW/2)*D3H/1440)), Round((_spaceBagY[targetRow]+_spaceSizeInnerH/2)*D3H/1440)
+            , Round(D3W-((3440-_spaceBagX[targetColumn])*D3H/1440)), Round((_spaceBagY[targetRow])*D3H/1440)]
         case "kanai":
             _firstSpaceUL:=[242, 503]
             targetColumn:=Mod(ID-1,3)
