@@ -703,7 +703,7 @@ skillKey(currentProfile, nskill, D3W, D3H, forceStandingKey, useSkillQueue){
             magicXY:=getSkillButtonBuffPos(D3W, D3H, nskill, buffpercent)
             crgb:=getPixelsRGB(magicXY[1], magicXY[2]-1, 1, 2, "Max", True, gameX, gameY)
             ; 具体判断是否需要补buff
-            If (!vPausing and crgb[1]+crgb[2]+crgb[3] < 300)
+            If (!vPausing and crgb[1]+crgb[2]+crgb[3] < 240)
             {
                 switch nskill
                 {
