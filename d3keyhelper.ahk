@@ -272,10 +272,10 @@ GuiCreate(){
 
     Gui Add, CheckBox, % "xs+20 yp+40 hwndextraUpgradeHelperCkboxID vextraUpgradeHelperCkbox Checked" generals.enableupgradehelper, 魔盒升级助手
     AddToolTip(extraUpgradeHelperCkboxID, "当魔盒打开且在升级页面时，按下助手快捷键即自动升级所有非安全格内的稀有（黄色）装备")
-    Gui Add, CheckBox, % "x+40 yp+0 hwndextraConvertHelperCkboxID vextraConvertHelperCkbox Checked" generals.enableconverthelper, 魔盒转化助手
+    Gui Add, CheckBox, % "x+15 yp+0 hwndextraConvertHelperCkboxID vextraConvertHelperCkbox Checked" generals.enableconverthelper, 魔盒转化助手
     AddToolTip(extraConvertHelperCkboxID, "当魔盒打开且在转化材料页面时，按下助手快捷键即自动使用所有非安全格内的装备进行材料转化")
 
-    Gui Add, CheckBox, % "xs+20 yp+20 hwndextraAbandonHelperCkboxID vextraAbandonHelperCkbox Checked" generals.enableabandonhelper, 丢装备助手
+    Gui Add, CheckBox, % "x+10 yp+0 hwndextraAbandonHelperCkboxID vextraAbandonHelperCkbox +Disabled Checked" 0, 丢装备助手
     AddToolTip(extraAbandonHelperCkboxID, "当物品栏打开，且鼠标指针位于背包栏内时有效，不丢传奇、帝国宝石")
 
     Gui Add, CheckBox, % "xs+20 yp+65 vextraSoundonProfileSwitch Checked" generals.enablesoundplay, 使用快捷键切换配置成功时播放声音
