@@ -696,7 +696,7 @@ skillKey(currentProfile, nskill, D3W, D3H, forceStandingKey, useSkillQueue){
         case 4:
             ; 获得对应按键buff条最左侧坐标
             magicXY:=getSkillButtonBuffPos(D3W, D3H, nskill, buffpercent)
-            crgb:=getPixelsRGB(magicXY[1], magicXY[2]-2, 1, 3, "Max", True, gameX, gameY)
+            crgb:=getPixelsRGB(magicXY[1], magicXY[2]-1, 1, 2, "Max", True, gameX, gameY)
             ; 具体判断是否需要补buff
             If (!vPausing and crgb[1]+crgb[2]+crgb[3] < 300)
             {
@@ -875,7 +875,7 @@ oldsandHelper(){
                             Return
                         }
                         ; 启动一键分解前等待装备消失
-                        _wait:=-helperDelay
+                        _wait:=-helperDelay-50
                         MouseMove, salvageIconXY[5-i][1], salvageIconXY[5-i][2]
                         Click
                         Sleep, helperDelay
