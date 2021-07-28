@@ -703,9 +703,9 @@ skillKey(currentProfile, nskill, D3W, D3H, forceStandingKey, useSkillQueue){
         case 4:
             ; 获得对应按键buff条最左侧坐标
             magicXY:=getSkillButtonBuffPos(D3W, D3H, nskill, buffpercent)
-            crgb:=getPixelsRGB(magicXY[1], magicXY[2]-1, 1, 2, "Max", False, gameX, gameY)
+            crgb:=getPixelsRGB(magicXY[1], magicXY[2]-1, 1, 3, "Max", True, gameX, gameY)
             ; 具体判断是否需要补buff
-            If (!vPausing and crgb[1]+crgb[2]+crgb[3] < 240)
+            If (!vPausing and crgb[2]<100)
             {
                 switch nskill
                 {
@@ -1447,15 +1447,14 @@ scanInventorySpaceGDIP(D3W, D3H){
 /*
 负责快速暂停
 参数：
-    keysOnHold：object，当前所有压下的按键
     pausetime: int, 暂停的时间
     pauseAction：int，暂停的方式
 返回：
     无
 */
-clickPauseMarco(keysOnHold, pausetime, pauseAction){
+clickPauseMarco(pausetime, pauseAction){
     local
-    Global vRunning, forceStandingKey
+    Global vRunning, forceStandingKey, keysOnHold
     if vRunning
     {
         for key, value in keysOnHold
@@ -2955,6 +2954,7 @@ Return
 
 ; 处理快速暂停按键
 quickPause:
+    GuiControlGet, skillset%currentProfile%clickpausedropdown1
     GuiControlGet, skillset%currentProfile%clickpausedropdown3
     GuiControlGet, skillset%currentProfile%clickpauseupdown
     switch skillset%currentProfile%clickpausedropdown1
@@ -2963,10 +2963,10 @@ quickPause:
             ; 双击
             If (A_PriorHotkey=A_ThisHotkey and A_TimeSincePriorHotkey < DblClickTime)
             {
-                clickPauseMarco(keysOnHold, skillset%currentProfile%clickpauseupdown, skillset%currentProfile%clickpausedropdown3)
+                clickPauseMarco(skillset%currentProfile%clickpauseupdown, skillset%currentProfile%clickpausedropdown3)
             }
         case 2:
-            clickPauseMarco(keysOnHold, skillset%currentProfile%clickpauseupdown, skillset%currentProfile%clickpausedropdown3)
+            clickPauseMarco(skillset%currentProfile%clickpauseupdown, skillset%currentProfile%clickpausedropdown3)
     }
 Return
 
