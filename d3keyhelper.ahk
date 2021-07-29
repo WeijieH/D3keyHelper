@@ -25,7 +25,7 @@ CoordMode, Pixel, Client
 CoordMode, Mouse, Client
 Process, Priority, , High
 
-VERSION:=210728
+VERSION:=210729
 TITLE:=Format("暗黑3技能连点器 v1.3.{:d}   by Oldsand", VERSION)
 MainWindowW:=900
 MainWindowH:=550
@@ -225,10 +225,11 @@ GuiCreate(){
         AddToolTip(skillset%currentTab%skillqueuewarningtextID, "按键队列功能设置有误")
 
         Gui Add, Checkbox, % "xs+20 yp+37 Checked" others[currentTab].enablequickpause " vskillset" currentTab "clickpauseckbox gSetQuickPause", 快速暂停：
-        Gui Add, DropDownList, % "x+0 yp-3 w50 AltSubmit Choose" others[currentTab].quickpausemethod1 " vskillset" currentTab "clickpausedropdown1 gSetQuickPause", 双击||单击
-        Gui Add, DropDownList, % "x+5 yp w100 AltSubmit Choose" others[currentTab].quickpausemethod2 " vskillset" currentTab "clickpausedropdown2 gSetQuickPause", 鼠标左键||鼠标右键||鼠标中键||侧键1||侧键2
-        Gui Add, Text, x+5 yp+3 vskillset%currentTab%clickpausetext1, 则暂停压键
-        Gui Add, Edit, vskillset%currentTab%clickpauseedit x+5 yp-3 w60 Number
+        Gui Add, DropDownList, % "x+0 yp-3 w50 AltSubmit Choose" others[currentTab].quickpausemethod1 " vskillset" currentTab "clickpausedropdown1 gSetQuickPause", 双击||单击||压住
+        Gui Add, DropDownList, % "x+5 yp w75 AltSubmit Choose" others[currentTab].quickpausemethod2 " vskillset" currentTab "clickpausedropdown2", 鼠标左键||鼠标右键||鼠标中键||侧键1||侧键2
+        Gui Add, Text, x+5 yp+3 vskillset%currentTab%clickpausetext1, 则
+        Gui Add, DropDownList, % "x+5 yp-3 w140 AltSubmit Choose" others[currentTab].quickpausemethod3 " vskillset" currentTab "clickpausedropdown3", 暂停按键宏||暂停宏且连点左键
+        Gui Add, Edit, vskillset%currentTab%clickpauseedit x+5 yp w60 Number
         Gui Add, Updown, vskillset%currentTab%clickpauseupdown Range500-5000, % others[currentTab].quickpausedelay
         Gui Add, Text, x+5 yp+3 vskillset%currentTab%clickpausetext2, 毫秒
     }
@@ -276,7 +277,7 @@ GuiCreate(){
     AddToolTip(extraConvertHelperCkboxID, "当魔盒打开且在转化材料页面时，按下助手快捷键即自动使用所有非安全格内的装备进行材料转化")
 
     Gui Add, CheckBox, % "x+25 yp+0 hwndextraAbandonHelperCkboxID vextraAbandonHelperCkbox Checked" generals.enableabandonhelper, 一键丢装助手
-    AddToolTip(extraAbandonHelperCkboxID, "当物品栏打开且鼠标指针位于背包栏内时，按下助手快捷键即自动丢弃非安全格的所有物品`n若储物箱（银行）打开且鼠标位于银行格子内时，宏会存储非安全格内的所有物品至储物箱")
+    AddToolTip(extraAbandonHelperCkboxID, "当背包栏打开且鼠标指针位于背包栏内时，按下助手快捷键即自动丢弃非安全格的所有物品`n若储物箱（银行）打开且鼠标位于银行格子内时，宏会存储非安全格内的所有物品至储物箱")
 
     Gui Add, CheckBox, % "xs+20 yp+65 vextraSoundonProfileSwitch Checked" generals.enablesoundplay, 使用快捷键切换配置成功时播放声音
     Gui Add, CheckBox, % "xs+20 yp+35 hwndextraSmartPauseID vextraSmartPause Checked" generals.enablesmartpause, 智能暂停
@@ -455,13 +456,14 @@ ReadCfgFile(cfgFileName, ByRef tabs, ByRef hotkeys, ByRef actions, ByRef interva
             IniRead, pfqp, %cfgFileName%, %cSection%, enablequickpause, 0
             IniRead, pfqpm1, %cfgFileName%, %cSection%, quickpausemethod1, 1
             IniRead, pfqpm2, %cfgFileName%, %cSection%, quickpausemethod2, 1
+            IniRead, pfqpm3, %cfgFileName%, %cSection%, quickpausemethod3, 1
             IniRead, pfqpdy, %cfgFileName%, %cSection%, quickpausedelay, 1500
             IniRead, pfusq, %cfgFileName%, %cSection%, useskillqueue, 0
             IniRead, pfusqiv, %cfgFileName%, %cSection%, useskillqueueinterval, 200
             IniRead, pfasm, %cfgFileName%, %cSection%, autostartmarco, 0
             tos:={"profilemethod":pfmd, "profilehotkey":pfhk, "movingmethod":pfmv, "movinginterval":pfmi, "lazymode":pflm
-            , "enablequickpause":pfqp, "quickpausemethod1":pfqpm1, "quickpausemethod2":pfqpm2, "quickpausedelay":pfqpdy
-            , "useskillqueue":pfusq, "useskillqueueinterval":pfusqiv, "autostartmarco":pfasm}
+            , "enablequickpause":pfqp, "quickpausemethod1":pfqpm1, "quickpausemethod2":pfqpm2, "quickpausemethod3":pfqpm3
+            , "quickpausedelay":pfqpdy, "useskillqueue":pfusq, "useskillqueueinterval":pfusqiv, "autostartmarco":pfasm}
             others.Push(tos)
         }
 
@@ -482,7 +484,7 @@ ReadCfgFile(cfgFileName, ByRef tabs, ByRef hotkeys, ByRef actions, ByRef interva
             intervals.Push([300,300,300,300,300,300])
             ivdelays.Push([10,10,10,10,10,10])
             others.Push({"profilemethod":1, "profilehotkey":"", "movingmethod":1, "movinginterval":100, "lazymode":1
-            , "enablequickpause":0, "quickpausemethod1":1, "quickpausemethod2":1, "quickpausedelay":1500
+            , "enablequickpause":0, "quickpausemethod1":1, "quickpausemethod2":1, "quickpausemethod3":1, "quickpausedelay":1500
             , "useskillqueue":0, "useskillqueueinterval":200, "autostartmarco":0})
         }
         generals:={"enablegamblehelper":1 ,"gamblehelpertimes":15, "oldsandhelperhk":"F5"
@@ -599,6 +601,8 @@ SaveCfgFile(cfgFileName, tabs, currentProfile, safezone, VERSION){
         IniWrite, % skillset%cSection%clickpausedropdown1, %cfgFileName%, %nSction%, quickpausemethod1
         GuiControlGet, skillset%cSection%clickpausedropdown2
         IniWrite, % skillset%cSection%clickpausedropdown2, %cfgFileName%, %nSction%, quickpausemethod2
+        GuiControlGet, skillset%cSection%clickpausedropdown3
+        IniWrite, % skillset%cSection%clickpausedropdown3, %cfgFileName%, %nSction%, quickpausemethod3
         GuiControlGet, skillset%cSection%clickpauseupdown
         IniWrite, % skillset%cSection%clickpauseupdown, %cfgFileName%, %nSction%, quickpausedelay
         GuiControlGet, skillset%cSection%useskillqueueckbox
@@ -699,9 +703,9 @@ skillKey(currentProfile, nskill, D3W, D3H, forceStandingKey, useSkillQueue){
         case 4:
             ; 获得对应按键buff条最左侧坐标
             magicXY:=getSkillButtonBuffPos(D3W, D3H, nskill, buffpercent)
-            crgb:=getPixelsRGB(magicXY[1], magicXY[2]-1, 1, 2, "Max", False, gameX, gameY)
+            crgb:=getPixelsRGB(magicXY[1], magicXY[2]-1, 1, 3, "Max", True, gameX, gameY)
             ; 具体判断是否需要补buff
-            If (!vPausing and crgb[1]+crgb[2]+crgb[3] < 240)
+            If (!vPausing and crgb[2]<95)
             {
                 switch nskill
                 {
@@ -1443,45 +1447,70 @@ scanInventorySpaceGDIP(D3W, D3H){
 /*
 负责快速暂停
 参数：
-    keysOnHold：object，当前所有压下的按键
     pausetime: int, 暂停的时间
-    vRunning：Bool，战斗宏是否在运行
+    pauseAction：int，暂停的方式
 返回：
     无
 */
-clickPauseMarco(keysOnHold, pausetime, vRunning){
+clickPauseMarco(pausetime, pauseAction){
+    local
+    Global vRunning, forceStandingKey, keysOnHold, quickPauseHK
     if vRunning
     {
-        for key, value in keysOnHold
+        Gosub, StopMarco
+        if (pausetime>0)
         {
-            if GetKeyState(key)
+            ; 自动恢复
+            SetTimer, RunMarco, off
+            SetTimer, RunMarco, -%pausetime%
+            ; 连点左键
+            if (pauseAction=2)
             {
-                Send {%key% up}
+                startTime:=A_TickCount
+                while (A_TickCount-startTime<pausetime)
+                {
+                    if GetKeyState(forceStandingKey)
+                    {
+                        Send {%forceStandingKey% up}{LButton}{%forceStandingKey% down}
+                    }
+                    Else
+                    {
+                        Click
+                    }
+                    Sleep, 50
+                }
             }
         }
-        ; 自动恢复
-        SetTimer, clickResumeMarco, off
-        SetTimer, clickResumeMarco, -%pausetime%
-    }
-    Return
-}
-
-/*
-负责快速暂停恢复
-参数：
-    无
-返回：
-    无
-*/
-clickResumeMarco(){
-    local
-    Global keysOnHold, vRunning
-    ; 重新压下所有压键
-    for key, value in keysOnHold
-    {
-        if (vRunning and !GetKeyState(key))
+        Else
         {
-            Send {%key% down}
+            ; 最多点1000次防卡死
+            Loop, 1000
+            {
+                if (pauseAction=2)
+                {
+                    if GetKeyState(forceStandingKey)
+                    {
+                        Send {%forceStandingKey% up}{LButton}{%forceStandingKey% down}
+                    }
+                    Else
+                    {
+                        if GetKeyState("LButton")
+                        {
+                            Send {LButton up}{LButton down}
+                        }
+                        Else
+                        {
+                            Click
+                        }
+                    }
+                }
+                Sleep, 50
+                if !GetKeyState(quickPauseHK)
+                {
+                    Break
+                }
+            }
+            SetTimer, RunMarco, -1
         }
     }
     Return
@@ -2584,15 +2613,25 @@ SetQuickPause:
     Gui, Submit, NoHide
     GuiControlGet, skillset%currentProfile%clickpauseckbox
     GuiControlGet, skillset%currentProfile%clickpausedropdown2
+    GuiControlGet, skillset%currentProfile%clickpausedropdown1
     mousePauseKeyArray:=["LButton", "RButton", "MButton", "XButton1", "XButton2"]
     currentQuickPauseHK:=mousePauseKeyArray[skillset%currentProfile%clickpausedropdown2]
     if skillset%currentProfile%clickpauseckbox
     {
         GuiControl, Enable, skillset%currentProfile%clickpausedropdown1
         GuiControl, Enable, skillset%currentProfile%clickpausedropdown2
+        GuiControl, Enable, skillset%currentProfile%clickpausedropdown3
         GuiControl, Enable, skillset%currentProfile%clickpausetext1
-        GuiControl, Enable, skillset%currentProfile%clickpauseedit
-        GuiControl, Enable, skillset%currentProfile%clickpausetext2
+        if (skillset%currentProfile%clickpausedropdown1!=3)
+        {
+            GuiControl, Enable, skillset%currentProfile%clickpauseedit
+            GuiControl, Enable, skillset%currentProfile%clickpausetext2
+        }
+        Else
+        {
+            GuiControl, Disable, skillset%currentProfile%clickpauseedit
+            GuiControl, Disable, skillset%currentProfile%clickpausetext2
+        }
         Try {
             Hotkey, ~*%quickPauseHK%, quickPause, off
         } 
@@ -2603,6 +2642,7 @@ SetQuickPause:
     {
         GuiControl, Disable, skillset%currentProfile%clickpausedropdown1
         GuiControl, Disable, skillset%currentProfile%clickpausedropdown2
+        GuiControl, Disable, skillset%currentProfile%clickpausedropdown3
         GuiControl, Disable, skillset%currentProfile%clickpausetext1
         GuiControl, Disable, skillset%currentProfile%clickpauseedit
         GuiControl, Disable, skillset%currentProfile%clickpausetext2
@@ -2931,6 +2971,7 @@ Return
 ; 处理快速暂停按键
 quickPause:
     GuiControlGet, skillset%currentProfile%clickpausedropdown1
+    GuiControlGet, skillset%currentProfile%clickpausedropdown3
     GuiControlGet, skillset%currentProfile%clickpauseupdown
     switch skillset%currentProfile%clickpausedropdown1
     {
@@ -2938,10 +2979,12 @@ quickPause:
             ; 双击
             If (A_PriorHotkey=A_ThisHotkey and A_TimeSincePriorHotkey < DblClickTime)
             {
-                clickPauseMarco(keysOnHold, skillset%currentProfile%clickpauseupdown, vRunning)
+                clickPauseMarco(skillset%currentProfile%clickpauseupdown, skillset%currentProfile%clickpausedropdown3)
             }
         case 2:
-            clickPauseMarco(keysOnHold, skillset%currentProfile%clickpauseupdown, vRunning)
+            clickPauseMarco(skillset%currentProfile%clickpauseupdown, skillset%currentProfile%clickpausedropdown3)
+        case 3:
+            clickPauseMarco(-1, skillset%currentProfile%clickpausedropdown3)
     }
 Return
 
