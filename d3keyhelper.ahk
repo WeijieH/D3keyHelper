@@ -25,7 +25,7 @@ CoordMode, Pixel, Client
 CoordMode, Mouse, Client
 Process, Priority, , High
 
-VERSION:=210729
+VERSION:=210730
 TITLE:=Format("暗黑3技能连点器 v1.3.{:d}   by Oldsand", VERSION)
 MainWindowW:=900
 MainWindowH:=550
@@ -226,7 +226,7 @@ GuiCreate(){
 
         Gui Add, Checkbox, % "xs+20 yp+37 Checked" others[currentTab].enablequickpause " vskillset" currentTab "clickpauseckbox gSetQuickPause", 快速暂停：
         Gui Add, DropDownList, % "x+0 yp-3 w50 AltSubmit Choose" others[currentTab].quickpausemethod1 " vskillset" currentTab "clickpausedropdown1 gSetQuickPause", 双击||单击||压住
-        Gui Add, DropDownList, % "x+5 yp w75 AltSubmit Choose" others[currentTab].quickpausemethod2 " vskillset" currentTab "clickpausedropdown2", 鼠标左键||鼠标右键||鼠标中键||侧键1||侧键2
+        Gui Add, DropDownList, % "x+5 yp w75 AltSubmit Choose" others[currentTab].quickpausemethod2 " vskillset" currentTab "clickpausedropdown2 gSetQuickPause", 鼠标左键||鼠标右键||鼠标中键||侧键1||侧键2
         Gui Add, Text, x+5 yp+3 vskillset%currentTab%clickpausetext1, 则
         Gui Add, DropDownList, % "x+5 yp-3 w140 AltSubmit Choose" others[currentTab].quickpausemethod3 " vskillset" currentTab "clickpausedropdown3", 暂停按键宏||暂停宏且连点左键
         Gui Add, Edit, vskillset%currentTab%clickpauseedit x+5 yp w60 Number
