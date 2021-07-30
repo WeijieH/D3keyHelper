@@ -25,7 +25,7 @@ CoordMode, Pixel, Client
 CoordMode, Mouse, Client
 Process, Priority, , High
 
-VERSION:=210730
+VERSION:=210731
 TITLE:=Format("暗黑3技能连点器 v1.3.{:d}   by Oldsand", VERSION)
 MainWindowW:=900
 MainWindowH:=550
@@ -703,7 +703,7 @@ skillKey(currentProfile, nskill, D3W, D3H, forceStandingKey, useSkillQueue){
         case 4:
             ; 获得对应按键buff条最左侧坐标
             magicXY:=getSkillButtonBuffPos(D3W, D3H, nskill, buffpercent)
-            crgb:=getPixelsRGB(magicXY[1], magicXY[2]-1, 1, 3, "Max", True, gameX, gameY)
+            crgb:=getPixelRGB(magicXY)
             ; 具体判断是否需要补buff
             If (!vPausing and crgb[2]<95)
             {
@@ -1893,7 +1893,7 @@ isSalvagePageOpen(D3W, D3H){
     c2:=getPixelRGB([Round(351*D3H/1440),Round(107*D3H/1440)])
     c3:=getPixelRGB([Round(388*D3H/1440),Round(86*D3H/1440)])
     c4:=getPixelRGB([Round(673*D3H/1440),Round(1040*D3H/1440)])
-    if (c1[3]>c1[2] and c1[2]>c1[1] and c1[3]>180 and c1[3]-c1[1]>90 and c3[3]>c3[2] and c3[2]>c3[1] and c3[3]>110 and c2[1]+c2[2]>350 and c4[1]>50 and c4[2]<15 and c4[3]<15){
+    if (c1[3]>c1[2] and c1[2]>c1[1] and c1[3]>170 and c1[3]-c1[1]>80 and c3[3]>c3[2] and c3[2]>c3[1] and c3[3]>110 and c2[1]+c2[2]>350 and c4[1]>50 and c4[2]<15 and c4[3]<15){
         p:=getSalvageIconXY(D3W, D3H, "edge")
         cLeg:=getPixelRGB(p[1])
         cWhite:=getPixelRGB(p[2])
@@ -1927,7 +1927,7 @@ isKanaiCubeOpen(D3W, D3H){
     c2:=getPixelRGB([Round(278*D3H/1440),Round(147*D3H/1440)])
     c3:=getPixelRGB([Round(330*D3H/1440),Round(140*D3H/1440)])
 
-    if (c1[1]<30 and c1[2]<20 and c1[3]<15 and c2[1]>100 and c2[2]<30 and c2[3]<30 and abs(c3[3]-c3[2])<=8 and c3[1]<=55 and c3[1]<c3[2] and c3[1]<c3[3]){
+    if (c1[1]<50 and c1[2]<40 and c1[3]<35 and c2[1]>100 and c2[2]<30 and c2[3]<30 and abs(c3[3]-c3[2])<=8 and c3[1]<=55 and c3[1]<c3[2] and c3[1]<c3[3]){
         cc1:=getPixelRGB([Round(788*D3H/1440),Round(428*D3H/1440)])
         cc2:=getPixelRGB([Round(810*D3H/1440),Round(429*D3H/1440)])
         if (cc1[3]>230 and cc2[3]>230 and cc1[3]>cc1[2] and cc2[3]>cc2[2] and cc1[2]>cc1[1] and cc2[2]>cc2[1])
