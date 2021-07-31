@@ -1490,22 +1490,15 @@ clickPauseMarco(pausetime, pauseAction){
                 {
                     if GetKeyState(forceStandingKey)
                     {
-                        Send {%forceStandingKey% up}{LButton}{%forceStandingKey% down}
+                        Send {Blind}{%forceStandingKey% up}{LButton}{%forceStandingKey% down}
                     }
                     Else
                     {
-                        if GetKeyState("LButton")
-                        {
-                            Send {LButton up}{LButton down}
-                        }
-                        Else
-                        {
-                            Click
-                        }
+                        Click
                     }
                 }
                 Sleep, 50
-                if !GetKeyState(quickPauseHK)
+                if !GetKeyState(quickPauseHK, "P")
                 {
                     Break
                 }
@@ -2929,10 +2922,10 @@ RunMarco:
     ; 处理按键队列
     if skillset%currentProfile%useskillqueueckbox{
         GuiControlGet, skillset%currentProfile%useskillqueueupdown
-        if runOnStart{
-            spamSkillQueue(skillset%currentProfile%useskillqueueupdown)
-        }
         sqfunc:=Func("spamSkillQueue").Bind(skillset%currentProfile%useskillqueueupdown)
+        if runOnStart{
+            SetTimer, %sqfunc%, -1
+        }
         SetTimer, %sqfunc%, % skillset%currentProfile%useskillqueueupdown
     }
     vRunning:=True 
