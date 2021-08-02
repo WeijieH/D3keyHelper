@@ -48,6 +48,7 @@ tabslen:=ObjCount(tabsarray)
 safezone:={}
 isCompact:= generals.compactmode
 runOnStart:= generals.runonstart
+gameResolution:= InStr(generals.gameresolution, "x")? generals.gameresolution:"Auto"
 hBMPButtonLeft_Normal := isCompact? hBMPButtonExpand_Normal:hBMPButtonBack_Normal
 hBMPButtonLeft_Hover := isCompact? hBMPButtonExpand_Hover:hBMPButtonBack_Hover
 hBMPButtonLeft_Pressed := isCompact? hBMPButtonExpand_Pressed:hBMPButtonBack_Pressed
@@ -406,11 +407,12 @@ ReadCfgFile(cfgFileName, ByRef tabs, ByRef hotkeys, ByRef actions, ByRef interva
         IniRead, buffpercent, %cfgFileName%, General, buffpercent, 0.050000
         IniRead, compactmode, %cfgFileName%, General, compactmode, 0
         IniRead, runonstart, %cfgFileName%, General, runonstart, 1
+        IniRead, gameresolution, %cfgFileName%, General, gameresolution, "Auto"
         IniRead, enableloothelper, %cfgFileName%, General, enableloothelper, 0
         IniRead, loothelpertimes, %cfgFileName%, General, loothelpertimes, 30
         generals:={"oldsandhelpermethod":oldsandhelpermethod, "oldsandhelperhk":oldsandhelperhk
         , "enablesalvagehelper":enablesalvagehelper, "salvagehelpermethod":salvagehelpermethod
-        , "enablereforgehelper":enablereforgehelper, "runonstart":runonstart
+        , "enablereforgehelper":enablereforgehelper, "runonstart":runonstart, "gameresolution":gameresolution
         , "enablegamblehelper":enablegamblehelper, "gamblehelpertimes":gamblehelpertimes
         , "startmethod":startmethod, "starthotkey":starthotkey, "enableupgradehelper":enableupgradehelper
         , "enablesmartpause":enablesmartpause, "enablesoundplay":enablesoundplay, "enableconverthelper":enableconverthelper, "enableabandonhelper":enableabandonhelper
@@ -493,7 +495,7 @@ ReadCfgFile(cfgFileName, ByRef tabs, ByRef hotkeys, ByRef actions, ByRef interva
         , "enablereforgehelper":0, "enableupgradehelper":0, "enableabandonhelper":0, "runonstart":1
         , "custommoving":0, "custommovinghk":"e", "customstanding":0, "customstandinghk":"LShift"
         , "safezone":"61,62,63", "helperspeed":3, "gamegamma":1.000000, "sendmode":"Event"
-        , "buffpercent":0.050000, "enableloothelper":0, "loothelpertimes":30, "compactmode":0}
+        , "buffpercent":0.050000, "enableloothelper":0, "loothelpertimes":30, "compactmode":0, "gameresolution":"Auto"}
     }
     Return currentProfile
 }
@@ -555,12 +557,13 @@ SaveCfgFile(cfgFileName, tabs, currentProfile, safezone, VERSION){
     IniWrite, %helperAnimationSpeedDropdown%, %cfgFileName%, General, helperspeed
     safezone:=keyJoin(",", safezone)
     IniWrite, %safezone%, %cfgFileName%, General, safezone
-    Global gameGamma, buffpercent, isCompact, runOnStart
+    Global gameGamma, buffpercent, isCompact, runOnStart, gameResolution
     IniWrite, %gameGamma%, %cfgFileName%, General, gamegamma
     IniWrite, %A_SendMode%, %cfgFileName%, General, sendmode
     IniWrite, %buffpercent%, %cfgFileName%, General, buffpercent
     IniWrite, %isCompact%, %cfgFileName%, General, compactmode
     IniWrite, %runOnStart%, %cfgFileName%, General, runonstart
+    IniWrite, %gameResolution%, %cfgFileName%, General, gameresolution
     
     GuiControlGet, StartRunDropdown
     GuiControlGet, StartRunHKInput
@@ -2096,13 +2099,24 @@ getGameXYonScreen(GameX, GameY){
     获取分辨率是否成功
 */
 getGameResulution(ByRef D3W, ByRef D3H){
-    VarSetCapacity(rect, 16)
-    DllCall("GetClientRect", "ptr", WinExist("ahk_class D3 Main Window Class"), "ptr", &rect)
-    D3W:=NumGet(rect, 8, "Int")
-    D3H:=NumGet(rect, 12, "Int")
-    if (D3W*D3H=0){
-        MsgBox, % Format("无法获取到你的游戏分辨率，错误代码：0x{:X}，请尝试切换至窗口模式运行游戏。", A_LastError)
-        Return False
+    local
+    Global gameResolution
+    if (gameResolution="Auto")
+    {
+        VarSetCapacity(rect, 16)
+        DllCall("GetClientRect", "ptr", WinExist("ahk_class D3 Main Window Class"), "ptr", &rect)
+        D3W:=NumGet(rect, 8, "Int")
+        D3H:=NumGet(rect, 12, "Int")
+        if (D3W*D3H=0){
+            MsgBox, % Format("无法获取到你的游戏分辨率，错误代码：0x{:X}，请尝试切换至窗口模式运行游戏。", A_LastError)
+            Return False
+        }
+    }
+    Else
+    {
+        _r:=StrSplit(gameResolution, "x", A_Space)
+        D3W:=_r[1]
+        D3H:=_r[2]
     }
     Return True
 }
