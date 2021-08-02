@@ -25,7 +25,7 @@ CoordMode, Pixel, Client
 CoordMode, Mouse, Client
 Process, Priority, , High
 
-VERSION:=210801
+VERSION:=210802
 TITLE:=Format("暗黑3技能连点器 v1.3.{:d}   by Oldsand", VERSION)
 MainWindowW:=900
 MainWindowH:=550
@@ -1284,10 +1284,10 @@ oneButtonSalvageHelper(D3W, D3H, xpos, ypos){
                         ; 循环检测当前格子的装备有没有消失
                         while (A_TickCount-StartTime2<=2*helperDelay)
                         {
-                            if isInventorySpaceEmpty(D3W, D3H, i, [[0.65625,0.71429], [0.375,0.36508], [0.725,0.251], [0.5,0.5]], "bag")
+                            if isInventorySpaceEmpty(D3W, D3H, i, "", "bag")
                             {
                                 ; 再次检查下方格子有没有变为空格子
-                                if ((helperBagZone[i+10]=10 or helperBagZone[i+10]=-1) and isInventorySpaceEmpty(D3W, D3H, i+10, [[0.65625,0.71429], [0.375,0.36508], [0.725,0.251], [0.5,0.5]], "bag"))
+                                if ((helperBagZone[i+10]=10 or helperBagZone[i+10]=-1) and isInventorySpaceEmpty(D3W, D3H, i+10, "", "bag"))
                                 {
                                     helperBagZone[i+10]:=5
                                 }
@@ -1376,7 +1376,7 @@ oneButtonAbandonHelper(D3W, D3H, xpos, ypos, mousePosition){
                     StartTime2:=A_TickCount
                     while (A_TickCount-StartTime2<=helperDelay+100)
                     {
-                        if isInventorySpaceEmpty(D3W, D3H, i+10, [[0.65625,0.71429], [0.375,0.36508], [0.725,0.251], [0.5,0.5]], "bag")
+                        if isInventorySpaceEmpty(D3W, D3H, i+10, "", "bag")
                         {
                             helperBagZone[i+10]:=5
                             Break
@@ -2061,14 +2061,26 @@ isStashOpen(D3W, D3H){
 isInventorySpaceEmpty(D3W, D3H, ID, ckpoints, zone){
     static _spaceSizeInnerW:=64
     static _spaceSizeInnerH:=63
+    Global gameX, gameY
     m:=getInventorySpaceXY(D3W, D3H, ID, zone)
-    for i, p in ckpoints
+    if (ckpoints="")
     {
-        xy:=[Round(m[3]+_spaceSizeInnerW*ckpoints[i][1]*D3H/1440), Round(m[4]+_spaceSizeInnerH*ckpoints[i][2]*D3H/1440)]
-        c:=getPixelRGB(xy)
-        if !(c[1]<22 and c[2]<20 and c[3]<15 and c[1]>c[3] and c[2]>c[3])
+        c:=getPixelsRGB(Round(m[3]+0.2*_spaceSizeInnerW), Round(m[4]+0.2*_spaceSizeInnerH), Round(0.6*_spaceSizeInnerW), Round(0.6*_spaceSizeInnerH), "Max", True, gameX, gameY)
+        if (c[1]>50 or c[2]>50 or c[3]>50)
         {
             Return False
+        }
+    }
+    Else
+    {
+        for i, p in ckpoints
+        {
+            xy:=[Round(m[3]+_spaceSizeInnerW*ckpoints[i][1]*D3H/1440), Round(m[4]+_spaceSizeInnerH*ckpoints[i][2]*D3H/1440)]
+            c:=getPixelRGB(xy)
+            if !(c[1]<22 and c[2]<20 and c[3]<15 and c[1]>c[3] and c[2]>c[3])
+            {
+                Return False
+            }
         }
     }
     Return True
