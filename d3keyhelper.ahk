@@ -25,7 +25,7 @@ CoordMode, Pixel, Client
 CoordMode, Mouse, Client
 Process, Priority, , High
 
-VERSION:=210802
+VERSION:=210803
 TITLE:=Format("暗黑3技能连点器 v1.3.{:d}   by Oldsand", VERSION)
 MainWindowW:=900
 MainWindowH:=550
@@ -48,6 +48,8 @@ tabslen:=ObjCount(tabsarray)
 safezone:={}
 isCompact:= generals.compactmode
 runOnStart:= generals.runonstart
+helperMouseSpeed:= generals.helpermousespeed
+helperAnimationDelay:= generals.helperanimationdelay
 gameResolution:= InStr(generals.gameresolution, "x")? generals.gameresolution:"Auto"
 hBMPButtonLeft_Normal := isCompact? hBMPButtonExpand_Normal:hBMPButtonBack_Normal
 hBMPButtonLeft_Hover := isCompact? hBMPButtonExpand_Hover:hBMPButtonBack_Hover
@@ -247,7 +249,9 @@ GuiCreate(){
 
     Gui Add, Text, xs+20 yp+40 hwndhelperSpeedTextID gdummyFunction, 助手宏动画速度：
     AddToolTip(helperSpeedTextID, "当网络延迟较高时，适当降低动画速度可以减少宏出错的概率")
-    Gui Add, DropDownList, % "x+5 yp-3 w90 vhelperAnimationSpeedDropdown AltSubmit Choose" generals.helperspeed, 非常快||快速||中等||慢速
+    Gui Add, DropDownList, % "x+5 yp-3 w90 vhelperAnimationSpeedDropdown hwndhelperAnimationSpeedDropdownID AltSubmit Choose" generals.helperspeed, 非常快||快速||中等||慢速||自定义
+    AddToolTip(helperAnimationSpeedDropdownID, "非常快：鼠标速度0，动画延迟50`n快速：鼠标速度1，动画延迟100`n中等：鼠标速度2，动画延迟150`n慢速：鼠标速度3，动画延迟200`n自定义：使用配置文件中的预设值")
+
     Gui Add, Text, x+20 yp+4 w80 hwndhelperSafeZoneTextID vhelperSafeZoneText gdummyFunction
     AddToolTip(helperSafeZoneTextID, "修改配置文件中Generals区块下的safezone值来设置安全格`n格式为英文逗号连接的格子编号`n左上角格子编号为1，右上角为10，左下角为51，右下角为60")
 
@@ -410,11 +414,13 @@ ReadCfgFile(cfgFileName, ByRef tabs, ByRef hotkeys, ByRef actions, ByRef interva
         IniRead, gameresolution, %cfgFileName%, General, gameresolution, "Auto"
         IniRead, enableloothelper, %cfgFileName%, General, enableloothelper, 0
         IniRead, loothelpertimes, %cfgFileName%, General, loothelpertimes, 30
+        IniRead, helpermousespeed, %cfgFileName%, General, helpermousespeed, 2
+        IniRead, helperanimationdelay, %cfgFileName%, General, helperanimationdelay, 150
         generals:={"oldsandhelpermethod":oldsandhelpermethod, "oldsandhelperhk":oldsandhelperhk
         , "enablesalvagehelper":enablesalvagehelper, "salvagehelpermethod":salvagehelpermethod
         , "enablereforgehelper":enablereforgehelper, "runonstart":runonstart, "gameresolution":gameresolution
-        , "enablegamblehelper":enablegamblehelper, "gamblehelpertimes":gamblehelpertimes
-        , "startmethod":startmethod, "starthotkey":starthotkey, "enableupgradehelper":enableupgradehelper
+        , "enablegamblehelper":enablegamblehelper, "gamblehelpertimes":gamblehelpertimes, "helpermousespeed":helpermousespeed
+        , "startmethod":startmethod, "starthotkey":starthotkey, "enableupgradehelper":enableupgradehelper, "helperanimationdelay":helperanimationdelay
         , "enablesmartpause":enablesmartpause, "enablesoundplay":enablesoundplay, "enableconverthelper":enableconverthelper, "enableabandonhelper":enableabandonhelper
         , "custommoving":custommoving, "custommovinghk":custommovinghk, "customstanding":customstanding, "customstandinghk":customstandinghk
         , "safezone":safezone, "helperspeed":helperspeed, "gamegamma":gamegamma, "sendmode":sendmode, "buffpercent":buffpercent
@@ -493,8 +499,8 @@ ReadCfgFile(cfgFileName, ByRef tabs, ByRef hotkeys, ByRef actions, ByRef interva
         , "startmethod":7, "starthotkey":"F2", "enablesmartpause":1, "salvagehelpermethod":1
         , "oldsandhelpermethod":7, "enablesalvagehelper":0, "enablesoundplay":1, "enableconverthelper":0
         , "enablereforgehelper":0, "enableupgradehelper":0, "enableabandonhelper":0, "runonstart":1
-        , "custommoving":0, "custommovinghk":"e", "customstanding":0, "customstandinghk":"LShift"
-        , "safezone":"61,62,63", "helperspeed":3, "gamegamma":1.000000, "sendmode":"Event"
+        , "custommoving":0, "custommovinghk":"e", "customstanding":0, "customstandinghk":"LShift", "helpermousespeed":2
+        , "safezone":"61,62,63", "helperspeed":3, "gamegamma":1.000000, "sendmode":"Event", "helperanimationdelay":150
         , "buffpercent":0.050000, "enableloothelper":0, "loothelpertimes":30, "compactmode":0, "gameresolution":"Auto"}
     }
     Return currentProfile
@@ -557,13 +563,15 @@ SaveCfgFile(cfgFileName, tabs, currentProfile, safezone, VERSION){
     IniWrite, %helperAnimationSpeedDropdown%, %cfgFileName%, General, helperspeed
     safezone:=keyJoin(",", safezone)
     IniWrite, %safezone%, %cfgFileName%, General, safezone
-    Global gameGamma, buffpercent, isCompact, runOnStart, gameResolution
+    Global gameGamma, buffpercent, isCompact, runOnStart, gameResolution, helperAnimationDelay, helperMouseSpeed
     IniWrite, %gameGamma%, %cfgFileName%, General, gamegamma
     IniWrite, %A_SendMode%, %cfgFileName%, General, sendmode
     IniWrite, %buffpercent%, %cfgFileName%, General, buffpercent
     IniWrite, %isCompact%, %cfgFileName%, General, compactmode
     IniWrite, %runOnStart%, %cfgFileName%, General, runonstart
     IniWrite, %gameResolution%, %cfgFileName%, General, gameresolution
+    IniWrite, %helperAnimationDelay%, %cfgFileName%, General, helperanimationdelay
+    IniWrite, %helperMouseSpeed%, %cfgFileName%, General, helpermousespeed
     
     GuiControlGet, StartRunDropdown
     GuiControlGet, StartRunHKInput
@@ -785,7 +793,7 @@ createOrTruncateFile(FileName){
 */
 oldsandHelper(){
     local
-    Global helperRunning, helperBreak, helperDelay, mouseDelay, vRunning
+    Global helperRunning, helperBreak, helperDelay, mouseDelay, vRunning, helperAnimationDelay, helperMouseSpeed
     if helperRunning{
         ; 防止过快连按
         ; 宏在执行中再按可以打断
@@ -822,9 +830,12 @@ oldsandHelper(){
         case 3:
             mouseDelay:=2
             helperDelay:=150
-        Default:
+        case 4:
             mouseDelay:=3
             helperDelay:=200
+        Default:
+            mouseDelay:=helperMouseSpeed
+            helperDelay:=helperAnimationDelay
     }
     SetDefaultMouseSpeed, mouseDelay
     ; 当鼠标在左侧
@@ -1279,6 +1290,7 @@ oneButtonSalvageHelper(D3W, D3H, xpos, ypos){
                 {
                     if isDialogBoXOnScreen(D3W, D3H)
                     {
+                        Sleep, helperDelay//4
                         Send {Enter}
                         StartTime2:=A_TickCount
                         ; 循环检测当前格子的装备有没有消失
