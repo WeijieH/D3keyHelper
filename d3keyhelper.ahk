@@ -17,7 +17,8 @@ if (A_AhkVersion < AHK_MIN_VERSION)
 #SingleInstance Force
 #IfWinActive, ahk_class D3 Main Window Class
 #NoEnv
-#UseHook
+#InstallKeybdHook
+#InstallMouseHook
 SetWorkingDir %A_ScriptDir%
 SetBatchLines -1
 Thread, interrupt, 0
@@ -25,7 +26,7 @@ CoordMode, Pixel, Client
 CoordMode, Mouse, Client
 Process, Priority, , High
 
-VERSION:=210803
+VERSION:=210807
 TITLE:=Format("暗黑3技能连点器 v1.3.{:d}   by Oldsand", VERSION)
 MainWindowW:=900
 MainWindowH:=550
@@ -171,14 +172,14 @@ GuiCreate(){
     GuiControlGet, TitleBarSize, Pos , TitleBarText
     Gui Add, Tab3, xm ym w%tabw% h%tabh% vActiveTab gSetTabFocus AltSubmit, %tabs%
     Gui Font, s9, Segoe UI
+    local skillLabels:=["技能一：", "技能二：", "技能三：", "技能四：", "左键技能：", "右键技能："]
     Loop, parse, tabs, `|
     {
-        currentTab:=A_Index
+        local currentTab:=A_Index
         Gui Tab, %currentTab%
         Gui Add, Hotkey, x0 y0 w0 w0
         
         Gui Add, GroupBox, xm+10 ym+40 w520 h260 section, 按键宏设置
-        skillLabels:=["技能一：", "技能二：", "技能三：", "技能四：", "左键技能：", "右键技能："]
         Gui Add, Text, xs+90 ys+20 w60 center section, 快捷键
         Gui Add, Text, x+10 w100 center, 策略
         Gui Add, Text, x+20 w110 center, 执行间隔（毫秒）
