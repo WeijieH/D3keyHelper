@@ -17,7 +17,8 @@ if (A_AhkVersion < AHK_MIN_VERSION)
 #SingleInstance Force
 #IfWinActive, ahk_class D3 Main Window Class
 #NoEnv
-#UseHook
+#InstallKeybdHook
+#InstallMouseHook
 SetWorkingDir %A_ScriptDir%
 SetBatchLines -1
 Thread, interrupt, 0
@@ -25,7 +26,7 @@ CoordMode, Pixel, Client
 CoordMode, Mouse, Client
 Process, Priority, , High
 
-VERSION:=210801
+VERSION:=210807
 TITLE:=Format("暗黑3技能连点器 v1.3.{:d}   by Oldsand", VERSION)
 MainWindowW:=900
 MainWindowH:=550
@@ -48,6 +49,9 @@ tabslen:=ObjCount(tabsarray)
 safezone:={}
 isCompact:= generals.compactmode
 runOnStart:= generals.runonstart
+helperMouseSpeed:= generals.helpermousespeed
+helperAnimationDelay:= generals.helperanimationdelay
+gameResolution:= InStr(generals.gameresolution, "x")? generals.gameresolution:"Auto"
 hBMPButtonLeft_Normal := isCompact? hBMPButtonExpand_Normal:hBMPButtonBack_Normal
 hBMPButtonLeft_Hover := isCompact? hBMPButtonExpand_Hover:hBMPButtonBack_Hover
 hBMPButtonLeft_Pressed := isCompact? hBMPButtonExpand_Pressed:hBMPButtonBack_Pressed
@@ -168,14 +172,14 @@ GuiCreate(){
     GuiControlGet, TitleBarSize, Pos , TitleBarText
     Gui Add, Tab3, xm ym w%tabw% h%tabh% vActiveTab gSetTabFocus AltSubmit, %tabs%
     Gui Font, s9, Segoe UI
+    local skillLabels:=["技能一：", "技能二：", "技能三：", "技能四：", "左键技能：", "右键技能："]
     Loop, parse, tabs, `|
     {
-        currentTab:=A_Index
+        local currentTab:=A_Index
         Gui Tab, %currentTab%
         Gui Add, Hotkey, x0 y0 w0 w0
         
         Gui Add, GroupBox, xm+10 ym+40 w520 h260 section, 按键宏设置
-        skillLabels:=["技能一：", "技能二：", "技能三：", "技能四：", "左键技能：", "右键技能："]
         Gui Add, Text, xs+90 ys+20 w60 center section, 快捷键
         Gui Add, Text, x+10 w100 center, 策略
         Gui Add, Text, x+20 w110 center, 执行间隔（毫秒）
@@ -246,7 +250,9 @@ GuiCreate(){
 
     Gui Add, Text, xs+20 yp+40 hwndhelperSpeedTextID gdummyFunction, 助手宏动画速度：
     AddToolTip(helperSpeedTextID, "当网络延迟较高时，适当降低动画速度可以减少宏出错的概率")
-    Gui Add, DropDownList, % "x+5 yp-3 w90 vhelperAnimationSpeedDropdown AltSubmit Choose" generals.helperspeed, 非常快||快速||中等||慢速
+    Gui Add, DropDownList, % "x+5 yp-3 w90 vhelperAnimationSpeedDropdown hwndhelperAnimationSpeedDropdownID AltSubmit Choose" generals.helperspeed, 非常快||快速||中等||慢速||自定义
+    AddToolTip(helperAnimationSpeedDropdownID, "非常快：鼠标速度0，动画延迟50`n快速：鼠标速度1，动画延迟100`n中等：鼠标速度2，动画延迟150`n慢速：鼠标速度3，动画延迟200`n自定义：使用配置文件中的预设值")
+
     Gui Add, Text, x+20 yp+4 w80 hwndhelperSafeZoneTextID vhelperSafeZoneText gdummyFunction
     AddToolTip(helperSafeZoneTextID, "修改配置文件中Generals区块下的safezone值来设置安全格`n格式为英文逗号连接的格子编号`n左上角格子编号为1，右上角为10，左下角为51，右下角为60")
 
@@ -406,13 +412,16 @@ ReadCfgFile(cfgFileName, ByRef tabs, ByRef hotkeys, ByRef actions, ByRef interva
         IniRead, buffpercent, %cfgFileName%, General, buffpercent, 0.050000
         IniRead, compactmode, %cfgFileName%, General, compactmode, 0
         IniRead, runonstart, %cfgFileName%, General, runonstart, 1
+        IniRead, gameresolution, %cfgFileName%, General, gameresolution, "Auto"
         IniRead, enableloothelper, %cfgFileName%, General, enableloothelper, 0
         IniRead, loothelpertimes, %cfgFileName%, General, loothelpertimes, 30
+        IniRead, helpermousespeed, %cfgFileName%, General, helpermousespeed, 2
+        IniRead, helperanimationdelay, %cfgFileName%, General, helperanimationdelay, 150
         generals:={"oldsandhelpermethod":oldsandhelpermethod, "oldsandhelperhk":oldsandhelperhk
         , "enablesalvagehelper":enablesalvagehelper, "salvagehelpermethod":salvagehelpermethod
-        , "enablereforgehelper":enablereforgehelper, "runonstart":runonstart
-        , "enablegamblehelper":enablegamblehelper, "gamblehelpertimes":gamblehelpertimes
-        , "startmethod":startmethod, "starthotkey":starthotkey, "enableupgradehelper":enableupgradehelper
+        , "enablereforgehelper":enablereforgehelper, "runonstart":runonstart, "gameresolution":gameresolution
+        , "enablegamblehelper":enablegamblehelper, "gamblehelpertimes":gamblehelpertimes, "helpermousespeed":helpermousespeed
+        , "startmethod":startmethod, "starthotkey":starthotkey, "enableupgradehelper":enableupgradehelper, "helperanimationdelay":helperanimationdelay
         , "enablesmartpause":enablesmartpause, "enablesoundplay":enablesoundplay, "enableconverthelper":enableconverthelper, "enableabandonhelper":enableabandonhelper
         , "custommoving":custommoving, "custommovinghk":custommovinghk, "customstanding":customstanding, "customstandinghk":customstandinghk
         , "safezone":safezone, "helperspeed":helperspeed, "gamegamma":gamegamma, "sendmode":sendmode, "buffpercent":buffpercent
@@ -491,9 +500,9 @@ ReadCfgFile(cfgFileName, ByRef tabs, ByRef hotkeys, ByRef actions, ByRef interva
         , "startmethod":7, "starthotkey":"F2", "enablesmartpause":1, "salvagehelpermethod":1
         , "oldsandhelpermethod":7, "enablesalvagehelper":0, "enablesoundplay":1, "enableconverthelper":0
         , "enablereforgehelper":0, "enableupgradehelper":0, "enableabandonhelper":0, "runonstart":1
-        , "custommoving":0, "custommovinghk":"e", "customstanding":0, "customstandinghk":"LShift"
-        , "safezone":"61,62,63", "helperspeed":3, "gamegamma":1.000000, "sendmode":"Event"
-        , "buffpercent":0.050000, "enableloothelper":0, "loothelpertimes":30, "compactmode":0}
+        , "custommoving":0, "custommovinghk":"e", "customstanding":0, "customstandinghk":"LShift", "helpermousespeed":2
+        , "safezone":"61,62,63", "helperspeed":3, "gamegamma":1.000000, "sendmode":"Event", "helperanimationdelay":150
+        , "buffpercent":0.050000, "enableloothelper":0, "loothelpertimes":30, "compactmode":0, "gameresolution":"Auto"}
     }
     Return currentProfile
 }
@@ -555,12 +564,15 @@ SaveCfgFile(cfgFileName, tabs, currentProfile, safezone, VERSION){
     IniWrite, %helperAnimationSpeedDropdown%, %cfgFileName%, General, helperspeed
     safezone:=keyJoin(",", safezone)
     IniWrite, %safezone%, %cfgFileName%, General, safezone
-    Global gameGamma, buffpercent, isCompact, runOnStart
+    Global gameGamma, buffpercent, isCompact, runOnStart, gameResolution, helperAnimationDelay, helperMouseSpeed
     IniWrite, %gameGamma%, %cfgFileName%, General, gamegamma
     IniWrite, %A_SendMode%, %cfgFileName%, General, sendmode
     IniWrite, %buffpercent%, %cfgFileName%, General, buffpercent
     IniWrite, %isCompact%, %cfgFileName%, General, compactmode
     IniWrite, %runOnStart%, %cfgFileName%, General, runonstart
+    IniWrite, %gameResolution%, %cfgFileName%, General, gameresolution
+    IniWrite, %helperAnimationDelay%, %cfgFileName%, General, helperanimationdelay
+    IniWrite, %helperMouseSpeed%, %cfgFileName%, General, helpermousespeed
     
     GuiControlGet, StartRunDropdown
     GuiControlGet, StartRunHKInput
@@ -782,7 +794,7 @@ createOrTruncateFile(FileName){
 */
 oldsandHelper(){
     local
-    Global helperRunning, helperBreak, helperDelay, mouseDelay, vRunning
+    Global helperRunning, helperBreak, helperDelay, mouseDelay, vRunning, helperAnimationDelay, helperMouseSpeed
     if helperRunning{
         ; 防止过快连按
         ; 宏在执行中再按可以打断
@@ -819,9 +831,12 @@ oldsandHelper(){
         case 3:
             mouseDelay:=2
             helperDelay:=150
-        Default:
+        case 4:
             mouseDelay:=3
             helperDelay:=200
+        Default:
+            mouseDelay:=helperMouseSpeed
+            helperDelay:=helperAnimationDelay
     }
     SetDefaultMouseSpeed, mouseDelay
     ; 当鼠标在左侧
@@ -1276,15 +1291,16 @@ oneButtonSalvageHelper(D3W, D3H, xpos, ypos){
                 {
                     if isDialogBoXOnScreen(D3W, D3H)
                     {
+                        Sleep, helperDelay//4
                         Send {Enter}
                         StartTime2:=A_TickCount
                         ; 循环检测当前格子的装备有没有消失
                         while (A_TickCount-StartTime2<=2*helperDelay)
                         {
-                            if isInventorySpaceEmpty(D3W, D3H, i, [[0.65625,0.71429], [0.375,0.36508], [0.725,0.251], [0.5,0.5]], "bag")
+                            if isInventorySpaceEmpty(D3W, D3H, i, "", "bag")
                             {
                                 ; 再次检查下方格子有没有变为空格子
-                                if ((helperBagZone[i+10]=10 or helperBagZone[i+10]=-1) and isInventorySpaceEmpty(D3W, D3H, i+10, [[0.65625,0.71429], [0.375,0.36508], [0.725,0.251], [0.5,0.5]], "bag"))
+                                if ((helperBagZone[i+10]=10 or helperBagZone[i+10]=-1) and isInventorySpaceEmpty(D3W, D3H, i+10, "", "bag"))
                                 {
                                     helperBagZone[i+10]:=5
                                 }
@@ -1373,7 +1389,7 @@ oneButtonAbandonHelper(D3W, D3H, xpos, ypos, mousePosition){
                     StartTime2:=A_TickCount
                     while (A_TickCount-StartTime2<=helperDelay+100)
                     {
-                        if isInventorySpaceEmpty(D3W, D3H, i+10, [[0.65625,0.71429], [0.375,0.36508], [0.725,0.251], [0.5,0.5]], "bag")
+                        if isInventorySpaceEmpty(D3W, D3H, i+10, "", "bag")
                         {
                             helperBagZone[i+10]:=5
                             Break
@@ -2058,14 +2074,26 @@ isStashOpen(D3W, D3H){
 isInventorySpaceEmpty(D3W, D3H, ID, ckpoints, zone){
     static _spaceSizeInnerW:=64
     static _spaceSizeInnerH:=63
+    Global gameX, gameY
     m:=getInventorySpaceXY(D3W, D3H, ID, zone)
-    for i, p in ckpoints
+    if (ckpoints="")
     {
-        xy:=[Round(m[3]+_spaceSizeInnerW*ckpoints[i][1]*D3H/1440), Round(m[4]+_spaceSizeInnerH*ckpoints[i][2]*D3H/1440)]
-        c:=getPixelRGB(xy)
-        if !(c[1]<22 and c[2]<20 and c[3]<15 and c[1]>c[3] and c[2]>c[3])
+        c:=getPixelsRGB(Round(m[3]+0.2*_spaceSizeInnerW), Round(m[4]+0.2*_spaceSizeInnerH), Round(0.6*_spaceSizeInnerW), Round(0.6*_spaceSizeInnerH), "Max", True, gameX, gameY)
+        if (c[1]>50 or c[2]>50 or c[3]>50)
         {
             Return False
+        }
+    }
+    Else
+    {
+        for i, p in ckpoints
+        {
+            xy:=[Round(m[3]+_spaceSizeInnerW*ckpoints[i][1]*D3H/1440), Round(m[4]+_spaceSizeInnerH*ckpoints[i][2]*D3H/1440)]
+            c:=getPixelRGB(xy)
+            if !(c[1]<22 and c[2]<20 and c[3]<15 and c[1]>c[3] and c[2]>c[3])
+            {
+                Return False
+            }
         }
     }
     Return True
@@ -2096,13 +2124,24 @@ getGameXYonScreen(GameX, GameY){
     获取分辨率是否成功
 */
 getGameResulution(ByRef D3W, ByRef D3H){
-    VarSetCapacity(rect, 16)
-    DllCall("GetClientRect", "ptr", WinExist("ahk_class D3 Main Window Class"), "ptr", &rect)
-    D3W:=NumGet(rect, 8, "Int")
-    D3H:=NumGet(rect, 12, "Int")
-    if (D3W*D3H=0){
-        MsgBox, % Format("无法获取到你的游戏分辨率，错误代码：0x{:X}，请尝试切换至窗口模式运行游戏。", A_LastError)
-        Return False
+    local
+    Global gameResolution
+    if (gameResolution="Auto")
+    {
+        VarSetCapacity(rect, 16)
+        DllCall("GetClientRect", "ptr", WinExist("ahk_class D3 Main Window Class"), "ptr", &rect)
+        D3W:=NumGet(rect, 8, "Int")
+        D3H:=NumGet(rect, 12, "Int")
+        if (D3W*D3H=0){
+            MsgBox, % Format("无法获取到你的游戏分辨率，错误代码：0x{:X}，请尝试切换至窗口模式运行游戏。", A_LastError)
+            Return False
+        }
+    }
+    Else
+    {
+        _r:=StrSplit(gameResolution, "x", A_Space)
+        D3W:=_r[1]
+        D3H:=_r[2]
     }
     Return True
 }
