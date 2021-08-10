@@ -26,7 +26,7 @@ CoordMode, Pixel, Client
 CoordMode, Mouse, Client
 Process, Priority, , High
 
-VERSION:=210807
+VERSION:=210810
 TITLE:=Format("暗黑3技能连点器 v1.3.{:d}   by Oldsand", VERSION)
 MainWindowW:=900
 MainWindowH:=550
@@ -2475,7 +2475,7 @@ Watchdog(wParam, lParam){
             }
             WinGetClass, AClass, ahk_id %lParam%
             ; 检查当前窗口是否是暗黑三
-            if (!vRunning and AClass != "D3 Main Window Class")
+            if (vRunning and AClass != "D3 Main Window Class")
             {
                 Gosub, StopMarco
             }
