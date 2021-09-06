@@ -6,4 +6,5 @@
 *.zip
 *.7z
 *.txt
+*.json
 *dev*

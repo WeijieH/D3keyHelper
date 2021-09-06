@@ -15,7 +15,6 @@ if (A_AhkVersion < AHK_MIN_VERSION)
 ;@Ahk2Exe-IgnoreEnd
 
 #SingleInstance Force
-#IfWinActive, ahk_class D3 Main Window Class
 #NoEnv
 #InstallKeybdHook
 #InstallMouseHook
@@ -26,7 +25,7 @@ CoordMode, Pixel, Client
 CoordMode, Mouse, Client
 Process, Priority, , High
 
-VERSION:=210810
+VERSION:=210906
 TITLE:=Format("暗黑3技能连点器 v1.3.{:d}   by Oldsand", VERSION)
 MainWindowW:=900
 MainWindowH:=550
@@ -49,6 +48,7 @@ tabslen:=ObjCount(tabsarray)
 safezone:={}
 isCompact:= generals.compactmode
 runOnStart:= generals.runonstart
+d3only:= generals.d3only
 helperMouseSpeed:= generals.helpermousespeed
 helperAnimationDelay:= generals.helperanimationdelay
 gameResolution:= InStr(generals.gameresolution, "x")? generals.gameresolution:"Auto"
@@ -59,6 +59,7 @@ Loop, Parse, % generals.safezone, CSV
 {
     safezone[A_LoopField]:=1
 }
+#If WinActive((d3only)?"ahk_class D3 Main Window Class":"A")
 gameGamma:=(generals.gamegamma>=0.5 and generals.gamegamma<=1.5)? generals.gamegamma:1
 buffpercent:=(generals.buffpercent>=0 and generals.buffpercent<=1)? generals.buffpercent:0.05
 ; ==============================================================================================================
@@ -417,8 +418,9 @@ ReadCfgFile(cfgFileName, ByRef tabs, ByRef hotkeys, ByRef actions, ByRef interva
         IniRead, loothelpertimes, %cfgFileName%, General, loothelpertimes, 30
         IniRead, helpermousespeed, %cfgFileName%, General, helpermousespeed, 2
         IniRead, helperanimationdelay, %cfgFileName%, General, helperanimationdelay, 150
+        IniRead, d3only, %cfgFileName%, General, d3only, 1
         generals:={"oldsandhelpermethod":oldsandhelpermethod, "oldsandhelperhk":oldsandhelperhk
-        , "enablesalvagehelper":enablesalvagehelper, "salvagehelpermethod":salvagehelpermethod
+        , "enablesalvagehelper":enablesalvagehelper, "salvagehelpermethod":salvagehelpermethod, "d3only":d3only
         , "enablereforgehelper":enablereforgehelper, "runonstart":runonstart, "gameresolution":gameresolution
         , "enablegamblehelper":enablegamblehelper, "gamblehelpertimes":gamblehelpertimes, "helpermousespeed":helpermousespeed
         , "startmethod":startmethod, "starthotkey":starthotkey, "enableupgradehelper":enableupgradehelper, "helperanimationdelay":helperanimationdelay
@@ -496,7 +498,7 @@ ReadCfgFile(cfgFileName, ByRef tabs, ByRef hotkeys, ByRef actions, ByRef interva
             , "enablequickpause":0, "quickpausemethod1":1, "quickpausemethod2":1, "quickpausemethod3":1, "quickpausedelay":1500
             , "useskillqueue":0, "useskillqueueinterval":200, "autostartmarco":0})
         }
-        generals:={"enablegamblehelper":1 ,"gamblehelpertimes":15, "oldsandhelperhk":"F5"
+        generals:={"enablegamblehelper":1 ,"gamblehelpertimes":15, "oldsandhelperhk":"F5", "d3only":1
         , "startmethod":7, "starthotkey":"F2", "enablesmartpause":1, "salvagehelpermethod":1
         , "oldsandhelpermethod":7, "enablesalvagehelper":0, "enablesoundplay":1, "enableconverthelper":0
         , "enablereforgehelper":0, "enableupgradehelper":0, "enableabandonhelper":0, "runonstart":1
@@ -564,7 +566,8 @@ SaveCfgFile(cfgFileName, tabs, currentProfile, safezone, VERSION){
     IniWrite, %helperAnimationSpeedDropdown%, %cfgFileName%, General, helperspeed
     safezone:=keyJoin(",", safezone)
     IniWrite, %safezone%, %cfgFileName%, General, safezone
-    Global gameGamma, buffpercent, isCompact, runOnStart, gameResolution, helperAnimationDelay, helperMouseSpeed
+    Global gameGamma, buffpercent, isCompact, runOnStart, gameResolution, helperAnimationDelay, helperMouseSpeed, d3only
+    IniWrite, %d3only%, %cfgFileName%, General, d3only
     IniWrite, %gameGamma%, %cfgFileName%, General, gamegamma
     IniWrite, %A_SendMode%, %cfgFileName%, General, sendmode
     IniWrite, %buffpercent%, %cfgFileName%, General, buffpercent
@@ -2125,14 +2128,14 @@ getGameXYonScreen(GameX, GameY){
 */
 getGameResulution(ByRef D3W, ByRef D3H){
     local
-    Global gameResolution
+    Global gameResolution, d3only
     if (gameResolution="Auto")
     {
         VarSetCapacity(rect, 16)
         DllCall("GetClientRect", "ptr", WinExist("ahk_class D3 Main Window Class"), "ptr", &rect)
         D3W:=NumGet(rect, 8, "Int")
         D3H:=NumGet(rect, 12, "Int")
-        if (D3W*D3H=0){
+        if (D3W*D3H=0 and d3only){
             MsgBox, % Format("无法获取到你的游戏分辨率，错误代码：0x{:X}，请尝试切换至窗口模式运行游戏。", A_LastError)
             Return False
         }
@@ -2475,7 +2478,7 @@ Watchdog(wParam, lParam){
             }
             WinGetClass, AClass, ahk_id %lParam%
             ; 检查当前窗口是否是暗黑三
-            if (vRunning and AClass != "D3 Main Window Class")
+            if (vRunning and d3only and AClass != "D3 Main Window Class")
             {
                 Gosub, StopMarco
             }
@@ -2908,7 +2911,7 @@ RunMarco:
     GuiControlGet, extraCustomMovingHK
     forceMovingKey:=extraCustomMoving? extraCustomMovingHK:"e"
     skillQueue:=[]
-    if !getGameResulution(D3W, D3H)
+    if (!getGameResulution(D3W, D3H) and d3only)
     {
         Return
     }
