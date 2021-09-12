@@ -25,7 +25,7 @@ CoordMode, Pixel, Client
 CoordMode, Mouse, Client
 Process, Priority, , High
 
-VERSION:=210906
+VERSION:=210911
 TITLE:=Format("暗黑3技能连点器 v1.3.{:d}   by Oldsand", VERSION)
 MainWindowW:=900
 MainWindowH:=550
@@ -1132,7 +1132,7 @@ gambleHelper(){
         if helperBreak{
             Break
         }
-        Send {RButton}
+        Click, Right
         Sleep, helperDelay//4
     }
     helperRunning:=False
@@ -1490,7 +1490,9 @@ clickPauseMarco(pausetime, pauseAction){
                 {
                     if GetKeyState(forceStandingKey)
                     {
-                        Send {%forceStandingKey% up}{LButton}{%forceStandingKey% down}
+                        Send {%forceStandingKey% up}
+                        Click
+                        Send {%forceStandingKey% down}
                     }
                     Else
                     {
@@ -1509,7 +1511,9 @@ clickPauseMarco(pausetime, pauseAction){
                 {
                     if GetKeyState(forceStandingKey)
                     {
-                        Send {Blind}{%forceStandingKey% up}{LButton}{%forceStandingKey% down}
+                        Send {%forceStandingKey% up}
+                        Click
+                        Send {%forceStandingKey% down}
                     }
                     Else
                     {
