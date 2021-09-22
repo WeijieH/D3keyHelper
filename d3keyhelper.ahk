@@ -25,8 +25,9 @@ CoordMode, Pixel, Client
 CoordMode, Mouse, Client
 Process, Priority, , High
 
-VERSION:=210911
-TITLE:=Format("暗黑3技能连点器 v1.3.{:d}   by Oldsand", VERSION)
+VERSION:=210922
+TitleString:=(d3only)? "暗黑3技能连点器":"鼠标键盘连点器"
+TITLE:=Format(TitleString " v1.3.{:d}   by Oldsand", VERSION)
 MainWindowW:=900
 MainWindowH:=550
 CompactWindowW:=551
@@ -284,7 +285,7 @@ GuiCreate(){
     AddToolTip(extraConvertHelperCkboxID, "当魔盒打开且在转化材料页面时，按下助手快捷键即自动使用所有非安全格内的装备进行材料转化")
 
     Gui Add, CheckBox, % "x+25 yp+0 hwndextraAbandonHelperCkboxID vextraAbandonHelperCkbox Checked" generals.enableabandonhelper, 一键丢装助手
-    AddToolTip(extraAbandonHelperCkboxID, "当背包栏打开且鼠标指针位于背包栏内时，按下助手快捷键即自动丢弃非安全格的所有物品`n若储物箱（银行）打开且鼠标位于银行格子内时，宏会存储非安全格内的所有物品至储物箱")
+    AddToolTip(extraAbandonHelperCkboxID, "当背包栏打开且鼠标指针位于背包栏内时，按下助手快捷键即自动丢弃所有非安全格的物品`n若储物箱（银行）打开且鼠标位于银行格子内时，宏会存储所有非安全格内的物品至储物箱")
 
     Gui Add, CheckBox, % "xs+20 yp+65 vextraSoundonProfileSwitch Checked" generals.enablesoundplay, 使用快捷键切换配置成功时播放声音
     Gui Add, CheckBox, % "xs+20 yp+35 hwndextraSmartPauseID vextraSmartPause Checked" generals.enablesmartpause, 智能暂停
@@ -1153,7 +1154,7 @@ lootHelper(D3W, D3H, helperDelay){
     Global helperBreak, helperRunning
     MouseGetPos, xpos, ypos
     ; 如果鼠标在人物周围，连点左键
-    if (Abs(xpos - D3W/2)<500*1440/D3H and Abs(ypos - D3H/2)<300*1440/D3H)
+    if (Abs(xpos - D3W/2)<600*1440/D3H and Abs(ypos - D3H/2)<500*1440/D3H)
     {
         GuiControlGet, extraLootHelperEdit
         Loop, %extraLootHelperEdit%
