@@ -26,8 +26,6 @@ CoordMode, Mouse, Client
 Process, Priority, , High
 
 VERSION:=210922
-TitleString:=(d3only)? "暗黑3技能连点器":"鼠标键盘连点器"
-TITLE:=Format(TitleString " v1.3.{:d}   by Oldsand", VERSION)
 MainWindowW:=900
 MainWindowH:=550
 CompactWindowW:=551
@@ -50,6 +48,8 @@ safezone:={}
 isCompact:= generals.compactmode
 runOnStart:= generals.runonstart
 d3only:= generals.d3only
+TitleString:=(d3only)? "暗黑3技能连点器":"鼠标键盘连点器"
+TITLE:=Format(TitleString " v1.3.{:d}   by Oldsand", VERSION)
 helperMouseSpeed:= generals.helpermousespeed
 helperAnimationDelay:= generals.helperanimationdelay
 gameResolution:= InStr(generals.gameresolution, "x")? generals.gameresolution:"Auto"
