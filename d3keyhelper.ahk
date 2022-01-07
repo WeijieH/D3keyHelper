@@ -25,7 +25,7 @@ CoordMode, Pixel, Client
 CoordMode, Mouse, Client
 Process, Priority, , High
 
-VERSION:=210922
+VERSION:=220104
 MainWindowW:=900
 MainWindowH:=550
 CompactWindowW:=551
@@ -1339,7 +1339,7 @@ oneButtonSalvageHelper(D3W, D3H, xpos, ypos){
 */
 oneButtonAbandonHelper(D3W, D3H, xpos, ypos, mousePosition){
     local
-    Global helperBreak, helperRunning, helperDelay, helperBagZone, mouseDelay
+    Global helperBreak, helperRunning, helperDelay, helperBagZone, mouseDelay, forceStandingKey
     helperBagZone:=make1DArray(60, -1)
     ; 开启一单独线程查找空格子
     fn1:=Func("scanInventorySpaceGDIP").Bind(D3W, D3H)
@@ -1379,7 +1379,16 @@ oneButtonAbandonHelper(D3W, D3H, xpos, ypos, mousePosition){
                     Click
                     Sleep, helperDelay//2
                     MouseMove, D3W//2, D3H//2
-                    Click
+                    if GetKeyState(forceStandingKey)
+                    {
+                        Send {%forceStandingKey% up}
+                        Click
+                        Send {%forceStandingKey% down}
+                    }
+                    Else
+                    {
+                        Click
+                    }
                 }
                 Else
                 {
