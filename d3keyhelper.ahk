@@ -1381,13 +1381,13 @@ oneButtonAbandonHelper(D3W, D3H, xpos, ypos, mousePosition){
                     MouseMove, D3W//2, D3H//2
                     if GetKeyState(forceStandingKey)
                     {
-                        Send {%forceStandingKey% up}
                         Click
-                        Send {%forceStandingKey% down}
                     }
                     Else
                     {
+                        Send {%forceStandingKey% down}
                         Click
+                        Send {%forceStandingKey% up}
                     }
                 }
                 Else
