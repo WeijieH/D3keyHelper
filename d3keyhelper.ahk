@@ -25,7 +25,7 @@ CoordMode, Pixel, Client
 CoordMode, Mouse, Client
 Process, Priority, , High
 
-VERSION:=220104
+VERSION:=220131
 MainWindowW:=900
 MainWindowH:=550
 CompactWindowW:=551
@@ -33,14 +33,14 @@ TitleBarHight:=25
 ;@Ahk2Exe-Obey U_Y, U_Y := A_YYYY
 ;@Ahk2Exe-Obey U_M, U_M := A_MM
 ;@Ahk2Exe-Obey U_D, U_D := A_DD
-;@Ahk2Exe-SetFileVersion 1.3.%U_Y%.%U_M%%U_D%
+;@Ahk2Exe-SetFileVersion 1.4.%U_Y%.%U_M%%U_D%
 ;@Ahk2Exe-SetLanguage 0x0804
 ;@Ahk2Exe-SetDescription 暗黑3技能连点器
 ;@Ahk2Exe-SetProductName D3keyHelper
 ;@Ahk2Exe-SetCopyright Oldsand
 ;@Ahk2Exe-Bin Unicode 64-bit.bin
 ; ========================================来自配置文件的全局变量===================================================
-currentProfile:=ReadCfgFile("d3oldsand.ini", tabs, hotkeys, actions, intervals, ivdelays, others, generals)
+currentProfile:=ReadCfgFile("d3oldsand.ini", tabs, combats, others, generals)
 SendMode, % generals.sendmode
 tabsarray:=StrSplit(tabs, "`|")
 tabslen:=ObjCount(tabsarray)
@@ -49,7 +49,7 @@ isCompact:= generals.compactmode
 runOnStart:= generals.runonstart
 d3only:= generals.d3only
 TitleString:=(d3only)? "暗黑3技能连点器":"鼠标键盘连点器"
-TITLE:=Format(TitleString " v1.3.{:d}   by Oldsand", VERSION)
+TITLE:=Format(TitleString " v1.4.{:d}   by Oldsand", VERSION)
 helperMouseSpeed:= generals.helpermousespeed
 helperAnimationDelay:= generals.helperanimationdelay
 gameResolution:= InStr(generals.gameresolution, "x")? generals.gameresolution:"Auto"
@@ -183,28 +183,32 @@ GuiCreate(){
         
         Gui Add, GroupBox, xm+10 ym+40 w520 h260 section, 按键宏设置
         Gui Add, Text, xs+90 ys+20 w60 center section, 快捷键
-        Gui Add, Text, x+10 w100 center, 策略
-        Gui Add, Text, x+20 w110 center, 执行间隔（毫秒）
-        Gui Add, Text, x+10 w110 center, 随机延迟（毫秒）
+        Gui Add, Text, x+10 w80 center, 策略
+        Gui Add, Text, x+15 w110 center, 执行间隔（毫秒）
+        Gui Add, Text, x+5 w90 center, 延迟（毫秒）
+        Gui Add, Text, x+0 center, 延迟随机
         Loop, 6
         {
-            Gui Add, Text, xs-75 w70 yp+36 center, % skillLabels[A_Index]
-            local ac:=actions[currentTab][A_Index]
+            Gui Add, Text, xs-75 w70 yp+34 center, % skillLabels[A_Index]
+            local ac:=combats[currentTab][A_Index]["action"]
+            local rd:=combats[currentTab][A_Index]["random"]
             switch A_Index
             {
                 case 1,2,3,4:
-                    Gui Add, Hotkey, x+5 yp-2 w60 vskillset%currentTab%s%A_Index%hotkey, % hotkeys[currentTab][A_Index]
+                    Gui Add, Hotkey, x+5 yp-2 w60 vskillset%currentTab%s%A_Index%hotkey, % combats[currentTab][A_Index]["hotkey"]
                 case 5:
                     Gui Add, Edit, x+5 yp-2 w60 vskillset%currentTab%s%A_Index%hotkey +Disabled, LButton
                 case 6:
                     Gui Add, Edit, x+5 yp-2 w60 vskillset%currentTab%s%A_Index%hotkey +Disabled, RButton
             }
-            Gui Add, DropDownList, x+10 w100 AltSubmit Choose%ac% gSetSkillsetDropdown vskillset%currentTab%s%A_Index%dropdown, 禁用||按住不放||连点||保持Buff
-            Gui Add, Edit, vskillset%currentTab%s%A_Index%edit x+25 w90 Number
-            Gui Add, Updown, vskillset%currentTab%s%A_Index%updown gSetSkillQueueWarning Range20-30000, % intervals[currentTab][A_Index]
-            Gui Add, Edit, vskillset%currentTab%s%A_Index%delayedit hwndskillset%currentTab%s%A_Index%delayeditID x+40 w70 Number
-            Gui Add, Updown, vskillset%currentTab%s%A_Index%delayupdown Range0-3000, % ivdelays[currentTab][A_Index]
-            AddToolTip(skillset%currentTab%s%A_Index%delayeditID, "这里填入随机延迟的最大值，设为0可以关闭随即延迟")
+            Gui Add, DropDownList, x+10 w80 AltSubmit Choose%ac% gSetSkillsetDropdown vskillset%currentTab%s%A_Index%dropdown, 禁用||按住不放||连点||保持Buff
+            Gui Add, Edit, vskillset%currentTab%s%A_Index%edit x+20 w90 Number
+            Gui Add, Updown, vskillset%currentTab%s%A_Index%updown gSetSkillQueueWarning Range20-60000, % combats[currentTab][A_Index]["interval"]
+            Gui Add, Edit, vskillset%currentTab%s%A_Index%delayedit hwndskillset%currentTab%s%A_Index%delayeditID x+25 w70
+            Gui Add, Updown, vskillset%currentTab%s%A_Index%delayupdown Range-30000-30000, % combats[currentTab][A_Index]["delay"]
+            AddToolTip(skillset%currentTab%s%A_Index%delayeditID, "正数代表策略延后执行，负数代表策略提前执行，设为0可以关闭延迟")
+            Gui Add, Checkbox, x+35 yp+2 Checked%rd% vskillset%currentTab%s%A_Index%randomckbox hwndskillset%currentTab%s%A_Index%randomckboxID
+            AddToolTip(skillset%currentTab%s%A_Index%randomckboxID, "勾选后，每次策略执行时的实际延迟为0至设置值之间的随机数")
         }
         Gui Add, GroupBox, xm+10 yp+45 w520 h170 section, 额外设置
         Gui Add, Text, xs+20 ys+30, 快速切换至本配置：
@@ -368,16 +372,13 @@ SetTrayMenu(){
 参数：
     cfgFileName：文件名
     tabs：ByRef String，存储由竖线“|”分隔的配置名，用于初始化Tab控件
-    hotkeys：ByRef Array，存储配置的技能快捷键
-    actions：ByRef Array，存储配置的技能策略选择
-    intervals：ByRef Array，存储配置的技能施放间隔
-    ivdelays Array，存储配置的技能施放间隔延迟
+    combats：ByRef Array，存储战斗宏相关配置
     others：ByRef Array，存储额外配置
     generals：ByRef Array，存储一些通用配置
 返回：
     上次退出时激活的配置编号，用于初始化Tab控件
 */
-ReadCfgFile(cfgFileName, ByRef tabs, ByRef hotkeys, ByRef actions, ByRef intervals, ByRef ivdelays, ByRef others, ByRef generals){
+ReadCfgFile(cfgFileName, ByRef tabs, ByRef combats, ByRef others, ByRef generals){
     local
     Global VERSION
     if FileExist(cfgFileName)
@@ -432,18 +433,12 @@ ReadCfgFile(cfgFileName, ByRef tabs, ByRef hotkeys, ByRef actions, ByRef interva
 
         IniRead, tabs, %cfgFileName%
         tabs:=StrReplace(StrReplace(tabs, "`n", "`|"), "General|", "")
-        hotkeys:=[]
-        actions:=[]
-        intervals:=[]
-        ivdelays:=[]
+        combats:=[]
         others:=[]
         Loop, parse, tabs, `|
         {
             cSection:=A_LoopField
-            thk:=[]
-            tac:=[]
-            tiv:=[]
-            tdy:=[]
+            trow:=[]
             tos:={}
             Loop, 6
             {
@@ -451,15 +446,10 @@ ReadCfgFile(cfgFileName, ByRef tabs, ByRef hotkeys, ByRef actions, ByRef interva
                 IniRead, ac, %cfgFileName%, %cSection%, action_%A_Index%, 1
                 IniRead, iv, %cfgFileName%, %cSection%, interval_%A_Index%, 300
                 IniRead, dy, %cfgFileName%, %cSection%, delay_%A_Index%, 10
-                thk.Push(hk)
-                tac.Push(ac)
-                tiv.Push(iv)
-                tdy.Push(dy)
+                IniRead, rd, %cfgFileName%, %cSection%, random_%A_Index%, 1
+                trow.Push({"hotkey":hk, "action":ac, "interval":iv, "delay":dy, "random": rd})
             }
-            hotkeys.Push(thk)
-            actions.Push(tac)
-            intervals.Push(tiv)
-            ivdelays.Push(tdy)
+            combats.Push(trow)
             IniRead, pfmd, %cfgFileName%, %cSection%, profilehkmethod, 1
             IniRead, pfhk, %cfgFileName%, %cSection%, profilehkkey
             IniRead, pfmv, %cfgFileName%, %cSection%, movingmethod, 1
@@ -484,17 +474,17 @@ ReadCfgFile(cfgFileName, ByRef tabs, ByRef hotkeys, ByRef actions, ByRef interva
     {
         tabs=配置1|配置2|配置3|配置4
         currentProfile:=1
-        hotkeys:=[]
-        actions:=[]
-        intervals:=[]
-        ivdelays:=[]
+        combats:=[]
         others:=[]
+        hks:="1,2,3,4,LButton,RButton"
         Loop, parse, tabs, `|
         {
-            hotkeys.Push(["1","2","3","4"])
-            actions.Push([1,1,1,1,1,1])
-            intervals.Push([300,300,300,300,300,300])
-            ivdelays.Push([10,10,10,10,10,10])
+            crow:=[]
+            loop, parse, hks, CSV
+            {
+                crow.Push({"hotkey":A_LoopField, "action":1, "interval":300, "delay":10, "random": 1})
+            }
+            combats.Push(crow)
             others.Push({"profilemethod":1, "profilehotkey":"", "movingmethod":1, "movinginterval":100, "lazymode":1
             , "enablequickpause":0, "quickpausemethod1":1, "quickpausemethod2":1, "quickpausemethod3":1, "quickpausedelay":1500
             , "useskillqueue":0, "useskillqueueinterval":200, "autostartmarco":0})
@@ -593,9 +583,11 @@ SaveCfgFile(cfgFileName, tabs, currentProfile, safezone, VERSION){
             GuiControlGet, skillset%cSection%s%A_Index%dropdown
             GuiControlGet, skillset%cSection%s%A_Index%updown
             GuiControlGet, skillset%cSection%s%A_Index%delayupdown
+            GuiControlGet, skillset%cSection%s%A_Index%randomckbox
             IniWrite, % skillset%cSection%s%A_Index%dropdown, %cfgFileName%, %nSction%, action_%A_Index%
             IniWrite, % skillset%cSection%s%A_Index%updown, %cfgFileName%, %nSction%, interval_%A_Index%
             IniWrite, % skillset%cSection%s%A_Index%delayupdown, %cfgFileName%, %nSction%, delay_%A_Index%
+            IniWrite, % skillset%cSection%s%A_Index%randomckbox, %cfgFileName%, %nSction%, random_%A_Index%
             if (A_Index < 5)
             {
                 IniWrite, % skillset%cSection%s%A_Index%hotkey, %cfgFileName%, %nSction%, skill_%A_Index%
@@ -685,21 +677,39 @@ splitRGB(vthiscolor){
 */
 skillKey(currentProfile, nskill, D3W, D3H, forceStandingKey, useSkillQueue){
     local
-    Global vPausing, skillQueue, buffpercent, gameX, gameY
+    Global vPausing, vRunning, skillQueue, buffpercent, gameX, gameY, syncTimer, syncDelay
     GuiControlGet, skillset%currentProfile%s%nskill%hotkey
     GuiControlGet, skillset%currentProfile%s%nskill%dropdown
     GuiControlGet, skillset%currentProfile%s%nskill%delayupdown
+    GuiControlGet, skillset%currentProfile%s%nskill%randomckbox
+    GuiControlGet, skillset%currentProfile%s%nskill%updown
     k:=skillset%currentProfile%s%nskill%hotkey
     switch skillset%currentProfile%s%nskill%dropdown
     {
         ; 连点
         case 3:
-            if (skillset%currentProfile%s%nskill%delayupdown>1)
+            if (abs(skillset%currentProfile%s%nskill%delayupdown)>20)
             {
-                Random, delay, 1, skillset%currentProfile%s%nskill%delayupdown
-                Sleep, delay
+                if (skillset%currentProfile%s%nskill%randomckbox)
+                {
+                    Random, delay, 10, abs(skillset%currentProfile%s%nskill%delayupdown)
+                }
+                Else
+                {
+                    delay:=abs(skillset%currentProfile%s%nskill%delayupdown)
+                }
+                syncDelay[nskill]:=delay
+                if (skillset%currentProfile%s%nskill%delayupdown<0)
+                {
+                    syncDelay[nskill]:=skillset%currentProfile%s%nskill%updown - delay
+                }
+                syncTimer[nskill]:=A_TickCount
+                while (A_TickCount - syncTimer[nskill] <= syncDelay[nskill])
+                {
+                    sleep 10
+                }
             }
-            if !vPausing
+            if !(vPausing) and vRunning
             {
                 if useSkillQueue
                 {
@@ -721,7 +731,7 @@ skillKey(currentProfile, nskill, D3W, D3H, forceStandingKey, useSkillQueue){
             magicXY:=getSkillButtonBuffPos(D3W, D3H, nskill, buffpercent)
             crgb:=getPixelRGB(magicXY)
             ; 具体判断是否需要补buff
-            If (!vPausing and crgb[2]<95)
+            If vRunning and (!vPausing and crgb[2]<95)
             {
                 switch nskill
                 {
@@ -2446,6 +2456,62 @@ AddToolTip(con, text, duration=30000, Modify=0){
     Return
 }
 
+/* ObjectSort() by bichlepa
+* 
+* Description:
+*    Reads content of an object and returns a sorted array
+* 
+* Parameters:
+*    obj:              Object which will be sorted
+*    keyName:          [optional] 
+*                      Omit it if you want to sort a array of strings, numbers etc.
+*                      If you have an array of objects, specify here the key by which contents the object will be sorted.
+*    callBackFunction: [optional] Use it if you want to have custom sort rules.
+*                      The function will be called once for each value. It must return a number or string.
+*    reverse:          [optional] Pass true if the result array should be reversed
+*/
+objectSort(obj, keyName="", callbackFunc="", reverse=false)
+{
+    temp := Object()
+    sorted := Object() ;Return value
+    
+    for oneKey, oneValue in obj
+    {
+        ;Get the value by which it will be sorted
+        if keyname
+            value := oneValue[keyName]
+        else
+            value := oneValue
+        
+        ;If there is a callback function, call it. The value is the key of the temporary list.
+        if (callbackFunc)
+            tempKey := %callbackFunc%(value)
+        else
+            tempKey := value
+        
+        ;Insert the value in the temporary object.
+        ;It may happen that some values are equal therefore we put the values in an array.
+        if not isObject(temp[tempKey])
+            temp[tempKey] := []
+        temp[tempKey].push(oneValue)
+    }
+    
+    ;Now loop throuth the temporary list. AutoHotkey sorts them for us.
+    for oneTempKey, oneValueList in temp
+    {
+        for oneValueIndex, oneValue in oneValueList
+        {
+            ;And add the values to the result list
+            if (reverse)
+                sorted.insertAt(1,oneValue)
+            else
+                sorted.push(oneValue)
+        }
+    }
+    
+    return sorted
+}
+
 /*
 windows钩子callback函数，监控当前窗口，处理标题栏颜色
 修改自：https://www.autohotkey.com/boards/viewtopic.php?t=32532
@@ -2636,6 +2702,12 @@ showMainWindow(windowSizeW, windowSizeH){
     Return
 }
 ; =====================================Subroutines===================================
+spamSkillKeyA1:
+spamSkillKeyA2:
+spamSkillKeyA3:
+spamSkillKeyA4:
+spamSkillKeyA5:
+spamSkillKeyA6:
 spamSkillKey1:
 spamSkillKey2:
 spamSkillKey3:
@@ -2867,12 +2939,15 @@ SetSkillsetDropdown:
                 case 1,2:
                     GuiControl, Disable, skillset%npage%s%A_Index%edit
                     GuiControl, Disable, skillset%npage%s%A_Index%delayedit
+                    GuiControl, Disable, skillset%npage%s%A_Index%randomckbox
                 case 3:
                     GuiControl, Enable, skillset%npage%s%A_Index%edit
                     GuiControl, Enable, skillset%npage%s%A_Index%delayedit
+                    GuiControl, Enable, skillset%npage%s%A_Index%randomckbox
                 case 4:
                     GuiControl, Enable, skillset%npage%s%A_Index%edit
                     GuiControl, Disable, skillset%npage%s%A_Index%delayedit
+                    GuiControl, Disable, skillset%npage%s%A_Index%randomckbox
             }
         }
     }
@@ -2925,6 +3000,8 @@ RunMarco:
     GuiControlGet, extraCustomMovingHK
     forceMovingKey:=extraCustomMoving? extraCustomMovingHK:"e"
     skillQueue:=[]
+    syncTimer:={}
+    syncDelay:={}
     if (!getGameResulution(D3W, D3H) and d3only)
     {
         Return
@@ -2932,29 +3009,40 @@ RunMarco:
     gameXY:=getGameXYonScreen(0,0)
     gameX:=gameXY[1]
     gameY:=gameXY[2]
-    ; 处理技能按键
+    keyDelay:=[]
     Loop, 6
     {
         GuiControlGet, skillset%currentProfile%s%A_Index%dropdown
-        GuiControlGet, skillset%currentProfile%s%A_Index%hotkey
-        Switch skillset%currentProfile%s%A_Index%dropdown
+        GuiControlGet, skillset%currentProfile%s%A_Index%delayupdown
+        GuiControlGet, skillset%currentProfile%s%A_Index%updown
+        keyDelay.Push({"key":A_Index, "delay":(skillset%currentProfile%s%A_Index%dropdown=3)?mod(skillset%currentProfile%s%A_Index%updown + skillset%currentProfile%s%A_Index%delayupdown, skillset%currentProfile%s%A_Index%updown):0})
+    }
+    ; 按照延迟排序技能按键
+    keyDelay:=ObjectSort(keyDelay, "delay", ,True)
+    ; 处理技能按键
+    vRunning:=True
+    for _, v in keyDelay
+    {
+        currentIndex:=v["key"]
+        GuiControlGet, skillset%currentProfile%s%currentIndex%hotkey
+        Switch skillset%currentProfile%s%currentIndex%dropdown
         {
             Case 2:
-                k:=skillset%currentProfile%s%A_Index%hotkey
+                k:=skillset%currentProfile%s%currentIndex%hotkey
                 Send {%k% Down}
                 keysOnHold[k]:=1
             Case 3, 4:
                 if runOnStart{
-                    Gosub, spamSkillKey%A_Index%
+                    SetTimer, spamSkillKeyA%currentIndex%, -1
                 }
-                GuiControlGet, skillset%currentProfile%s%A_Index%updown
-                SetTimer, spamSkillKey%A_Index%, % skillset%currentProfile%s%A_Index%updown
+                GuiControlGet, skillset%currentProfile%s%currentIndex%updown
+                SetTimer, spamSkillKey%currentIndex%, % skillset%currentProfile%s%currentIndex%updown
             Default:
-                SetTimer, spamSkillKey%A_Index%, off
+                SetTimer, spamSkillKey%currentIndex%, off
         }
-        if (A_Index <=4)
+        if (currentIndex <=4)
         {
-            GuiControl, Disable, skillset%currentProfile%s%A_Index%hotkey
+            GuiControl, Disable, skillset%currentProfile%s%currentIndex%hotkey
         }
     }
     ; 处理位移按键
@@ -2983,8 +3071,7 @@ RunMarco:
             SetTimer, %sqfunc%, -1
         }
         SetTimer, %sqfunc%, % skillset%currentProfile%useskillqueueupdown
-    }
-    vRunning:=True 
+    } 
     vPausing:=False
 Return
 
