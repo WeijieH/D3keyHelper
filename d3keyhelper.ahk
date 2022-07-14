@@ -277,7 +277,7 @@ GuiCreate(){
     Gui Add, CheckBox, % "xs+20 yp+40 hwndextraSalvageHelperCkboxID vextraSalvageHelperCkbox gSetSalvageHelper Checked" generals.enablesalvagehelper, 铁匠分解助手：
     Gui Add, DropDownList, % "x+5 yp-4 w180 AltSubmit hwndextraSalvageHelperDropdownID vextraSalvageHelperDropdown gSetSalvageHelper Choose" generals.salvagehelpermethod, 快速分解||一键分解||智能分解||智能分解（留神圣，太古）||智能分解（只留太古）
     AddToolTip(extraSalvageHelperCkboxID, "分解装备时按下助手快捷键可以自动执行所选择的策略")
-    AddToolTip(extraSalvageHelperDropdownID, "快速分解：按下快捷键即等同于点击鼠标左键+回车`n一键分解：一键分解背包内所有非安全格的装备`n智能分解：同一键分解，但会跳过远古，无形，太古`n智能分解（留神圣，太古）：只保留神圣，太古装备`n智能分解（只留太古）：只保留太古装备")
+    AddToolTip(extraSalvageHelperDropdownID, "快速分解：按下快捷键即等同于点击鼠标左键+回车`n一键分解：一键分解背包内所有非安全格的装备`n智能分解：同一键分解，但会跳过远古，神圣，太古`n智能分解（留神圣，太古）：只保留神圣，太古装备`n智能分解（只留太古）：只保留太古装备")
 
     Gui Add, CheckBox, % "xs+20 yp+40 hwndextraReforgeHelperCkboxID vextraReforgeHelperCkbox Checked" generals.enablereforgehelper, 魔盒重铸助手
     AddToolTip(extraReforgeHelperCkboxID, "当魔盒打开且在重铸页面时，按下助手快捷键即自动重铸鼠标指针处的装备一次")
@@ -1260,7 +1260,7 @@ oneButtonSalvageHelper(D3W, D3H, xpos, ypos){
                         c_t:=c
                         Sleep, 20
                     }
-                    if ((c[1]>=70 or c[3]<=20) and Max(Abs(c[1]-c[2]), Abs(c[1]-c[3]), Abs(c[3]-c[2]))>20) {
+                    if ((c[1]>=70 or c[3]<=20) and Max(Abs(c[1]-c[2]), Abs(c[1]-c[3]), Abs(c[3]-c[2]))>20 and (c[1]+c[2]+c[3]<410)) {
                         ; 装备是太古或者远古
                         q:=(c[2]<35) ? 5:3
                     } else if (c[3]>100 and c[3]>c[2] and c[2]>c[1]) {
