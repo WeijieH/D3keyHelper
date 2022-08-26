@@ -25,7 +25,7 @@ CoordMode, Pixel, Client
 CoordMode, Mouse, Client
 Process, Priority, , High
 
-VERSION:=220714
+VERSION:=220825
 MainWindowW:=900
 MainWindowH:=550
 CompactWindowW:=551
@@ -48,6 +48,7 @@ safezone:={}
 isCompact:= generals.compactmode
 runOnStart:= generals.runonstart
 d3only:= generals.d3only
+maxreforge:= (generals.maxreforge)?generals.maxreforge:10
 TitleString:=(d3only)? "暗黑3技能连点器":"鼠标键盘连点器"
 TITLE:=Format(TitleString " v1.4.{:d}   by Oldsand", VERSION)
 helperMouseSpeed:= generals.helpermousespeed
@@ -279,20 +280,24 @@ GuiCreate(){
     AddToolTip(extraSalvageHelperCkboxID, "分解装备时按下助手快捷键可以自动执行所选择的策略")
     AddToolTip(extraSalvageHelperDropdownID, "快速分解：按下快捷键即等同于点击鼠标左键+回车`n一键分解：一键分解背包内所有非安全格的装备`n智能分解：同一键分解，但会跳过远古，神圣，太古`n智能分解（留神圣，太古）：只保留神圣，太古装备`n智能分解（只留太古）：只保留太古装备")
 
-    Gui Add, CheckBox, % "xs+20 yp+40 hwndextraReforgeHelperCkboxID vextraReforgeHelperCkbox Checked" generals.enablereforgehelper, 魔盒重铸助手
-    AddToolTip(extraReforgeHelperCkboxID, "当魔盒打开且在重铸页面时，按下助手快捷键即自动重铸鼠标指针处的装备一次")
+    Gui Add, CheckBox, % "xs+20 yp+40 hwndextraReforgeHelperCkboxID vextraReforgeHelperCkbox gSetReforgeHelper Checked" generals.enablereforgehelper, 魔盒重铸助手：
+    Gui Add, DropDownList, % "x+5 yp-4 w180 AltSubmit hwndextraReforgeHelperDropdownID vextraReforgeHelperDropdown Choose" generals.reforgehelpermethod, 重铸一次||重铸直到远古，太古||重铸直到太古
+    AddToolTip(extraReforgeHelperCkboxID, "当魔盒打开且在重铸页面时，按下助手快捷键可以自动执行所选择的重铸策略`n***最大重铸次数可以通过配置文件中的maxreforge变量修改***")
+    local strMaxReforge1:= "不停重铸鼠标指针处的装备，直到变为远古或者太古装备，最多重铸" maxreforge "次"
+    local strMaxReforge2:= "不停重铸鼠标指针处的装备，直到变成太古装备，最多重铸" maxreforge "次"
+    AddToolTip(extraReforgeHelperDropdownID, "重铸一次：重铸鼠标指针处的装备一次`n重铸直到远古，太古：" strMaxReforge1 "`n重铸直到太古：" strMaxReforge2 "`n***重铸过程中再次按下助手快捷键可以打断宏！***")
 
-    Gui Add, CheckBox, % "x+25 yp+0 hwndextraUpgradeHelperCkboxID vextraUpgradeHelperCkbox Checked" generals.enableupgradehelper, 魔盒升级助手
+    Gui Add, CheckBox, % "xs+20 yp+40 hwndextraUpgradeHelperCkboxID vextraUpgradeHelperCkbox Checked" generals.enableupgradehelper, 魔盒升级助手
     AddToolTip(extraUpgradeHelperCkboxID, "当魔盒打开且在升级页面时，按下助手快捷键即自动升级所有非安全格内的稀有（黄色）装备")
 
-    Gui Add, CheckBox, % "xs+20 yp+40 hwndextraConvertHelperCkboxID vextraConvertHelperCkbox Checked" generals.enableconverthelper, 魔盒转化助手
+    Gui Add, CheckBox, % "x+20 yp+0 hwndextraConvertHelperCkboxID vextraConvertHelperCkbox Checked" generals.enableconverthelper, 魔盒转化助手
     AddToolTip(extraConvertHelperCkboxID, "当魔盒打开且在转化材料页面时，按下助手快捷键即自动使用所有非安全格内的装备进行材料转化")
 
-    Gui Add, CheckBox, % "x+25 yp+0 hwndextraAbandonHelperCkboxID vextraAbandonHelperCkbox Checked" generals.enableabandonhelper, 一键丢装助手
+    Gui Add, CheckBox, % "xs+20 yp+40 hwndextraAbandonHelperCkboxID vextraAbandonHelperCkbox Checked" generals.enableabandonhelper, 一键丢装助手
     AddToolTip(extraAbandonHelperCkboxID, "当背包栏打开且鼠标指针位于背包栏内时，按下助手快捷键即自动丢弃所有非安全格的物品`n若储物箱（银行）打开且鼠标位于银行格子内时，宏会存储所有非安全格内的物品至储物箱")
 
-    Gui Add, CheckBox, % "xs+20 yp+65 vextraSoundonProfileSwitch Checked" generals.enablesoundplay, 使用快捷键切换配置成功时播放声音
-    Gui Add, CheckBox, % "xs+20 yp+35 hwndextraSmartPauseID vextraSmartPause Checked" generals.enablesmartpause, 智能暂停
+    Gui Add, CheckBox, % "xs+20 yp+65 vextraSoundonProfileSwitch Checked" generals.enablesoundplay, 快捷键切换配置成功时播放声音
+    Gui Add, CheckBox, % "x+20 yp+0 hwndextraSmartPauseID vextraSmartPause Checked" generals.enablesmartpause, 智能暂停
     AddToolTip(extraSmartPauseID, "开启后，游戏中按tab键可以暂停宏`n回车键，M键，T键会停止宏")
 
     Gui Add, CheckBox, % "xs+20 yp+35 vextraCustomStanding gSetCustomStanding Checked" generals.customstanding, 使用自定义强制站立按键：
@@ -338,6 +343,7 @@ StartUp(){
     Gosub, SetQuickPause
     SetGambleHelper()
     SetLootHelper()
+    SetReforgeHelper()
     SetSalvageHelper()
     SetCustomStanding()
     SetCustomMoving()
@@ -396,6 +402,7 @@ ReadCfgFile(cfgFileName, ByRef tabs, ByRef combats, ByRef others, ByRef generals
         IniRead, gamblehelpertimes, %cfgFileName%, General, gamblehelpertimes, 15
         IniRead, enablesalvagehelper, %cfgFileName%, General, enablesalvagehelper, 0
         IniRead, salvagehelpermethod, %cfgFileName%, General, salvagehelpermethod, 1
+        IniRead, reforgehelpermethod, %cfgFileName%, General, reforgehelpermethod, 1
         IniRead, enablereforgehelper, %cfgFileName%, General, enablereforgehelper, 0
         IniRead, enableconverthelper, %cfgFileName%, General, enableconverthelper, 0
         IniRead, enableupgradehelper, %cfgFileName%, General, enableupgradehelper, 0
@@ -421,9 +428,10 @@ ReadCfgFile(cfgFileName, ByRef tabs, ByRef combats, ByRef others, ByRef generals
         IniRead, helpermousespeed, %cfgFileName%, General, helpermousespeed, 2
         IniRead, helperanimationdelay, %cfgFileName%, General, helperanimationdelay, 150
         IniRead, d3only, %cfgFileName%, General, d3only, 1
-        generals:={"oldsandhelpermethod":oldsandhelpermethod, "oldsandhelperhk":oldsandhelperhk
-        , "enablesalvagehelper":enablesalvagehelper, "salvagehelpermethod":salvagehelpermethod, "d3only":d3only
-        , "enablereforgehelper":enablereforgehelper, "runonstart":runonstart, "gameresolution":gameresolution
+        IniRead, maxreforge, %cfgFileName%, General, maxreforge, 10
+        generals:={"oldsandhelpermethod":oldsandhelpermethod, "oldsandhelperhk":oldsandhelperhk, "maxreforge":maxreforge
+        , "enablesalvagehelper":enablesalvagehelper, "salvagehelpermethod":salvagehelpermethod, "reforgehelpermethod":reforgehelpermethod
+        , "d3only":d3only, "enablereforgehelper":enablereforgehelper, "runonstart":runonstart, "gameresolution":gameresolution
         , "enablegamblehelper":enablegamblehelper, "gamblehelpertimes":gamblehelpertimes, "helpermousespeed":helpermousespeed
         , "startmethod":startmethod, "starthotkey":starthotkey, "enableupgradehelper":enableupgradehelper, "helperanimationdelay":helperanimationdelay
         , "enablesmartpause":enablesmartpause, "enablesoundplay":enablesoundplay, "enableconverthelper":enableconverthelper, "enableabandonhelper":enableabandonhelper
@@ -489,8 +497,8 @@ ReadCfgFile(cfgFileName, ByRef tabs, ByRef combats, ByRef others, ByRef generals
             , "enablequickpause":0, "quickpausemethod1":1, "quickpausemethod2":1, "quickpausemethod3":1, "quickpausedelay":1500
             , "useskillqueue":0, "useskillqueueinterval":200, "autostartmarco":0})
         }
-        generals:={"enablegamblehelper":1 ,"gamblehelpertimes":15, "oldsandhelperhk":"F5", "d3only":1
-        , "startmethod":7, "starthotkey":"F2", "enablesmartpause":1, "salvagehelpermethod":1
+        generals:={"enablegamblehelper":1 ,"gamblehelpertimes":15, "oldsandhelperhk":"F5", "d3only":1, "maxreforge":10
+        , "startmethod":7, "starthotkey":"F2", "enablesmartpause":1, "salvagehelpermethod":1, "reforgehelpermethod":1
         , "oldsandhelpermethod":7, "enablesalvagehelper":0, "enablesoundplay":1, "enableconverthelper":0
         , "enablereforgehelper":0, "enableupgradehelper":0, "enableabandonhelper":0, "runonstart":1
         , "custommoving":0, "custommovinghk":"e", "customstanding":0, "customstandinghk":"LShift", "helpermousespeed":2
@@ -524,6 +532,7 @@ SaveCfgFile(cfgFileName, tabs, currentProfile, safezone, VERSION){
     GuiControlGet, extraSalvageHelperCkbox
     GuiControlGet, extraSalvageHelperDropdown
     GuiControlGet, extraReforgeHelperCkbox
+    GuiControlGet, extraReforgeHelperDropdown
     GuiControlGet, extraConvertHelperCkbox
     GuiControlGet, extraUpgradeHelperCkbox
     GuiControlGet, extraSoundonProfileSwitch
@@ -542,6 +551,9 @@ SaveCfgFile(cfgFileName, tabs, currentProfile, safezone, VERSION){
     IniWrite, %extraSalvageHelperCkbox%, %cfgFileName%, General, enablesalvagehelper
     IniWrite, %extraSalvageHelperDropdown%, %cfgFileName%, General, salvagehelpermethod
     IniWrite, %extraReforgeHelperCkbox%, %cfgFileName%, General, enablereforgehelper
+    IniWrite, %extraReforgeHelperDropdown%, %cfgFileName%, General, reforgehelpermethod
+    Global maxreforge
+    IniWrite, %maxreforge%, %cfgFileName%, General, maxreforge
     IniWrite, %extraUpgradeHelperCkbox%, %cfgFileName%, General, enableupgradehelper
     IniWrite, %extraConvertHelperCkbox%, %cfgFileName%, General, enableconverthelper
     IniWrite, %extraAbandonHelperCkbox%, %cfgFileName%, General, enableabandonhelper
@@ -1015,22 +1027,75 @@ oldsandHelper(){
 */
 oneButtonReforgeHelper(D3W, D3H, xpos, ypos){
     local
-    Global helperRunning, helperDelay, mouseDelay
+    Global helperRunning, helperBreak, helperDelay, mouseDelay, maxreforge
+    GuiControlGet, extraReforgeHelperDropdown
     SetDefaultMouseSpeed, mouseDelay
     kanai:=getKanaiCubeButtonPos(D3W, D3H)
-    Click, Right
-    Sleep, helperDelay//4
-    MouseMove, kanai[2][1], kanai[2][2]
-    Click
-    Sleep, helperDelay//4
-    MouseMove, kanai[1][1], kanai[1][2]
-    Click
-    Sleep, helperDelay//4
-    MouseMove, kanai[3][1], kanai[3][2]
-    Click
-    Sleep, helperDelay//4
-    MouseMove, kanai[4][1], kanai[4][2]
-    Click
+    box_1_1:=getInventorySpaceXY(D3W, D3H, 1, "kanai")
+    box_1_2:=getInventorySpaceXY(D3W, D3H, 2, "kanai")
+    Loop, %maxreforge% {
+        q:=0
+        ; 执行重铸
+        Click, Right
+        Sleep, helperDelay//4
+        MouseMove, kanai[2][1], kanai[2][2]
+        Click
+        Sleep, helperDelay//4
+        MouseMove, kanai[1][1], kanai[1][2]
+        Click
+        Sleep, helperDelay//4
+        MouseMove, kanai[3][1], kanai[3][2]
+        Click
+        Sleep, helperDelay//4
+        MouseMove, kanai[4][1], kanai[4][2]
+        Click
+        ; 判断重铸后的装备品质
+        if (extraReforgeHelperDropdown > 1 and not helperBreak)
+        {
+            ;右键把装备再次放入魔盒
+            MouseMove, xpos, ypos
+            Click, Right
+            ;鼠标移动到魔盒第一个格子位置，然后等待动画完毕
+            MouseMove, box_1_1[1], box_1_1[2]
+            Sleep, helperDelay//2
+            ;条件重铸，需要判断重铸后的装备品质
+            c_t:=[-255,-255,-255]
+            StartTime1:=A_TickCount
+            while (A_TickCount-StartTime1<=helperDelay)
+            {
+                ; 获取三个位于边框上的点颜色
+                c:=getPixelsRGB(box_1_2[3]+1, box_1_2[2], 3, 1, "Max", False)
+                if (c_t[1]=c[1] and c_t[2]=c[2] and c_t[3]=c[3]){
+                    ; 当取色点颜色停止变化，动画显示完毕
+                    Break
+                }
+                c_t:=c
+                Sleep, 20
+            }
+            if ((c[1]>=70 or c[3]<=20) and Max(Abs(c[1]-c[2]), Abs(c[1]-c[3]), Abs(c[3]-c[2]))>20 and (c[1]+c[2]+c[3]<460)) {
+                ; 装备是太古或者远古
+                q:=(c[2]<35) ? 5:3
+            } else if (c[3]>100 and c[3]>c[2] and c[2]>c[1]) {
+                ; 装备是神圣装备
+                q:=4
+            } else {
+                ; 装备是普通传奇
+                q:=2
+            }
+            ; 鼠标回到原位置
+            MouseMove, xpos, ypos
+            if (q > extraReforgeHelperDropdown)
+            {
+                ;品质符合结束条件，退出
+                Break
+            }
+        }
+        Else
+        {
+            ;重铸一次，直接退出
+            Break
+        }
+    }
     ; 鼠标回到原位置
     MouseMove, xpos, ypos
     helperRunning:=False
@@ -1726,6 +1791,28 @@ SetLootHelper(){
     Return
 }
 
+
+/*
+设置重铸助手相关的控件动画
+参数：
+    无
+返回：
+    无
+*/
+SetReforgeHelper(){
+    GuiControlGet, extraReforgeHelperCkbox
+    If extraReforgeHelperCkbox
+    {
+        GuiControl, Enable, extraReforgeHelperDropdown
+    }
+    Else
+    {
+        GuiControl, Disable, extraReforgeHelperDropdown
+    }
+    Return
+}
+
+
 /*
 设置分解助手相关的控件动画
 参数：
@@ -1897,6 +1984,8 @@ getInventorySpaceXY(D3W, D3H, ID, zone){
     static _spaceSizeH:=66
     static _spaceBagX:=[2753,2820,2887,2954,3021,3089,3156,3223,3290,3357]
     static _spaceBagY:=[747,813,880,946,1013,1079]
+    static _spaceKanaiX:=[242, 318, 394]
+    static _spaceKanaiY:=[503, 579, 655]
 
     switch zone
     {
@@ -1906,11 +1995,10 @@ getInventorySpaceXY(D3W, D3H, ID, zone){
             Return [Round(D3W-((3440-_spaceBagX[targetColumn]-_spaceSizeInnerW/2)*D3H/1440)), Round((_spaceBagY[targetRow]+_spaceSizeInnerH/2)*D3H/1440)
             , Round(D3W-((3440-_spaceBagX[targetColumn])*D3H/1440)), Round((_spaceBagY[targetRow])*D3H/1440)]
         case "kanai":
-            _firstSpaceUL:=[242, 503]
-            targetColumn:=Mod(ID-1,3)
-            targetRow:=Floor((ID-1)/3)
-            Return [Round((_firstSpaceUL[1]+_spaceSizeW*targetColumn+_spaceSizeInnerW/2)*D3H/1440), Round((_firstSpaceUL[2]+targetRow*_spaceSizeH+_spaceSizeInnerH/2)*D3H/1440)
-            , Round((_firstSpaceUL[1]+_spaceSizeW*targetColumn)*D3H/1440), Round((_firstSpaceUL[2]+targetRow*_spaceSizeH)*D3H/1440)]
+            targetColumn:=(Mod(ID,3)=0)?3:Mod(ID,3)
+            targetRow:=Floor((ID-1)/3)+1
+            Return [Round(D3W-((3440-_spaceKanaiX[targetColumn]-_spaceSizeInnerW/2)*D3H/1440)), Round((_spaceKanaiY[targetRow]+_spaceSizeInnerH/2)*D3H/1440)
+            , Round(D3W-((3440-_spaceKanaiX[targetColumn])*D3H/1440)), Round((_spaceKanaiY[targetRow])*D3H/1440)]
     }
 }
 
