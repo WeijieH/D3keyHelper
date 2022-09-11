@@ -25,7 +25,7 @@ CoordMode, Pixel, Client
 CoordMode, Mouse, Client
 Process, Priority, , High
 
-VERSION:=220906
+VERSION:=220911
 MainWindowW:=900
 MainWindowH:=550
 CompactWindowW:=551
@@ -153,7 +153,7 @@ GuiCreate(){
     Global
     local tabw:=MainWindowW-357
     local tabh:=MainWindowH-35-TitleBarHight
-    local helperSettingGroupx:=555
+    local helperSettingGroupx:=MainWindowW-345
 
     Gui Font, s11, Segoe UI
     Gui -MaximizeBox -MinimizeBox +Owner +DPIScale +LastFound -Caption -Border
@@ -293,7 +293,7 @@ GuiCreate(){
     Gui Add, CheckBox, % "x+20 yp+0 hwndextraConvertHelperCkboxID vextraConvertHelperCkbox gSetSalvageHelper Checked" generals.enableconverthelper, 魔盒转化助手
     AddToolTip(extraConvertHelperCkboxID, "当魔盒打开且在转化材料页面时，按下助手快捷键即自动使用所有非安全格内的装备进行材料转化")
 
-    Gui Add, CheckBox, % "xs+20 yp+40 hwndextraAbandonHelperCkboxID vextraAbandonHelperCkbox gSetSalvageHelper Checked" generals.enableabandonhelper, 一键丢装助手
+    Gui Add, CheckBox, % "xs+20 yp+36 hwndextraAbandonHelperCkboxID vextraAbandonHelperCkbox gSetSalvageHelper Checked" generals.enableabandonhelper, 一键丢装助手
     AddToolTip(extraAbandonHelperCkboxID, "当背包栏打开且鼠标指针位于背包栏内时，按下助手快捷键即自动丢弃所有非安全格的物品`n若储物箱（银行）打开且鼠标位于银行格子内时，宏会存储所有非安全格内的物品至储物箱")
 
     Gui Add, CheckBox, % "xs+20 yp+65 vextraSoundonProfileSwitch Checked" generals.enablesoundplay, 快捷键切换配置成功时播放声音
@@ -455,7 +455,8 @@ ReadCfgFile(cfgFileName, ByRef tabs, ByRef combats, ByRef others, ByRef generals
                 IniRead, iv, %cfgFileName%, %cSection%, interval_%A_Index%, 300
                 IniRead, dy, %cfgFileName%, %cSection%, delay_%A_Index%, 10
                 IniRead, rd, %cfgFileName%, %cSection%, random_%A_Index%, 1
-                trow.Push({"hotkey":hk, "action":ac, "interval":iv, "delay":dy, "random": rd})
+                IniRead, pr, %cfgFileName%, %cSection%, priority_%A_Index%, 1
+                trow.Push({"hotkey":hk, "action":ac, "interval":iv, "delay":dy, "random": rd, "priority": pr})
             }
             combats.Push(trow)
             IniRead, pfmd, %cfgFileName%, %cSection%, profilehkmethod, 1
@@ -490,7 +491,7 @@ ReadCfgFile(cfgFileName, ByRef tabs, ByRef combats, ByRef others, ByRef generals
             crow:=[]
             loop, parse, hks, CSV
             {
-                crow.Push({"hotkey":A_LoopField, "action":1, "interval":300, "delay":10, "random": 1})
+                crow.Push({"hotkey":A_LoopField, "action":1, "interval":300, "delay":10, "random": 1, "priority":1})
             }
             combats.Push(crow)
             others.Push({"profilemethod":1, "profilehotkey":"", "movingmethod":1, "movinginterval":100, "lazymode":1
@@ -584,7 +585,7 @@ SaveCfgFile(cfgFileName, tabs, currentProfile, safezone, VERSION){
     GuiControlGet, StartRunHKInput
     IniWrite, %StartRunDropdown%, %cfgFileName%, General, startmethod
     IniWrite, %StartRunHKInput%, %cfgFileName%, General, starthotkey
-
+    global combats
     Loop, parse, tabs, `|
     {
         cSection:=A_Index
@@ -596,10 +597,12 @@ SaveCfgFile(cfgFileName, tabs, currentProfile, safezone, VERSION){
             GuiControlGet, skillset%cSection%s%A_Index%updown
             GuiControlGet, skillset%cSection%s%A_Index%delayupdown
             GuiControlGet, skillset%cSection%s%A_Index%randomckbox
+            pr:=combats[cSection][A_Index]["priority"]
             IniWrite, % skillset%cSection%s%A_Index%dropdown, %cfgFileName%, %nSction%, action_%A_Index%
             IniWrite, % skillset%cSection%s%A_Index%updown, %cfgFileName%, %nSction%, interval_%A_Index%
             IniWrite, % skillset%cSection%s%A_Index%delayupdown, %cfgFileName%, %nSction%, delay_%A_Index%
             IniWrite, % skillset%cSection%s%A_Index%randomckbox, %cfgFileName%, %nSction%, random_%A_Index%
+            IniWrite, % pr, %cfgFileName%, %nSction%, priority_%A_Index%
             if (A_Index < 5)
             {
                 IniWrite, % skillset%cSection%s%A_Index%hotkey, %cfgFileName%, %nSction%, skill_%A_Index%
@@ -690,39 +693,58 @@ splitRGB(vthiscolor){
 skillKey(currentProfile, nskill, D3W, D3H, forceStandingKey, useSkillQueue){
     local
     Global vPausing, vRunning, skillQueue, buffpercent, gameX, gameY, syncTimer, syncDelay
+    global combats
     GuiControlGet, skillset%currentProfile%s%nskill%hotkey
-    GuiControlGet, skillset%currentProfile%s%nskill%dropdown
     GuiControlGet, skillset%currentProfile%s%nskill%delayupdown
     GuiControlGet, skillset%currentProfile%s%nskill%randomckbox
     GuiControlGet, skillset%currentProfile%s%nskill%updown
+    Loop, 6
+    {
+        GuiControlGet, skillset%currentProfile%s%A_Index%dropdown
+        ; 循环检查其他按键的策略选择
+        if (A_Index = nskill){
+            Continue
+        }
+        ; 如果有其他按键策略为保持buff，且优先级更高
+        if (skillset%currentProfile%s%A_Index%dropdown = 4 and combats[currentProfile][A_Index]["priority"]>combats[currentProfile][nskill]["priority"])
+        {
+            ; 检查其buff是否激活
+            magicXY:=getSkillButtonBuffPos(D3W, D3H, A_Index, buffpercent)
+            crgb:=getPixelRGB(magicXY)
+            ; 如果已激活，直接返回
+            if (crgb[2]>=95) {
+                Return
+            }
+        }
+    }
     k:=skillset%currentProfile%s%nskill%hotkey
     switch skillset%currentProfile%s%nskill%dropdown
     {
         ; 连点
         case 3:
-            if (abs(skillset%currentProfile%s%nskill%delayupdown)>20)
-            {
-                if (skillset%currentProfile%s%nskill%randomckbox)
-                {
-                    Random, delay, 10, abs(skillset%currentProfile%s%nskill%delayupdown)
-                }
-                Else
-                {
-                    delay:=abs(skillset%currentProfile%s%nskill%delayupdown)
-                }
-                syncDelay[nskill]:=delay
-                if (skillset%currentProfile%s%nskill%delayupdown<0)
-                {
-                    syncDelay[nskill]:=skillset%currentProfile%s%nskill%updown - delay
-                }
-                syncTimer[nskill]:=A_TickCount
-                while (A_TickCount - syncTimer[nskill] <= syncDelay[nskill])
-                {
-                    sleep 10
-                }
-            }
             if !(vPausing) and vRunning
             {
+                if (abs(skillset%currentProfile%s%nskill%delayupdown)>20)
+                {
+                    if (skillset%currentProfile%s%nskill%randomckbox)
+                    {
+                        Random, delay, 10, abs(skillset%currentProfile%s%nskill%delayupdown)
+                    }
+                    Else
+                    {
+                        delay:=abs(skillset%currentProfile%s%nskill%delayupdown)
+                    }
+                    syncDelay[nskill]:=delay
+                    if (skillset%currentProfile%s%nskill%delayupdown<0)
+                    {
+                        syncDelay[nskill]:=skillset%currentProfile%s%nskill%updown - delay
+                    }
+                    syncTimer[nskill]:=A_TickCount
+                    while (A_TickCount - syncTimer[nskill] <= syncDelay[nskill])
+                    {
+                        sleep 10
+                    }
+                }
                 if useSkillQueue
                 {
                     ; 当技能列表大于1000时什么都不做，防止占用过多内存
@@ -739,47 +761,50 @@ skillKey(currentProfile, nskill, D3W, D3H, forceStandingKey, useSkillQueue){
             }
         ; 保持buff
         case 4:
-            ; 获得对应按键buff条最左侧坐标
-            magicXY:=getSkillButtonBuffPos(D3W, D3H, nskill, buffpercent)
-            crgb:=getPixelRGB(magicXY)
-            ; 具体判断是否需要补buff
-            If vRunning and (!vPausing and crgb[2]<95)
+            if !(vPausing) and vRunning
             {
-                switch nskill
+                ; 获得对应按键buff条最左侧坐标
+                magicXY:=getSkillButtonBuffPos(D3W, D3H, nskill, buffpercent)
+                crgb:=getPixelRGB(magicXY)
+                ; 具体判断是否需要补buff
+                if (crgb[2]<95)
                 {
-                    case 5:
-                        ; 判断按键是否是左键
-                        if useSkillQueue
-                        {
-                            if (skillQueue.Count() < 1000){
-                                ; 4代表因为补buff加入
-                                skillQueue.Push([k, 4])
-                            }
-                        }
-                        Else
-                        {
-                            ; 判断是否需要强制站立再点击左键
-                            if GetKeyState(forceStandingKey)
+                    switch nskill
+                    {
+                        case 5:
+                            ; 判断按键是否是左键
+                            if useSkillQueue
                             {
-                                Send {Blind}{%k%}
+                                if (skillQueue.Count() < 1000){
+                                    ; 4代表因为补buff加入
+                                    skillQueue.Push([k, 4])
+                                }
                             }
                             Else
                             {
-                                Send {Blind}{%forceStandingKey% down}{%k% down}
-                                Send {Blind}{%k% up}{%forceStandingKey% up}
+                                ; 判断是否需要强制站立再点击左键
+                                if GetKeyState(forceStandingKey)
+                                {
+                                    Send {Blind}{%k%}
+                                }
+                                Else
+                                {
+                                    Send {Blind}{%forceStandingKey% down}{%k% down}
+                                    Send {Blind}{%k% up}{%forceStandingKey% up}
+                                }
                             }
-                        }
-                    Default:
-                        if useSkillQueue
-                        {
-                            if (skillQueue.Count() < 1000){
-                                skillQueue.Push([k, 4])
+                        Default:
+                            if useSkillQueue
+                            {
+                                if (skillQueue.Count() < 1000){
+                                    skillQueue.Push([k, 4])
+                                }
                             }
-                        }
-                        Else
-                        {
-                            Send {Blind}{%k%}
-                        }
+                            Else
+                            {
+                                Send {Blind}{%k%}
+                            }
+                    }
                 }
             }
     }
