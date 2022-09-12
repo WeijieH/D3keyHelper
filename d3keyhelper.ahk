@@ -2043,8 +2043,8 @@ getInventorySpaceXY(D3W, D3H, ID, zone){
         case "kanai":
             targetColumn:=(Mod(ID,3)=0)?3:Mod(ID,3)
             targetRow:=Floor((ID-1)/3)+1
-            Return [Round(D3W-((3440-_spaceKanaiX[targetColumn]-_spaceSizeInnerW/2)*D3H/1440)), Round((_spaceKanaiY[targetRow]+_spaceSizeInnerH/2)*D3H/1440)
-            , Round(D3W-((3440-_spaceKanaiX[targetColumn])*D3H/1440)), Round((_spaceKanaiY[targetRow])*D3H/1440)]
+            Return [Round((_spaceKanaiX[targetColumn]+_spaceSizeInnerW/2)*D3H/1440), Round((_spaceKanaiY[targetRow]+_spaceSizeInnerH/2)*D3H/1440)
+            , Round(_spaceKanaiX[targetColumn]*D3H/1440), Round((_spaceKanaiY[targetRow])*D3H/1440)]
     }
 }
 
