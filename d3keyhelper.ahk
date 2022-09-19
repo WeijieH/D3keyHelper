@@ -25,7 +25,7 @@ CoordMode, Pixel, Client
 CoordMode, Mouse, Client
 Process, Priority, , High
 
-VERSION:=220912
+VERSION:=220913
 MainWindowW:=900
 MainWindowH:=550
 CompactWindowW:=551
@@ -353,6 +353,7 @@ StartUp(){
     DllCall("RegisterShellHookWindow", "Ptr", A_ScriptHwnd)
     hHookMouse:=0
     OnMessage(DllCall("RegisterWindowMessage", "Str", "SHELLHOOK"), "Watchdog")
+    Watchdog(4, 0)
 }
 
 /*
