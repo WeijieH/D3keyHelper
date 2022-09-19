@@ -25,7 +25,7 @@ CoordMode, Pixel, Client
 CoordMode, Mouse, Client
 Process, Priority, , High
 
-VERSION:=220913
+VERSION:=220919
 MainWindowW:=900
 MainWindowH:=550
 CompactWindowW:=551
@@ -457,7 +457,9 @@ ReadCfgFile(cfgFileName, ByRef tabs, ByRef combats, ByRef others, ByRef generals
                 IniRead, dy, %cfgFileName%, %cSection%, delay_%A_Index%, 10
                 IniRead, rd, %cfgFileName%, %cSection%, random_%A_Index%, 1
                 IniRead, pr, %cfgFileName%, %cSection%, priority_%A_Index%, 1
-                trow.Push({"hotkey":hk, "action":ac, "interval":iv, "delay":dy, "random": rd, "priority": pr})
+                IniRead, rp, %cfgFileName%, %cSection%, repeat_%A_Index%, 1
+                IniRead, rpiv, %cfgFileName%, %cSection%, repeatinterval_%A_Index%, 30
+                trow.Push({"hotkey":hk, "action":ac, "interval":iv, "delay":dy, "random":rd, "priority":pr, "repeat":rp, "repeatinterval":rpiv})
             }
             combats.Push(trow)
             IniRead, pfmd, %cfgFileName%, %cSection%, profilehkmethod, 1
@@ -492,7 +494,7 @@ ReadCfgFile(cfgFileName, ByRef tabs, ByRef combats, ByRef others, ByRef generals
             crow:=[]
             loop, parse, hks, CSV
             {
-                crow.Push({"hotkey":A_LoopField, "action":1, "interval":300, "delay":10, "random": 1, "priority":1})
+                crow.Push({"hotkey":A_LoopField, "action":1, "interval":300, "delay":10, "random": 1, "priority":1, "repeat":1, "repeatinterval":30})
             }
             combats.Push(crow)
             others.Push({"profilemethod":1, "profilehotkey":"", "movingmethod":1, "movinginterval":100, "lazymode":1
@@ -599,11 +601,15 @@ SaveCfgFile(cfgFileName, tabs, currentProfile, safezone, VERSION){
             GuiControlGet, skillset%cSection%s%A_Index%delayupdown
             GuiControlGet, skillset%cSection%s%A_Index%randomckbox
             pr:=combats[cSection][A_Index]["priority"]
+            rp:=combats[cSection][A_Index]["repeat"]
+            rpiv:=combats[cSection][A_Index]["repeatinterval"]
             IniWrite, % skillset%cSection%s%A_Index%dropdown, %cfgFileName%, %nSction%, action_%A_Index%
             IniWrite, % skillset%cSection%s%A_Index%updown, %cfgFileName%, %nSction%, interval_%A_Index%
             IniWrite, % skillset%cSection%s%A_Index%delayupdown, %cfgFileName%, %nSction%, delay_%A_Index%
             IniWrite, % skillset%cSection%s%A_Index%randomckbox, %cfgFileName%, %nSction%, random_%A_Index%
             IniWrite, % pr, %cfgFileName%, %nSction%, priority_%A_Index%
+            IniWrite, % rp, %cfgFileName%, %nSction%, repeat_%A_Index%
+            IniWrite, % rpiv, %cfgFileName%, %nSction%, repeatinterval_%A_Index%
             if (A_Index < 5)
             {
                 IniWrite, % skillset%cSection%s%A_Index%hotkey, %cfgFileName%, %nSction%, skill_%A_Index%
@@ -746,18 +752,26 @@ skillKey(currentProfile, nskill, D3W, D3H, forceStandingKey, useSkillQueue){
                         sleep 10
                     }
                 }
-                if useSkillQueue
+                ; 重复连点
+                Loop,% combats[currentProfile][nskill]["repeat"]
                 {
-                    ; 当技能列表大于1000时什么都不做，防止占用过多内存
-                    if (skillQueue.Count() < 1000){
-                        ; 按键加入技能列表头部
-                        ; [k, 3] k是具体按键，3代表因为连点加入
-                        skillQueue.InsertAt(1, [k, 3])
+                    if useSkillQueue
+                    {
+                        ; 当技能列表大于1000时什么都不做，防止占用过多内存
+                        if (skillQueue.Count() < 1000){
+                            ; 按键加入技能列表头部
+                            ; [k, 3] k是具体按键，3代表因为连点加入
+                            skillQueue.InsertAt(1, [k, 3])
+                        }
                     }
-                }
-                Else
-                {
-                    Send {Blind}{%k%}
+                    Else
+                    {
+                        Send {Blind}{%k%}
+                    }
+                    if (combats[currentProfile][nskill]["repeat"] > 1){
+                        sleep, % combats[currentProfile][nskill]["repeatinterval"]
+                    }
+
                 }
             }
         ; 保持buff
