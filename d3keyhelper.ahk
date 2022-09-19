@@ -25,7 +25,7 @@ CoordMode, Pixel, Client
 CoordMode, Mouse, Client
 Process, Priority, , High
 
-VERSION:=220825
+VERSION:=220913
 MainWindowW:=900
 MainWindowH:=550
 CompactWindowW:=551
@@ -153,7 +153,7 @@ GuiCreate(){
     Global
     local tabw:=MainWindowW-357
     local tabh:=MainWindowH-35-TitleBarHight
-    local helperSettingGroupx:=555
+    local helperSettingGroupx:=MainWindowW-345
 
     Gui Font, s11, Segoe UI
     Gui -MaximizeBox -MinimizeBox +Owner +DPIScale +LastFound -Caption -Border
@@ -287,13 +287,13 @@ GuiCreate(){
     local strMaxReforge2:= "不停重铸鼠标指针处的装备，直到变成太古装备，最多重铸" maxreforge "次"
     AddToolTip(extraReforgeHelperDropdownID, "重铸一次：重铸鼠标指针处的装备一次`n重铸直到远古，太古：" strMaxReforge1 "`n重铸直到太古：" strMaxReforge2 "`n***重铸过程中再次按下助手快捷键可以打断宏！***")
 
-    Gui Add, CheckBox, % "xs+20 yp+40 hwndextraUpgradeHelperCkboxID vextraUpgradeHelperCkbox Checked" generals.enableupgradehelper, 魔盒升级助手
+    Gui Add, CheckBox, % "xs+20 yp+40 hwndextraUpgradeHelperCkboxID vextraUpgradeHelperCkbox gSetSalvageHelper Checked" generals.enableupgradehelper, 魔盒升级助手
     AddToolTip(extraUpgradeHelperCkboxID, "当魔盒打开且在升级页面时，按下助手快捷键即自动升级所有非安全格内的稀有（黄色）装备")
 
-    Gui Add, CheckBox, % "x+20 yp+0 hwndextraConvertHelperCkboxID vextraConvertHelperCkbox Checked" generals.enableconverthelper, 魔盒转化助手
+    Gui Add, CheckBox, % "x+20 yp+0 hwndextraConvertHelperCkboxID vextraConvertHelperCkbox gSetSalvageHelper Checked" generals.enableconverthelper, 魔盒转化助手
     AddToolTip(extraConvertHelperCkboxID, "当魔盒打开且在转化材料页面时，按下助手快捷键即自动使用所有非安全格内的装备进行材料转化")
 
-    Gui Add, CheckBox, % "xs+20 yp+40 hwndextraAbandonHelperCkboxID vextraAbandonHelperCkbox Checked" generals.enableabandonhelper, 一键丢装助手
+    Gui Add, CheckBox, % "xs+20 yp+36 hwndextraAbandonHelperCkboxID vextraAbandonHelperCkbox gSetSalvageHelper Checked" generals.enableabandonhelper, 一键丢装助手
     AddToolTip(extraAbandonHelperCkboxID, "当背包栏打开且鼠标指针位于背包栏内时，按下助手快捷键即自动丢弃所有非安全格的物品`n若储物箱（银行）打开且鼠标位于银行格子内时，宏会存储所有非安全格内的物品至储物箱")
 
     Gui Add, CheckBox, % "xs+20 yp+65 vextraSoundonProfileSwitch Checked" generals.enablesoundplay, 快捷键切换配置成功时播放声音
@@ -353,6 +353,7 @@ StartUp(){
     DllCall("RegisterShellHookWindow", "Ptr", A_ScriptHwnd)
     hHookMouse:=0
     OnMessage(DllCall("RegisterWindowMessage", "Str", "SHELLHOOK"), "Watchdog")
+    Watchdog(4, 0)
 }
 
 /*
@@ -455,7 +456,8 @@ ReadCfgFile(cfgFileName, ByRef tabs, ByRef combats, ByRef others, ByRef generals
                 IniRead, iv, %cfgFileName%, %cSection%, interval_%A_Index%, 300
                 IniRead, dy, %cfgFileName%, %cSection%, delay_%A_Index%, 10
                 IniRead, rd, %cfgFileName%, %cSection%, random_%A_Index%, 1
-                trow.Push({"hotkey":hk, "action":ac, "interval":iv, "delay":dy, "random": rd})
+                IniRead, pr, %cfgFileName%, %cSection%, priority_%A_Index%, 1
+                trow.Push({"hotkey":hk, "action":ac, "interval":iv, "delay":dy, "random": rd, "priority": pr})
             }
             combats.Push(trow)
             IniRead, pfmd, %cfgFileName%, %cSection%, profilehkmethod, 1
@@ -490,7 +492,7 @@ ReadCfgFile(cfgFileName, ByRef tabs, ByRef combats, ByRef others, ByRef generals
             crow:=[]
             loop, parse, hks, CSV
             {
-                crow.Push({"hotkey":A_LoopField, "action":1, "interval":300, "delay":10, "random": 1})
+                crow.Push({"hotkey":A_LoopField, "action":1, "interval":300, "delay":10, "random": 1, "priority":1})
             }
             combats.Push(crow)
             others.Push({"profilemethod":1, "profilehotkey":"", "movingmethod":1, "movinginterval":100, "lazymode":1
@@ -584,7 +586,7 @@ SaveCfgFile(cfgFileName, tabs, currentProfile, safezone, VERSION){
     GuiControlGet, StartRunHKInput
     IniWrite, %StartRunDropdown%, %cfgFileName%, General, startmethod
     IniWrite, %StartRunHKInput%, %cfgFileName%, General, starthotkey
-
+    global combats
     Loop, parse, tabs, `|
     {
         cSection:=A_Index
@@ -596,10 +598,12 @@ SaveCfgFile(cfgFileName, tabs, currentProfile, safezone, VERSION){
             GuiControlGet, skillset%cSection%s%A_Index%updown
             GuiControlGet, skillset%cSection%s%A_Index%delayupdown
             GuiControlGet, skillset%cSection%s%A_Index%randomckbox
+            pr:=combats[cSection][A_Index]["priority"]
             IniWrite, % skillset%cSection%s%A_Index%dropdown, %cfgFileName%, %nSction%, action_%A_Index%
             IniWrite, % skillset%cSection%s%A_Index%updown, %cfgFileName%, %nSction%, interval_%A_Index%
             IniWrite, % skillset%cSection%s%A_Index%delayupdown, %cfgFileName%, %nSction%, delay_%A_Index%
             IniWrite, % skillset%cSection%s%A_Index%randomckbox, %cfgFileName%, %nSction%, random_%A_Index%
+            IniWrite, % pr, %cfgFileName%, %nSction%, priority_%A_Index%
             if (A_Index < 5)
             {
                 IniWrite, % skillset%cSection%s%A_Index%hotkey, %cfgFileName%, %nSction%, skill_%A_Index%
@@ -690,39 +694,58 @@ splitRGB(vthiscolor){
 skillKey(currentProfile, nskill, D3W, D3H, forceStandingKey, useSkillQueue){
     local
     Global vPausing, vRunning, skillQueue, buffpercent, gameX, gameY, syncTimer, syncDelay
+    global combats
     GuiControlGet, skillset%currentProfile%s%nskill%hotkey
-    GuiControlGet, skillset%currentProfile%s%nskill%dropdown
     GuiControlGet, skillset%currentProfile%s%nskill%delayupdown
     GuiControlGet, skillset%currentProfile%s%nskill%randomckbox
     GuiControlGet, skillset%currentProfile%s%nskill%updown
+    Loop, 6
+    {
+        GuiControlGet, skillset%currentProfile%s%A_Index%dropdown
+        ; 循环检查其他按键的策略选择
+        if (A_Index = nskill){
+            Continue
+        }
+        ; 如果有其他按键策略为保持buff，且优先级更高
+        if (skillset%currentProfile%s%A_Index%dropdown = 4 and combats[currentProfile][A_Index]["priority"]>combats[currentProfile][nskill]["priority"])
+        {
+            ; 检查其buff是否激活
+            magicXY:=getSkillButtonBuffPos(D3W, D3H, A_Index, buffpercent)
+            crgb:=getPixelRGB(magicXY)
+            ; 如果已激活，直接返回
+            if (crgb[2]>=95) {
+                Return
+            }
+        }
+    }
     k:=skillset%currentProfile%s%nskill%hotkey
     switch skillset%currentProfile%s%nskill%dropdown
     {
         ; 连点
         case 3:
-            if (abs(skillset%currentProfile%s%nskill%delayupdown)>20)
-            {
-                if (skillset%currentProfile%s%nskill%randomckbox)
-                {
-                    Random, delay, 10, abs(skillset%currentProfile%s%nskill%delayupdown)
-                }
-                Else
-                {
-                    delay:=abs(skillset%currentProfile%s%nskill%delayupdown)
-                }
-                syncDelay[nskill]:=delay
-                if (skillset%currentProfile%s%nskill%delayupdown<0)
-                {
-                    syncDelay[nskill]:=skillset%currentProfile%s%nskill%updown - delay
-                }
-                syncTimer[nskill]:=A_TickCount
-                while (A_TickCount - syncTimer[nskill] <= syncDelay[nskill])
-                {
-                    sleep 10
-                }
-            }
             if !(vPausing) and vRunning
             {
+                if (abs(skillset%currentProfile%s%nskill%delayupdown)>20)
+                {
+                    if (skillset%currentProfile%s%nskill%randomckbox)
+                    {
+                        Random, delay, 10, abs(skillset%currentProfile%s%nskill%delayupdown)
+                    }
+                    Else
+                    {
+                        delay:=abs(skillset%currentProfile%s%nskill%delayupdown)
+                    }
+                    syncDelay[nskill]:=delay
+                    if (skillset%currentProfile%s%nskill%delayupdown<0)
+                    {
+                        syncDelay[nskill]:=skillset%currentProfile%s%nskill%updown - delay
+                    }
+                    syncTimer[nskill]:=A_TickCount
+                    while (A_TickCount - syncTimer[nskill] <= syncDelay[nskill])
+                    {
+                        sleep 10
+                    }
+                }
                 if useSkillQueue
                 {
                     ; 当技能列表大于1000时什么都不做，防止占用过多内存
@@ -739,47 +762,50 @@ skillKey(currentProfile, nskill, D3W, D3H, forceStandingKey, useSkillQueue){
             }
         ; 保持buff
         case 4:
-            ; 获得对应按键buff条最左侧坐标
-            magicXY:=getSkillButtonBuffPos(D3W, D3H, nskill, buffpercent)
-            crgb:=getPixelRGB(magicXY)
-            ; 具体判断是否需要补buff
-            If vRunning and (!vPausing and crgb[2]<95)
+            if !(vPausing) and vRunning
             {
-                switch nskill
+                ; 获得对应按键buff条最左侧坐标
+                magicXY:=getSkillButtonBuffPos(D3W, D3H, nskill, buffpercent)
+                crgb:=getPixelRGB(magicXY)
+                ; 具体判断是否需要补buff
+                if (crgb[2]<95)
                 {
-                    case 5:
-                        ; 判断按键是否是左键
-                        if useSkillQueue
-                        {
-                            if (skillQueue.Count() < 1000){
-                                ; 4代表因为补buff加入
-                                skillQueue.Push([k, 4])
-                            }
-                        }
-                        Else
-                        {
-                            ; 判断是否需要强制站立再点击左键
-                            if GetKeyState(forceStandingKey)
+                    switch nskill
+                    {
+                        case 5:
+                            ; 判断按键是否是左键
+                            if useSkillQueue
                             {
-                                Send {Blind}{%k%}
+                                if (skillQueue.Count() < 1000){
+                                    ; 4代表因为补buff加入
+                                    skillQueue.Push([k, 4])
+                                }
                             }
                             Else
                             {
-                                Send {Blind}{%forceStandingKey% down}{%k% down}
-                                Send {Blind}{%k% up}{%forceStandingKey% up}
+                                ; 判断是否需要强制站立再点击左键
+                                if GetKeyState(forceStandingKey)
+                                {
+                                    Send {Blind}{%k%}
+                                }
+                                Else
+                                {
+                                    Send {Blind}{%forceStandingKey% down}{%k% down}
+                                    Send {Blind}{%k% up}{%forceStandingKey% up}
+                                }
                             }
-                        }
-                    Default:
-                        if useSkillQueue
-                        {
-                            if (skillQueue.Count() < 1000){
-                                skillQueue.Push([k, 4])
+                        Default:
+                            if useSkillQueue
+                            {
+                                if (skillQueue.Count() < 1000){
+                                    skillQueue.Push([k, 4])
+                                }
                             }
-                        }
-                        Else
-                        {
-                            Send {Blind}{%k%}
-                        }
+                            Else
+                            {
+                                Send {Blind}{%k%}
+                            }
+                    }
                 }
             }
     }
@@ -820,7 +846,7 @@ createOrTruncateFile(FileName){
 */
 oldsandHelper(){
     local
-    Global helperRunning, helperBreak, helperDelay, mouseDelay, vRunning, helperAnimationDelay, helperMouseSpeed
+    Global helperRunning, helperBreak, helperDelay, mouseDelay, vRunning, helperAnimationDelay, helperMouseSpeed, gameX, gameY
     if helperRunning{
         ; 防止过快连按
         ; 宏在执行中再按可以打断
@@ -833,6 +859,9 @@ oldsandHelper(){
     if (vRunning or !getGameResulution(D3W, D3H)){
         Return
     }
+    gameXY:=getGameXYonScreen(0,0)
+    gameX:=gameXY[1]
+    gameY:=gameXY[2]
     helperRunning:=True
     helperBreak:=False
     GuiControlGet, extraGambleHelperCKbox
@@ -865,94 +894,6 @@ oldsandHelper(){
             helperDelay:=helperAnimationDelay
     }
     SetDefaultMouseSpeed, mouseDelay
-    ; 当鼠标在左侧
-    if (xpos<680*D3H/1440)
-    {
-        if (extraGambleHelperCKbox and isGambleOpen(D3W, D3H))
-        {
-            SetTimer, gambleHelper, -1
-            Return
-        }
-    }
-    Else if(xpos>D3W-(3440-2740)*D3H/1440)
-    {
-        ; 当鼠标在右侧
-        if (extraSalvageHelperCkbox and extraSalvageHelperDropdown=1)
-        {
-            ; 快速分解
-            quickSalvageHelper(D3W, D3H, helperDelay)
-            helperRunning:=False
-            Return
-        }
-    }
-    ; 一键分解
-    if (extraSalvageHelperCkbox and extraSalvageHelperDropdown>1)
-    {
-        ; 判断分解页面是否打开
-        r:=isSalvagePageOpen(D3W, D3H)
-        switch r[1]
-        {
-            ; 铁匠页面打开且分解页面打开
-            case 2:
-                salvageIconXY:=getSalvageIconXY(D3W, D3H, "center")
-                MouseMove, salvageIconXY[1][1], salvageIconXY[1][2]
-                ; 判断拆解按钮是否已经按下
-                if (r[2][3]<10 and r[2][1]+r[2][2]>400)
-                {
-                    if helperBreak
-                    {
-                        helperRunning:=False
-                        Return
-                    }
-                    ; 分解按钮已经按下，右键取消然后重新获得颜色信息
-                    Click, Right
-                    Sleep, helperDelay
-                    p:=getSalvageIconXY(D3W, D3H, "edge")
-                    r[3]:=getPixelRGB(p[2])
-                    r[4]:=getPixelRGB(p[3])
-                    r[5]:=getPixelRGB(p[4])
-                }
-                ; [黄分解条件，蓝分解条件，白/灰分解条件]
-                _wait:=-1
-                for i, _c in [r[5][1]>50, r[4][3]>65, r[3][1]>65]
-                {
-                    if _c
-                    {
-                        if helperBreak
-                        {
-                            helperRunning:=False
-                            Return
-                        }
-                        ; 启动一键分解前等待装备消失
-                        _wait:=-helperDelay-50
-                        MouseMove, salvageIconXY[5-i][1], salvageIconXY[5-i][2]
-                        Click
-                        Sleep, helperDelay
-                        Send {Enter}
-                    }
-                }
-                ; 点击分解按钮
-                MouseMove, salvageIconXY[1][1], salvageIconXY[1][2]
-                Sleep, helperDelay//2
-                Click
-                if helperBreak
-                {
-                    helperRunning:=False
-                    Return
-                }
-                Sleep, helperDelay//2
-                ; 执行一键分解
-                fn:=Func("oneButtonSalvageHelper").Bind(D3W, D3H, xpos, ypos)
-                SetTimer, %fn%, %_wait%
-                Return
-            case 1:
-                ; 铁匠页面打开但是不在分解页面
-                helperRunning:=False
-                Return
-            Default:
-                ; 铁匠页面未打卡 
-        }
-    }
     ; 鼠标位置。1：位于背包栏。2：位于储物栏（银行）。-1：其他
     mousePosition:=-1
     if (xpos>D3W-(3440-2740)*D3H/1440 and ypos>730*D3H/1440 and ypos<1150*D3H/1440)
@@ -962,6 +903,98 @@ oldsandHelper(){
     else if (xpos>65*D3H/1440 and xpos<640*D3H/1440 and ypos>275*D3H/1440 and ypos<1150*D3H/1440)
     {
         mousePosition:=2
+    }
+    ; 当鼠标在左侧
+    if (xpos<680*D3H/1440)
+    {
+        if (extraGambleHelperCKbox and isGambleOpen(D3W, D3H))
+        {
+            ; 赌博助手
+            SetTimer, gambleHelper, -1
+            Return
+        }
+    }
+
+    ; 分解助手逻辑
+    if (extraSalvageHelperCkbox)
+    {
+        ; 判断分解页面是否打开
+        r:=isSalvagePageOpen(D3W, D3H)
+        switch r[1]
+        {
+            ; 铁匠页面打开且分解页面打开
+            case 2:
+                if(extraSalvageHelperDropdown=1)    ;选择了快速分解
+                {
+                    ; 当鼠标在背包栏内
+                    if(mousePosition = 1)
+                    {
+                        ; 执行快速分解
+                        quickSalvageHelper(D3W, D3H, helperDelay)
+                        helperRunning:=False
+                    }
+                }
+                Else    ;选择其他分解选项
+                {
+                    salvageIconXY:=getSalvageIconXY(D3W, D3H, "center")
+                    MouseMove, salvageIconXY[1][1], salvageIconXY[1][2]
+                    ; 判断拆解按钮是否已经按下
+                    if (r[2][3]<10 and r[2][1]+r[2][2]>400)
+                    {
+                        if helperBreak
+                        {
+                            helperRunning:=False
+                            Return
+                        }
+                        ; 分解按钮已经按下，右键取消然后重新获得颜色信息
+                        Click, Right
+                        Sleep, helperDelay
+                        p:=getSalvageIconXY(D3W, D3H, "edge")
+                        r[3]:=getPixelRGB(p[2])
+                        r[4]:=getPixelRGB(p[3])
+                        r[5]:=getPixelRGB(p[4])
+                    }
+                    ; [黄分解条件，蓝分解条件，白/灰分解条件]
+                    _wait:=-1
+                    for i, _c in [r[5][1]>50, r[4][3]>65, r[3][1]>65]
+                    {
+                        if _c
+                        {
+                            if helperBreak
+                            {
+                                helperRunning:=False
+                                Return
+                            }
+                            ; 启动一键分解前等待装备消失
+                            _wait:=-helperDelay-50
+                            MouseMove, salvageIconXY[5-i][1], salvageIconXY[5-i][2]
+                            Click
+                            Sleep, helperDelay
+                            Send {Enter}
+                        }
+                    }
+                    ; 点击分解按钮
+                    MouseMove, salvageIconXY[1][1], salvageIconXY[1][2]
+                    Sleep, helperDelay//2
+                    Click
+                    if helperBreak
+                    {
+                        helperRunning:=False
+                        Return
+                    }
+                    Sleep, helperDelay//2
+                    ; 执行一键分解
+                    fn:=Func("oneButtonSalvageHelper").Bind(D3W, D3H, xpos, ypos)
+                    SetTimer, %fn%, %_wait%
+                }
+                Return
+            case 1:
+                ; 铁匠页面打开但是不在分解页面
+                helperRunning:=False
+                Return
+            Default:
+                ; 铁匠页面未打卡 
+        }
     }
     ; 卡奈魔盒助手
     if (extraReforgeHelperCkbox or extraUpgradeHelperCkbox or extraConvertHelperCkbox)
@@ -1475,7 +1508,7 @@ oneButtonAbandonHelper(D3W, D3H, xpos, ypos, mousePosition){
                 if (i<=50 and (helperBagZone[i+10]=10 or helperBagZone[i+10]=-1))
                 {
                     StartTime2:=A_TickCount
-                    while (A_TickCount-StartTime2<=helperDelay+100)
+                    while (A_TickCount-StartTime2<=helperDelay)
                     {
                         if isInventorySpaceEmpty(D3W, D3H, i+10, "", "bag")
                         {
@@ -1827,40 +1860,54 @@ SetSalvageHelper(){
     GuiControlGet, extraSalvageHelperCkbox
     GuiControlGet, extraSalvageHelperHK
     GuiControlGet, extraSalvageHelperDropdown
-    If extraSalvageHelperCkbox
+    GuiControlGet, extraUpgradeHelperCkbox
+    GuiControlGet, extraConvertHelperCkbox
+    GuiControlGet, extraAbandonHelperCkbox
+    If extraSalvageHelperCkbox or extraUpgradeHelperCkbox or extraConvertHelperCkbox or extraAbandonHelperCkbox
     {
+        ; 如果启用了任意一键宏，检查安全区域设置
+        hasSafeZone:=False
+        Loop, 60
+        {
+            if safezone.HasKey(A_Index)
+            {
+                hasSafeZone:=True
+                Break
+            }
+        }
+        if hasSafeZone
+        {
+            GuiControl, +c348017, helperSafeZoneText
+            GuiControl,, helperSafeZoneText, 安全格已设置
+        }
+        Else
+        {
+            GuiControl, +cFF0000, helperSafeZoneText
+            GuiControl,, helperSafeZoneText, 安全格未设置
+        }
+
         GuiControl, Enable, extraSalvageHelperDropdown
         switch extraSalvageHelperDropdown
         {
             case 1:
-                GuiControl, hide, helperSafeZoneText
-            case 2,3,4,5:
-                ; 如果是一键分解，检查安全区域设置
-                hasSafeZone:=False
-                Loop, 60
+                if extraUpgradeHelperCkbox or extraConvertHelperCkbox or extraAbandonHelperCkbox
                 {
-                    if safezone.HasKey(A_Index)
-                    {
-                        hasSafeZone:=True
-                        Break
-                    }
-                }
-                if hasSafeZone
-                {
-                    GuiControl, +c348017, helperSafeZoneText
-                    GuiControl,, helperSafeZoneText, 安全格已设置
+                    GuiControl, show, helperSafeZoneText
                 }
                 Else
                 {
-                    GuiControl, +cFF0000, helperSafeZoneText
-                    GuiControl,, helperSafeZoneText, 安全格未设置
+                    GuiControl, hide, helperSafeZoneText
                 }
+            case 2,3,4,5:
                 GuiControl, show, helperSafeZoneText
         }
     }
     Else
     {
-        GuiControl, Disable, extraSalvageHelperDropdown
+        if not extraSalvageHelperCkbox
+        {
+            GuiControl, Disable, extraSalvageHelperDropdown
+        }
         GuiControl, Hide, helperSafeZoneText
     }
     Return
@@ -1997,8 +2044,8 @@ getInventorySpaceXY(D3W, D3H, ID, zone){
         case "kanai":
             targetColumn:=(Mod(ID,3)=0)?3:Mod(ID,3)
             targetRow:=Floor((ID-1)/3)+1
-            Return [Round(D3W-((3440-_spaceKanaiX[targetColumn]-_spaceSizeInnerW/2)*D3H/1440)), Round((_spaceKanaiY[targetRow]+_spaceSizeInnerH/2)*D3H/1440)
-            , Round(D3W-((3440-_spaceKanaiX[targetColumn])*D3H/1440)), Round((_spaceKanaiY[targetRow])*D3H/1440)]
+            Return [Round((_spaceKanaiX[targetColumn]+_spaceSizeInnerW/2)*D3H/1440), Round((_spaceKanaiY[targetRow]+_spaceSizeInnerH/2)*D3H/1440)
+            , Round(_spaceKanaiX[targetColumn]*D3H/1440), Round((_spaceKanaiY[targetRow])*D3H/1440)]
     }
 }
 
