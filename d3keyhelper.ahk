@@ -25,9 +25,9 @@ CoordMode, Pixel, Client
 CoordMode, Mouse, Client
 Process, Priority, , High
 
-VERSION:=220913
+VERSION:=230222
 MainWindowW:=900
-MainWindowH:=550
+MainWindowH:=570
 CompactWindowW:=551
 TitleBarHight:=25
 ;@Ahk2Exe-Obey U_Y, U_Y := A_YYYY
@@ -95,6 +95,7 @@ OnLoad(){
     helperBreak:=False
     profileKeybinding:={}
     keysOnHold:={}
+    lastpotion:=[]
     DblClickTime:=DllCall("GetDoubleClickTime", "UInt")
     RightButtonState:=0
     LeftButtonState:=0
@@ -211,20 +212,14 @@ GuiCreate(){
             Gui Add, Checkbox, x+35 yp+2 Checked%rd% vskillset%currentTab%s%A_Index%randomckbox hwndskillset%currentTab%s%A_Index%randomckboxID
             AddToolTip(skillset%currentTab%s%A_Index%randomckboxID, "勾选后，每次策略执行时的实际延迟为0至设置值之间的随机数")
         }
-        Gui Add, GroupBox, xm+10 yp+45 w520 h170 section, 额外设置
-        Gui Add, Text, xs+20 ys+30, 快速切换至本配置：
+        Gui Add, GroupBox, xm+10 yp+45 w520 h192 section, 额外设置
+        Gui Add, Text, xs+20 ys+27, 快速切换至本配置：
         Gui Add, DropDownList, % "x+5 yp-3 w90 AltSubmit Choose" others[currentTab].profilemethod " vskillset" currentTab "profilekeybindingdropdown gSetProfileKeybinding", 无||鼠标中键||滚轮向上||滚轮向下||侧键1||侧键2||键盘按键
         Gui Add, Hotkey, x+15 w100 vskillset%currentTab%profilekeybindinghkbox gSetProfileKeybinding, % others[currentTab].profilehotkey
         Gui Add, Checkbox, % "x+15 yp+3 Checked" others[currentTab].autostartmarco " vskillset" currentTab "autostartmarcockbox hwndskillset" currentTab "autostartmarcockboxID", 切换后自动启动宏
         AddToolTip(skillset%currentTab%autostartmarcockboxID, "开启后，以懒人模式启动的战斗宏可以在运行中无缝切换")
 
-        Gui Add, Text, xs+20 yp+37, 走位辅助：
-        Gui Add, DropDownList, % "x+5 yp-3 w150 AltSubmit Choose" pfmv:=others[currentTab].movingmethod " vskillset" currentTab "movingdropdown gSetMovingHelper", 无||强制站立||强制走位（按住不放）||强制走位（连点）
-        Gui Add, Text, vskillset%currentTab%movingtext x+10 yp+3, 间隔（毫秒）：
-        Gui Add, Edit, vskillset%currentTab%movingedit x+5 yp-3 w60 Number
-        Gui Add, Updown, vskillset%currentTab%movingupdown Range20-3000, % others[currentTab].movinginterval
-
-        Gui Add, Text, xs+20 yp+40, 宏启动方式：
+        Gui Add, Text, xs+20 yp+35, 宏启动方式：
         Gui Add, DropDownList, % "x+5 yp-3 w90 AltSubmit Choose" others[currentTab].lazymode " hwndprofileStartModeDropdown" currentTab "ID vskillset" currentTab "profilestartmodedropdown gSetStartMode", 懒人模式||仅按下时||仅按一次
         AddToolTip(profileStartModeDropdown%currentTab%ID, "懒人模式：按下战斗宏快捷键时开启宏，再按一下关闭宏`n仅按下时：仅在战斗宏快捷键被压下时启动宏`n仅按一次：按下战斗宏快捷键即按下所有“按住不放”的技能键一次")
         Gui Add, Checkbox, % "x+20 yp+3 Checked" others[currentTab].useskillqueue " hwnduseskillqueueckbox" currentTab "ID vskillset" currentTab "useskillqueueckbox gSetSkillQueue", 使用单线程按键队列（毫秒）：
@@ -235,7 +230,7 @@ GuiCreate(){
         Gui Add, Text, x+8  yp+3 vskillset%currentTab%skillqueuewarningtext hwndskillset%currentTab%skillqueuewarningtextID gdummyFunction +cRed +Hidden, % "注意！"
         AddToolTip(skillset%currentTab%skillqueuewarningtextID, "按键队列功能设置有误")
 
-        Gui Add, Checkbox, % "xs+20 yp+37 Checked" others[currentTab].enablequickpause " vskillset" currentTab "clickpauseckbox gSetQuickPause", 快速暂停：
+        Gui Add, Checkbox, % "xs+20 yp+35 Checked" others[currentTab].enablequickpause " vskillset" currentTab "clickpauseckbox gSetQuickPause", 快速暂停：
         Gui Add, DropDownList, % "x+0 yp-3 w50 AltSubmit Choose" others[currentTab].quickpausemethod1 " vskillset" currentTab "clickpausedropdown1 gSetQuickPause", 双击||单击||压住
         Gui Add, DropDownList, % "x+5 yp w75 AltSubmit Choose" others[currentTab].quickpausemethod2 " vskillset" currentTab "clickpausedropdown2 gSetQuickPause", 鼠标左键||鼠标右键||鼠标中键||侧键1||侧键2
         Gui Add, Text, x+5 yp+3 vskillset%currentTab%clickpausetext1, 则
@@ -243,11 +238,24 @@ GuiCreate(){
         Gui Add, Edit, vskillset%currentTab%clickpauseedit x+5 yp w60 Number
         Gui Add, Updown, vskillset%currentTab%clickpauseupdown Range500-5000, % others[currentTab].quickpausedelay
         Gui Add, Text, x+5 yp+3 vskillset%currentTab%clickpausetext2, 毫秒
+
+        Gui Add, Text, xs+20 yp+35, 走位辅助：
+        Gui Add, DropDownList, % "x+5 yp-3 w150 AltSubmit Choose" pfmv:=others[currentTab].movingmethod " vskillset" currentTab "movingdropdown gSetMovingHelper", 无||强制站立||强制走位（按住不放）||强制走位（连点）
+        Gui Add, Text, vskillset%currentTab%movingtext x+10 yp+3, 执行间隔（毫秒）：
+        Gui Add, Edit, vskillset%currentTab%movingedit x+5 yp-3 w60 Number
+        Gui Add, Updown, vskillset%currentTab%movingupdown Range20-3000, % others[currentTab].movinginterval
+
+        Gui Add, Text, xs+20 yp+35, 药水辅助：
+        Gui Add, DropDownList, % "x+5 yp-3 w120 AltSubmit Choose" pfpo:=others[currentTab].potionmethod "hwndpotionDropdown" currentTab "ID vskillset" currentTab "potiondropdown gSetMovingHelper", 无||定时连点||保持药水CD
+        AddToolTip(potionDropdown%currentTab%ID, "定时连点：以固定时间间隔连续点击药水按键`n保持药水CD：仅在药水CD结束时连点，从而使药水尽快重新进入CD")
+        Gui Add, Text, vskillset%currentTab%potiontext x+10 yp+3, 执行间隔（毫秒）：
+        Gui Add, Edit, vskillset%currentTab%potionedit x+5 yp-3 w60 Number
+        Gui Add, Updown, vskillset%currentTab%potionupdown Range200-30000, % others[currentTab].potioninterval
     }
     Gui Tab
     GuiControl, Choose, ActiveTab, % currentProfile
 
-    Gui Add, GroupBox, x%helperSettingGroupx% ym+40 w338 h450 section, 辅助功能
+    Gui Add, GroupBox, x%helperSettingGroupx% ym+40 w338 h470 section, 辅助功能
     oldsandhelperhk:=generals.oldsandhelperhk
     Gui Font,s10
     Gui Add, Text, xs+20 ys+30 +cRed, 助手宏启动快捷键：
@@ -296,7 +304,7 @@ GuiCreate(){
     Gui Add, CheckBox, % "xs+20 yp+36 hwndextraAbandonHelperCkboxID vextraAbandonHelperCkbox gSetSalvageHelper Checked" generals.enableabandonhelper, 一键丢装助手
     AddToolTip(extraAbandonHelperCkboxID, "当背包栏打开且鼠标指针位于背包栏内时，按下助手快捷键即自动丢弃所有非安全格的物品`n若储物箱（银行）打开且鼠标位于银行格子内时，宏会存储所有非安全格内的物品至储物箱")
 
-    Gui Add, CheckBox, % "xs+20 yp+65 vextraSoundonProfileSwitch Checked" generals.enablesoundplay, 快捷键切换配置成功时播放声音
+    Gui Add, CheckBox, % "xs+20 yp+55 vextraSoundonProfileSwitch Checked" generals.enablesoundplay, 快捷键切换配置成功时播放声音
     Gui Add, CheckBox, % "x+20 yp+0 hwndextraSmartPauseID vextraSmartPause Checked" generals.enablesmartpause, 智能暂停
     AddToolTip(extraSmartPauseID, "开启后，游戏中按tab键可以暂停宏`n回车键，M键，T键会停止宏")
 
@@ -305,6 +313,9 @@ GuiCreate(){
 
     Gui Add, CheckBox, % "xs+20 yp+35 vextraCustomMoving gSetCustomMoving Checked" generals.custommoving, 使用自定义强制移动按键：
     Gui Add, Hotkey, x+5 yp-3 w70 Limit14 vextraCustomMovingHK gSetCustomMoving, % generals.custommovinghk
+
+    Gui Add, CheckBox, % "xs+20 yp+35 vextraCustompotion gSetCustomPotion Checked" generals.custompotion, 使用自定义药水按键：
+    Gui Add, Hotkey, x+5 yp-3 w70 Limit14 vextraCustompotionHK gSetCustomPotion, % generals.custompotionhk
 
     startRunHK:=generals.starthotkey
     Gui Font, s10
@@ -347,6 +358,7 @@ StartUp(){
     SetSalvageHelper()
     SetCustomStanding()
     SetCustomMoving()
+    SetCustomPotion()
     SetSkillQueue()
     SetStartMode()
 
@@ -416,6 +428,8 @@ ReadCfgFile(cfgFileName, ByRef tabs, ByRef combats, ByRef others, ByRef generals
         IniRead, custommovinghk, %cfgFileName%, General, custommovinghk, e
         IniRead, customstanding, %cfgFileName%, General, customstanding, 0
         IniRead, customstandinghk, %cfgFileName%, General, customstandinghk, LShift
+        IniRead, custompotion, %cfgFileName%, General, custompotion, 0
+        IniRead, custompotionhk, %cfgFileName%, General, custompotionhk, q
         IniRead, safezone, %cfgFileName%, General, safezone, "61,62,63"
         IniRead, helperspeed, %cfgFileName%, General, helperspeed, 3
         IniRead, gamegamma, %cfgFileName%, General, gamegamma, 1.000000
@@ -437,6 +451,7 @@ ReadCfgFile(cfgFileName, ByRef tabs, ByRef combats, ByRef others, ByRef generals
         , "startmethod":startmethod, "starthotkey":starthotkey, "enableupgradehelper":enableupgradehelper, "helperanimationdelay":helperanimationdelay
         , "enablesmartpause":enablesmartpause, "enablesoundplay":enablesoundplay, "enableconverthelper":enableconverthelper, "enableabandonhelper":enableabandonhelper
         , "custommoving":custommoving, "custommovinghk":custommovinghk, "customstanding":customstanding, "customstandinghk":customstandinghk
+        , "custompotion":custompotion, "custompotionhk":custompotionhk
         , "safezone":safezone, "helperspeed":helperspeed, "gamegamma":gamegamma, "sendmode":sendmode, "buffpercent":buffpercent
         , "enableloothelper":enableloothelper, "loothelpertimes":loothelpertimes, "compactmode":compactmode}
 
@@ -457,13 +472,17 @@ ReadCfgFile(cfgFileName, ByRef tabs, ByRef combats, ByRef others, ByRef generals
                 IniRead, dy, %cfgFileName%, %cSection%, delay_%A_Index%, 10
                 IniRead, rd, %cfgFileName%, %cSection%, random_%A_Index%, 1
                 IniRead, pr, %cfgFileName%, %cSection%, priority_%A_Index%, 1
-                trow.Push({"hotkey":hk, "action":ac, "interval":iv, "delay":dy, "random": rd, "priority": pr})
+                IniRead, rp, %cfgFileName%, %cSection%, repeat_%A_Index%, 1
+                IniRead, rpiv, %cfgFileName%, %cSection%, repeatinterval_%A_Index%, 30
+                trow.Push({"hotkey":hk, "action":ac, "interval":iv, "delay":dy, "random":rd, "priority":pr, "repeat":rp, "repeatinterval":rpiv})
             }
             combats.Push(trow)
             IniRead, pfmd, %cfgFileName%, %cSection%, profilehkmethod, 1
             IniRead, pfhk, %cfgFileName%, %cSection%, profilehkkey
             IniRead, pfmv, %cfgFileName%, %cSection%, movingmethod, 1
             IniRead, pfmi, %cfgFileName%, %cSection%, movinginterval, 100
+            IniRead, pfpo, %cfgFileName%, %cSection%, potionmethod, 1
+            IniRead, pfpi, %cfgFileName%, %cSection%, potioninterval, 500
             IniRead, pflm, %cfgFileName%, %cSection%, lazymode, 1
             IniRead, pfqp, %cfgFileName%, %cSection%, enablequickpause, 0
             IniRead, pfqpm1, %cfgFileName%, %cSection%, quickpausemethod1, 1
@@ -473,7 +492,8 @@ ReadCfgFile(cfgFileName, ByRef tabs, ByRef combats, ByRef others, ByRef generals
             IniRead, pfusq, %cfgFileName%, %cSection%, useskillqueue, 0
             IniRead, pfusqiv, %cfgFileName%, %cSection%, useskillqueueinterval, 200
             IniRead, pfasm, %cfgFileName%, %cSection%, autostartmarco, 0
-            tos:={"profilemethod":pfmd, "profilehotkey":pfhk, "movingmethod":pfmv, "movinginterval":pfmi, "lazymode":pflm
+            tos:={"profilemethod":pfmd, "profilehotkey":pfhk, "movingmethod":pfmv, "movinginterval":pfmi
+            , "potionmethod":pfpo, "potioninterval":pfpi, "lazymode":pflm
             , "enablequickpause":pfqp, "quickpausemethod1":pfqpm1, "quickpausemethod2":pfqpm2, "quickpausemethod3":pfqpm3
             , "quickpausedelay":pfqpdy, "useskillqueue":pfusq, "useskillqueueinterval":pfusqiv, "autostartmarco":pfasm}
             others.Push(tos)
@@ -492,10 +512,11 @@ ReadCfgFile(cfgFileName, ByRef tabs, ByRef combats, ByRef others, ByRef generals
             crow:=[]
             loop, parse, hks, CSV
             {
-                crow.Push({"hotkey":A_LoopField, "action":1, "interval":300, "delay":10, "random": 1, "priority":1})
+                crow.Push({"hotkey":A_LoopField, "action":1, "interval":300, "delay":10, "random": 1, "priority":1, "repeat":1, "repeatinterval":30})
             }
             combats.Push(crow)
-            others.Push({"profilemethod":1, "profilehotkey":"", "movingmethod":1, "movinginterval":100, "lazymode":1
+            others.Push({"profilemethod":1, "profilehotkey":"", "movingmethod":1, "movinginterval":100
+            , "potionmethod":1, "potioninterval":500, "lazymode":1
             , "enablequickpause":0, "quickpausemethod1":1, "quickpausemethod2":1, "quickpausemethod3":1, "quickpausedelay":1500
             , "useskillqueue":0, "useskillqueueinterval":200, "autostartmarco":0})
         }
@@ -503,7 +524,8 @@ ReadCfgFile(cfgFileName, ByRef tabs, ByRef combats, ByRef others, ByRef generals
         , "startmethod":7, "starthotkey":"F2", "enablesmartpause":1, "salvagehelpermethod":1, "reforgehelpermethod":1
         , "oldsandhelpermethod":7, "enablesalvagehelper":0, "enablesoundplay":1, "enableconverthelper":0
         , "enablereforgehelper":0, "enableupgradehelper":0, "enableabandonhelper":0, "runonstart":1
-        , "custommoving":0, "custommovinghk":"e", "customstanding":0, "customstandinghk":"LShift", "helpermousespeed":2
+        , "custommoving":0, "custommovinghk":"e", "customstanding":0, "customstandinghk":"LShift"
+        , "custompotion":0, "custompotionhk":"q", "helpermousespeed":2
         , "safezone":"61,62,63", "helperspeed":3, "gamegamma":1.000000, "sendmode":"Event", "helperanimationdelay":150
         , "buffpercent":0.050000, "enableloothelper":0, "loothelpertimes":30, "compactmode":0, "gameresolution":"Auto"}
     }
@@ -543,6 +565,8 @@ SaveCfgFile(cfgFileName, tabs, currentProfile, safezone, VERSION){
     GuiControlGet, extraCustomMovingHK
     GuiControlGet, extraCustomStanding
     GuiControlGet, extraCustomStandingHK
+    GuiControlGet, extraCustomPotion
+    GuiControlGet, extraCustomPotionHK
     GuiControlGet, helperAnimationSpeedDropdown
 
     IniWrite, %VERSION%, %cfgFileName%, General, version
@@ -568,6 +592,8 @@ SaveCfgFile(cfgFileName, tabs, currentProfile, safezone, VERSION){
     IniWrite, %extraCustomMovingHK%, %cfgFileName%, General, custommovinghk
     IniWrite, %extraCustomStanding%, %cfgFileName%, General, customstanding
     IniWrite, %extraCustomStandingHK%, %cfgFileName%, General, customstandinghk
+    IniWrite, %extraCustomPotion%, %cfgFileName%, General, custompotion
+    IniWrite, %extraCustomPotionHK%, %cfgFileName%, General, custompotionhk
     IniWrite, %helperAnimationSpeedDropdown%, %cfgFileName%, General, helperspeed
     safezone:=keyJoin(",", safezone)
     IniWrite, %safezone%, %cfgFileName%, General, safezone
@@ -599,11 +625,15 @@ SaveCfgFile(cfgFileName, tabs, currentProfile, safezone, VERSION){
             GuiControlGet, skillset%cSection%s%A_Index%delayupdown
             GuiControlGet, skillset%cSection%s%A_Index%randomckbox
             pr:=combats[cSection][A_Index]["priority"]
+            rp:=combats[cSection][A_Index]["repeat"]
+            rpiv:=combats[cSection][A_Index]["repeatinterval"]
             IniWrite, % skillset%cSection%s%A_Index%dropdown, %cfgFileName%, %nSction%, action_%A_Index%
             IniWrite, % skillset%cSection%s%A_Index%updown, %cfgFileName%, %nSction%, interval_%A_Index%
             IniWrite, % skillset%cSection%s%A_Index%delayupdown, %cfgFileName%, %nSction%, delay_%A_Index%
             IniWrite, % skillset%cSection%s%A_Index%randomckbox, %cfgFileName%, %nSction%, random_%A_Index%
             IniWrite, % pr, %cfgFileName%, %nSction%, priority_%A_Index%
+            IniWrite, % rp, %cfgFileName%, %nSction%, repeat_%A_Index%
+            IniWrite, % rpiv, %cfgFileName%, %nSction%, repeatinterval_%A_Index%
             if (A_Index < 5)
             {
                 IniWrite, % skillset%cSection%s%A_Index%hotkey, %cfgFileName%, %nSction%, skill_%A_Index%
@@ -617,6 +647,10 @@ SaveCfgFile(cfgFileName, tabs, currentProfile, safezone, VERSION){
         GuiControlGet, skillset%cSection%movingupdown
         IniWrite, % skillset%cSection%movingdropdown, %cfgFileName%, %nSction%, movingmethod
         IniWrite, % skillset%cSection%movingupdown, %cfgFileName%, %nSction%, movinginterval
+        GuiControlGet, skillset%cSection%potiondropdown
+        GuiControlGet, skillset%cSection%potionupdown
+        IniWrite, % skillset%cSection%potiondropdown, %cfgFileName%, %nSction%, potionmethod
+        IniWrite, % skillset%cSection%potionupdown, %cfgFileName%, %nSction%, potioninterval
         GuiControlGet, skillset%cSection%profilestartmodedropdown
         IniWrite, % skillset%cSection%profilestartmodedropdown, %cfgFileName%, %nSction%, lazymode
         GuiControlGet, skillset%cSection%clickpauseckbox
@@ -746,18 +780,26 @@ skillKey(currentProfile, nskill, D3W, D3H, forceStandingKey, useSkillQueue){
                         sleep 10
                     }
                 }
-                if useSkillQueue
+                ; 重复连点
+                Loop,% combats[currentProfile][nskill]["repeat"]
                 {
-                    ; 当技能列表大于1000时什么都不做，防止占用过多内存
-                    if (skillQueue.Count() < 1000){
-                        ; 按键加入技能列表头部
-                        ; [k, 3] k是具体按键，3代表因为连点加入
-                        skillQueue.InsertAt(1, [k, 3])
+                    if useSkillQueue
+                    {
+                        ; 当技能列表大于1000时什么都不做，防止占用过多内存
+                        if (skillQueue.Count() < 1000){
+                            ; 按键加入技能列表头部
+                            ; [k, 3] k是具体按键，3代表因为连点加入
+                            skillQueue.InsertAt(1, [k, 3])
+                        }
                     }
-                }
-                Else
-                {
-                    Send {Blind}{%k%}
+                    Else
+                    {
+                        Send {Blind}{%k%}
+                    }
+                    if (combats[currentProfile][nskill]["repeat"] > 1){
+                        sleep, % combats[currentProfile][nskill]["repeatinterval"]
+                    }
+
                 }
             }
         ; 保持buff
@@ -1530,6 +1572,36 @@ oneButtonAbandonHelper(D3W, D3H, xpos, ypos, mousePosition){
 }
 
 /*
+负责自动喝药
+参数：
+    D3W：int，窗口区域的宽度
+    D3H：int，窗口区域的高度
+    action: int，自动喝药策略
+*/
+potionHelper(D3W, D3H, action){
+    local
+    Global vPausing, potionKey, gameX, gameY, lastpotion
+    static _x := 1822
+    static _y := 1340
+    static _w := 66
+    if !vPausing
+    {
+        switch action
+        {
+            case 2:
+                Send {%potionKey%}
+            case 3:
+                currentpotion:=getPixelsRGB(Round(D3W/2-(3440/2-1822)*D3H/1440), Round(_y*D3H/1440), Round(_w*D3H/1440), Round(_w*D3H/1440), "", True, gameX, gameY)
+                if (lastpotion and isArraysEqual(lastpotion, currentpotion[1], 0)) {
+                    Send {%potionKey%}
+                }
+                lastpotion:=currentpotion[1]
+        }
+    }
+    Return
+}
+
+/*
 扫描所有背包格子。未扫描-1，安全格0，没东西1，有东西10
 参数：
     D3W：int，窗口区域的宽度
@@ -1668,12 +1740,15 @@ SetStartMode(){
             GuiControl, Disable, skillset%currentProfile%clickpauseckbox
             GuiControl, Enable, skillset%currentProfile%useskillqueueckbox
             GuiControl, Enable, skillset%currentProfile%movingdropdown
+            GuiControl, Enable, skillset%currentProfile%potiondropdown
         case 3:
             GuiControl, , skillset%currentProfile%useskillqueueckbox, 0
             GuiControl, Choose, skillset%currentProfile%movingdropdown, 1
+            GuiControl, Choose, skillset%currentProfile%potiondropdown, 1
             GuiControl, , skillset%currentProfile%clickpauseckbox, 0
             GuiControl, Disable, skillset%currentProfile%useskillqueueckbox
             GuiControl, Disable, skillset%currentProfile%movingdropdown
+            GuiControl, Disable, skillset%currentProfile%potiondropdown
             GuiControl, Disable, skillset%currentProfile%clickpauseckbox
             WinSet, Redraw,, A
         Default:
@@ -1776,6 +1851,31 @@ SetCustomMoving(){
     Else
     {
         GuiControl, Disable, extraCustomMovingHK
+    }
+    Return
+}
+
+/*
+设置自定义药水按键相关的控件动画
+参数：
+    无
+返回：
+    无
+*/
+SetCustomPotion(){
+    GuiControlGet, extraCustomPotion
+    if extraCustomPotion
+    {
+        GuiControl, Enable, extraCustomPotionHK
+        GuiControlGet, extraCustomPotionHK
+        if !extraCustomPotionHK
+        {
+            GuiControl,, extraCustomPotionHK, q
+        }
+    }
+    Else
+    {
+        GuiControl, Disable, extraCustomPotionHK
     }
     Return
 }
@@ -2349,7 +2449,7 @@ getPixelRGB(point){
 返回：
     [R，G，B]
 */
-getPixelsRGB(pointX, pointY, w, h, agg_func, gdip=False, gameX=0, gameY=0){
+getPixelsRGB(pointX, pointY, w, h, agg_func="", gdip=False, gameX=0, gameY=0){
     cpixelR:=[]
     cpixelG:=[]
     cpixelB:=[]
@@ -2387,7 +2487,12 @@ getPixelsRGB(pointX, pointY, w, h, agg_func, gdip=False, gameX=0, gameY=0){
             }
         }
     }
-    Return [Func(agg_func).Call(cpixelR*), Func(agg_func).Call(cpixelG*), Func(agg_func).Call(cpixelB*)]
+    if not agg_func {
+        Return [cpixelR, cpixelG, cpixelB]
+    }
+    Else {
+        Return [Func(agg_func).Call(cpixelR*), Func(agg_func).Call(cpixelG*), Func(agg_func).Call(cpixelB*)]
+    }
 }
 
 /*
@@ -3043,7 +3148,7 @@ SetStartRun:
     }
 Return
 
-; 设置强制移动相关控件动画
+; 设置强制移动. 自动喝药相关控件动画
 SetMovingHelper:
     Gui, Submit, NoHide
     Loop, %tabslen%
@@ -3057,6 +3162,16 @@ SetMovingHelper:
         { 
             GuiControl, Disable, skillset%A_Index%movingtext
             GuiControl, Disable, skillset%A_Index%movingedit
+        }
+        if (skillset%currentProfile%potiondropdown > 1)
+        {
+            GuiControl, Enable, skillset%A_Index%potiontext
+            GuiControl, Enable, skillset%A_Index%potionedit
+        }
+        Else
+        { 
+            GuiControl, Disable, skillset%A_Index%potiontext
+            GuiControl, Disable, skillset%A_Index%potionedit
         }
     }
 Return
@@ -3134,6 +3249,7 @@ RunMarco:
     GuiControlGet, extraCustomMoving
     GuiControlGet, extraCustomMovingHK
     forceMovingKey:=extraCustomMoving? extraCustomMovingHK:"e"
+    potionKey:=extraCustomPotion? extraCustomPotionHK:"q"
     skillQueue:=[]
     syncTimer:={}
     syncDelay:={}
@@ -3198,6 +3314,14 @@ RunMarco:
             SetTimer, forceMoving, % skillset%currentProfile%movingedit
 
     }
+    ; 处理自动喝药
+    GuiControlGet, skillset%currentProfile%potiondropdown
+    if (skillset%currentProfile%potiondropdown > 1)
+    {
+        GuiControlGet, skillset%currentProfile%potionedit
+        pofunc:=Func("potionHelper").Bind(D3W, D3H, skillset%currentProfile%potiondropdown)
+        SetTimer, %pofunc%, % skillset%currentProfile%potionupdown
+    }
     ; 处理按键队列
     if skillset%currentProfile%useskillqueueckbox{
         GuiControlGet, skillset%currentProfile%useskillqueueupdown
@@ -3214,6 +3338,9 @@ Return
 StopMarco:
     if IsObject(sqfunc){
         SetTimer, %sqfunc%, off
+    }
+    if IsObject(pofunc){
+        SetTimer, %pofunc%, off
     }
     skillQueue:=[]
     Loop, 6
