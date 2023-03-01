@@ -25,7 +25,7 @@ CoordMode, Pixel, Client
 CoordMode, Mouse, Client
 Process, Priority, , High
 
-VERSION:=230222
+VERSION:=230301
 MainWindowW:=900
 MainWindowH:=570
 CompactWindowW:=551
@@ -1574,13 +1574,11 @@ oneButtonAbandonHelper(D3W, D3H, xpos, ypos, mousePosition){
 /*
 负责自动喝药
 参数：
-    D3W：int，窗口区域的宽度
-    D3H：int，窗口区域的高度
     action: int，自动喝药策略
 */
-potionHelper(D3W, D3H, action){
+potionHelper(action){
     local
-    Global vPausing, potionKey, gameX, gameY, lastpotion
+    Global vPausing, potionKey, gameX, gameY, lastpotion, D3W, D3H
     static _x := 1822
     static _y := 1340
     static _w := 66
@@ -1591,7 +1589,10 @@ potionHelper(D3W, D3H, action){
             case 2:
                 Send {%potionKey%}
             case 3:
+                ; 卡CD喝药
+                ; 对药水图标区域截图，并且和上次对比
                 currentpotion:=getPixelsRGB(Round(D3W/2-(3440/2-1822)*D3H/1440), Round(_y*D3H/1440), Round(_w*D3H/1440), Round(_w*D3H/1440), "", True, gameX, gameY)
+                ; 如果两次截图相同则药水已冷却，按下喝药按键
                 if (lastpotion and isArraysEqual(lastpotion, currentpotion[1], 0)) {
                     Send {%potionKey%}
                 }
@@ -3318,8 +3319,11 @@ RunMarco:
     GuiControlGet, skillset%currentProfile%potiondropdown
     if (skillset%currentProfile%potiondropdown > 1)
     {
+        if IsObject(pofunc){
+            SetTimer, %pofunc%, off
+        }
         GuiControlGet, skillset%currentProfile%potionedit
-        pofunc:=Func("potionHelper").Bind(D3W, D3H, skillset%currentProfile%potiondropdown)
+        pofunc:=Func("potionHelper").Bind(skillset%currentProfile%potiondropdown)
         SetTimer, %pofunc%, % skillset%currentProfile%potionupdown
     }
     ; 处理按键队列
